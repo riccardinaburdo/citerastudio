@@ -1,0 +1,115 @@
+backend:
+  name: git-gateway
+  branch: main
+
+media_folder: "public/images"
+public_folder: "/images"
+
+collections:
+  - name: "pages"
+    label: "Pagine"
+    files:
+      - label: "Home"
+        name: "home"
+        file: "src/content/pages/home.json"
+        fields:
+          - { label: "Titolo", name: "title", widget: "string" }
+          - { label: "Sottotitolo Hero", name: "heroSubtitle", widget: "string" }
+          - { label: "Immagine Hero", name: "heroImage", widget: "image", required: false }
+
+      - label: "About"
+        name: "about"
+        file: "src/content/pages/about.json"
+        fields:
+          - { label: "Titolo", name: "title", widget: "string" }
+          - { label: "Nome", name: "name", widget: "string" }
+          - { label: "Foto", name: "photo", widget: "image", required: false }
+          - { label: "Biografia", name: "bio", widget: "markdown" }
+          - { label: "CV URL", name: "cvUrl", widget: "string", required: false }
+          - { label: "LinkedIn URL", name: "linkedinUrl", widget: "string", required: false }
+          - { label: "Houzz URL", name: "houzzUrl", widget: "string", required: false }
+
+      - label: "Services"
+        name: "services"
+        file: "src/content/pages/services.json"
+        fields:
+          - { label: "Titolo", name: "title", widget: "string" }
+          - { label: "Introduzione", name: "intro", widget: "markdown" }
+          - label: "Cosa facciamo"
+            name: "whatWeDo"
+            widget: "list"
+            fields:
+              - { label: "Titolo", name: "title", widget: "string" }
+              - { label: "Descrizione", name: "description", widget: "markdown" }
+          - label: "Come lo facciamo"
+            name: "howWeDo"
+            widget: "list"
+            fields:
+              - { label: "Numero", name: "number", widget: "string" }
+              - { label: "Titolo", name: "title", widget: "string" }
+              - { label: "Descrizione", name: "description", widget: "markdown" }
+
+      - label: "Contact"
+        name: "contact"
+        file: "src/content/pages/contact.json"
+        fields:
+          - { label: "Titolo", name: "title", widget: "string" }
+          - { label: "Sottotitolo", name: "subtitle", widget: "string" }
+          - { label: "Email", name: "email", widget: "string" }
+          - { label: "Messaggio", name: "message", widget: "string" }
+
+      - label: "Alveus Project"
+        name: "alveus"
+        file: "src/content/pages/alveus.json"
+        fields:
+          - { label: "Titolo", name: "title", widget: "string" }
+          - { label: "Sottotitolo", name: "subtitle", widget: "string" }
+          - { label: "Contenuto", name: "content", widget: "markdown" }
+          - { label: "Video URL", name: "videoUrl", widget: "string", required: false }
+
+      - label: "Footer"
+        name: "footer"
+        file: "src/content/pages/footer.json"
+        fields:
+          - { label: "Indirizzo Linea 1", name: "address1", widget: "string" }
+          - { label: "Indirizzo Linea 2", name: "address2", widget: "string" }
+          - { label: "Indirizzo Linea 3", name: "address3", widget: "string" }
+          - { label: "Email", name: "email", widget: "string" }
+
+      - label: "Navigazione"
+        name: "navigation"
+        file: "src/content/pages/navigation.json"
+        fields:
+          - label: "Menu"
+            name: "menu"
+            widget: "list"
+            fields:
+              - { label: "Etichetta", name: "label", widget: "string" }
+              - { label: "URL", name: "url", widget: "string" }
+
+  - name: "portfolio"
+    label: "Portfolio"
+    folder: "src/content/portfolio"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Titolo", name: "title", widget: "string" }
+      - { label: "Slug", name: "slug", widget: "string" }
+      - { label: "Ordine", name: "order", widget: "number" }
+      - { label: "Descrizione", name: "description", widget: "markdown" }
+      - label: "Immagini"
+        name: "images"
+        widget: "list"
+        fields:
+          - { label: "Immagine", name: "src", widget: "image" }
+          - { label: "Alt text", name: "alt", widget: "string" }
+
+  - name: "testimonials"
+    label: "Testimonial"
+    folder: "src/content/testimonials"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Nome", name: "name", widget: "string" }
+      - { label: "Testo", name: "text", widget: "text" }
+      - { label: "Ordine", name: "order", widget: "number" }

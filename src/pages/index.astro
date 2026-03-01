@@ -1,0 +1,75 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import home from '../content/pages/home.json';
+import fs from 'node:fs';
+import path from 'node:path';
+
+// Load portfolio items
+const portfolioDir = path.join(process.cwd(), 'src/content/portfolio');
+const portfolioFiles = fs.readdirSync(portfolioDir).filter(f => f.endsWith('.json'));
+const portfolioItems = portfolioFiles
+  .map(f => JSON.parse(fs.readFileSync(path.join(portfolioDir, f), 'utf-8')))
+  .sort((a, b) => a.order - b.order);
+
+// Load testimonials
+const testimonialsDir = path.join(process.cwd(), 'src/content/testimonials');
+const testimonialFiles = fs.readdirSync(testimonialsDir).filter(f => f.endsWith('.json'));
+const testimonials = testimonialFiles
+  .map(f => JSON.parse(fs.readFileSync(path.join(testimonialsDir, f), 'utf-8')))
+  .sort((a, b) => a.order - b.order);
+
+// Split portfolio into left and right columns
+const leftItems = portfolioItems.filter((_, i) => i % 2 === 0);
+const rightItems = portfolioItems.filter((_, i) => i % 2 !== 0);
+---
+
+<BaseLayout title={home.title} currentPath="/">
+  <!-- Hero -->
+  <section class="hero">
+    <h2>The garden: a <strong>mindscape</strong> shaped by plants, earth and water.</h2>
+  </section>
+
+  <!-- Portfolio -->
+  <section class="portfolio-section">
+    <h2>Portfolio</h2>
+    <div class="portfolio-grid">
+      <!-- Left column -->
+      {leftItems.map((item) => (
+        <a href={`/portfolio/${item.slug}`} class="portfolio-link left">
+          {item.title} <span class="arrow">&#10095;</span>
+        </a>
+      ))}
+
+      <!-- Center image -->
+      <div class="center-image">
+        <img src="/images/polifilo.png" alt="Polifilo illustration" />
+      </div>
+
+      <!-- Right column -->
+      {rightItems.map((item) => (
+        <a href={`/portfolio/${item.slug}`} class="portfolio-link right">
+          <span class="arrow">&#10095;</span> {item.title}
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <!-- Work in Progress -->
+  <section class="wip-section">
+    <h2><a href="/portfolio/work-in-progress">Work in progress</a></h2>
+    <a href="/portfolio/work-in-progress" class="btn">Start Now</a>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="testimonials">
+    <h1>What People Say</h1>
+    <div class="testimonial-slider">
+      {testimonials.map((t) => (
+        <div class="testimonial-card">
+          <p class="name">{t.name}</p>
+          <blockquote>{t.text}</blockquote>
+        </div>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

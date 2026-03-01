@@ -1,0 +1,50 @@
+{
+  "title": "Services",
+  "intro": "We specialize in creating bespoke garden designs that blend aesthetics, functionality, and sustainability. Whether you're looking to transform a small urban courtyard, a family-friendly outdoor space, or a sprawling estate, our garden design services are tailored to your needs.",
+  "whatWeDo": [
+    {
+      "title": "Vision and Creativity",
+      "description": "Comprehensive garden design that translates your vision into a functional, personalized outdoor space. We develop innovative layouts, reimagine existing gardens, and create holistic design strategies that capture the unique character of your landscape."
+    },
+    {
+      "title": "Landscape Solutions",
+      "description": "Expertly crafted landscape solutions combining:\n- Customized planting designs that ensure seasonal beauty and biodiversity\n- Precision hard landscaping with sustainable materials\n- Structural elements that harmonize with both natural and built environments"
+    },
+    {
+      "title": "Ecological Innovation",
+      "description": "Advanced design approach focusing on:\n- Intelligent garden lighting that extends usability and creates atmosphere\n- Water-conservation and eco-friendly solutions\n- Native plant selections and strategies that support local ecosystems and climate resilience"
+    }
+  ],
+  "howWeDo": [
+    {
+      "number": "1",
+      "title": "Consultation",
+      "description": "We begin with an in-depth discussion to understand your vision, preferences, and practical requirements. This includes reviewing your site, discussing budgets, and exploring potential ideas."
+    },
+    {
+      "number": "2",
+      "title": "Site Survey and Analysis",
+      "description": "A thorough site survey is the critical foundation of any successful landscape design project. A detailed site visit to measure dimensions, analyze soil, assess sunlight, and note existing features."
+    },
+    {
+      "number": "3",
+      "title": "Concept Design",
+      "description": "We present a preliminary design with sketches or digital renderings to visualize the layout, features, and style."
+    },
+    {
+      "number": "4",
+      "title": "Design Development",
+      "description": "Once the concept is approved, we refine the design, including planting schemes, hard landscaping details, and material recommendations."
+    },
+    {
+      "number": "5",
+      "title": "Implementation Plan",
+      "description": "We provide a detailed plan for project execution, liaising with trusted contractors and suppliers to bring your garden to life."
+    },
+    {
+      "number": "6",
+      "title": "Construction Site Management",
+      "description": "We oversee planting and ensure all elements are installed correctly to meet the design's vision."
+    }
+  ]
+}

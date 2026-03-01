@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import services from '../content/pages/services.json';
+---
+
+<BaseLayout title="Services | citerastudio" currentPath="/services">
+  <!-- Intro -->
+  <section class="services-intro">
+    <p>{services.intro}</p>
+  </section>
+
+  <!-- What we do -->
+  <section class="services-what">
+    <h2>What we do</h2>
+    <p class="subtitle">Transform outdoor spaces into living, sustainable landscapes that reflect your personal style and respect environmental principles.</p>
+    <div class="services-grid">
+      {services.whatWeDo.map((service) => (
+        <div class="service-card">
+          <h3>{service.title}</h3>
+          <p>{service.description}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- How we do it -->
+  <section class="services-how">
+    <h2>How we do it</h2>
+    <div class="steps-grid">
+      {services.howWeDo.map((step) => (
+        <div class="step-card">
+          <div class="step-number">{step.number}</div>
+          <h3>{step.title}</h3>
+          <p>{step.description}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- Contact CTA -->
+  <section class="services-intro" style="padding: 3rem 2rem;">
+    <p>Like what you see? <a href="/contact" style="color: var(--color-orange);">Get in touch</a> to learn more.</p>
+  </section>
+</BaseLayout>

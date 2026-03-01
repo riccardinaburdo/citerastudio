@@ -1,0 +1,55 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+
+export function getStaticPaths() {
+  const portfolioDir = path.join(process.cwd(), 'src/content/portfolio');
+  const files = fs.readdirSync(portfolioDir).filter(f => f.endsWith('.json'));
+  return files.map(f => {
+    const data = JSON.parse(fs.readFileSync(path.join(portfolioDir, f), 'utf-8'));
+    return {
+      params: { slug: data.slug },
+      props: { project: data },
+    };
+  });
+}
+
+const { project } = Astro.props;
+
+// Simple markdown-to-html conversion for descriptions
+function simpleMarkdown(text: string): string {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[hluol])(.+)$/gm, (match) => {
+      if (match.startsWith('<')) return match;
+      return match;
+    });
+}
+
+const htmlContent = simpleMarkdown(project.description);
+---
+
+<BaseLayout title={`${project.title} | citerastudio`}>
+  <div class="page-header">
+    <h1>{project.title}</h1>
+  </div>
+
+  <div class="page-content">
+    <Fragment set:html={htmlContent} />
+
+    {project.images && project.images.length > 0 && (
+      <div class="gallery">
+        {project.images.map((img: {src: string; alt: string}) => (
+          <img src={img.src} alt={img.alt} />
+        ))}
+      </div>
+    )}
+  </div>
+</BaseLayout>

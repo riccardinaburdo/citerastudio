@@ -1,0 +1,9 @@
+{
+  "menu": [
+    { "label": "Home", "url": "/" },
+    { "label": "Services", "url": "/services" },
+    { "label": "Alveus Project", "url": "/alveus-project" },
+    { "label": "About", "url": "/about" },
+    { "label": "Contact", "url": "/contact" }
+  ]
+}

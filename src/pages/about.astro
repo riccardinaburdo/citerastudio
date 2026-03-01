@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import about from '../content/pages/about.json';
+---
+
+<BaseLayout title="About | citerastudio" currentPath="/about">
+  <div class="about-layout">
+    <div class="about-text">
+      <h2>{about.title}</h2>
+      <p class="author-name">{about.name}</p>
+      {about.bio.split('\n\n').map((paragraph) => (
+        <p>{paragraph}</p>
+      ))}
+
+      <div class="social-links">
+        {about.linkedinUrl && (
+          <a href={about.linkedinUrl} target="_blank" rel="noopener noreferrer">
+            LinkedIn
+          </a>
+        )}
+        {about.houzzUrl && (
+          <a href={about.houzzUrl} target="_blank" rel="noopener noreferrer">
+            Houzz
+          </a>
+        )}
+      </div>
+
+      {about.cvUrl && (
+        <a href={about.cvUrl} class="btn-cv" target="_blank" rel="noopener noreferrer">
+          My CV
+        </a>
+      )}
+    </div>
+    <div class="about-photo">
+      {about.photo ? (
+        <img src={about.photo} alt={about.name} />
+      ) : (
+        <div style="background: #ddd; height: 500px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #999;">Photo placeholder</div>
+      )}
+    </div>
+  </div>
+</BaseLayout>
