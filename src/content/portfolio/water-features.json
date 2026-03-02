@@ -3,5 +3,16 @@
   "slug": "water-features",
   "order": 2,
   "description": "Whether in a small terrace or a large public park, water in the garden is a vital presence through its movement, sound, and light reflections. I like to use it in the right proportion with the surrounding space and integrate it as much as possible into the garden's design.",
-  "images": []
+  "images": [
+    {"src": "/images/portfolio/water-features-1.jpg", "alt": "Public garden water channel with cascading water and central fountain"},
+    {"src": "/images/portfolio/water-features-2.jpg", "alt": "Aerial view of formal garden with octagonal fountain and symmetrical water channels"},
+    {"src": "/images/portfolio/water-features-3.jpg", "alt": "Contemporary corten steel water feature with lily pad pond"},
+    {"src": "/images/portfolio/water-features-4.jpg", "alt": "Corten steel water channels in lawn with mist effects"},
+    {"src": "/images/portfolio/water-features-5.jpg", "alt": "Stone-edged garden pond with water cascade"},
+    {"src": "/images/portfolio/water-features-6.jpg", "alt": "Stone water feature with sheet waterfall"},
+    {"src": "/images/portfolio/water-features-7.jpg", "alt": "Garden water basin with water lily and ornamental grasses"},
+    {"src": "/images/portfolio/water-features-8.jpg", "alt": "Dark reflecting pool with circular travertine stepping discs"},
+    {"src": "/images/portfolio/water-features-9.jpg", "alt": "Curved bench beside reflecting pool with stepping stones"},
+    {"src": "/images/portfolio/water-features-10.jpg", "alt": "Children playing on travertine stepping stones in water feature"}
+  ]
 }

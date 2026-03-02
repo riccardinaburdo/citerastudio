@@ -3,5 +3,31 @@
   "slug": "swimming-pools",
   "order": 3,
   "description": "The swimming pool in the garden must interact with all its parts and should not appear as an alien element, especially during the months when it is not in use. The pools we design are always lined with natural materials like stone and travertine, in order to create a water color that harmonizes with the surrounding landscape.",
-  "images": []
+  "images": [
+    {"src": "/images/portfolio/swimming-pools-1.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-2.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-3.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-4.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-5.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-6.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-7.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-8.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-9.jpg", "alt": "Swimming pool landscape design"},
+    {"src": "/images/portfolio/swimming-pools-10.jpg", "alt": "Casentino swimming pool project"},
+    {"src": "/images/portfolio/swimming-pools-11.jpg", "alt": "Casentino swimming pool project"},
+    {"src": "/images/portfolio/swimming-pools-12.jpg", "alt": "Casentino swimming pool project"},
+    {"src": "/images/portfolio/swimming-pools-13.jpg", "alt": "Swimming pool garden"},
+    {"src": "/images/portfolio/swimming-pools-14.jpg", "alt": "Swimming pool design detail"},
+    {"src": "/images/portfolio/swimming-pools-15.jpg", "alt": "Swimming pool design detail"},
+    {"src": "/images/portfolio/swimming-pools-16.jpg", "alt": "Porta swimming pool project"},
+    {"src": "/images/portfolio/swimming-pools-17.jpg", "alt": "Porta swimming pool project"},
+    {"src": "/images/portfolio/swimming-pools-18.jpg", "alt": "Campolungo swimming pool design"},
+    {"src": "/images/portfolio/swimming-pools-19.jpg", "alt": "Campolungo swimming pool design"},
+    {"src": "/images/portfolio/swimming-pools-20.jpg", "alt": "Campolungo swimming pool design"},
+    {"src": "/images/portfolio/swimming-pools-21.jpg", "alt": "Col d'Orcia swimming pool"},
+    {"src": "/images/portfolio/swimming-pools-22.jpg", "alt": "Col d'Orcia swimming pool"},
+    {"src": "/images/portfolio/swimming-pools-23.jpg", "alt": "Baldini swimming pool executive design"},
+    {"src": "/images/portfolio/swimming-pools-24.jpg", "alt": "Mirabello swimming pool project"},
+    {"src": "/images/portfolio/swimming-pools-25.jpg", "alt": "Mirabello swimming pool project"}
+  ]
 }

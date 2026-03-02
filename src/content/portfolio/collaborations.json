@@ -3,5 +3,22 @@
   "slug": "collaborations",
   "order": 6,
   "description": "Throughout my landscape architecture career, I have had the pleasure and honour of collaborating with talented architects, starting with Architect **Riccardina Burdo**, who enriched me for many years with her sensitivity for architectural composition, and Architect **Christina Kammereck**, with whom we often worked on renovation projects in the beautiful Tuscan countryside.\n\nA particularly fruitful collaboration is with **Claudio Petrini** - [Indalo](https://www.indalopiscine.com/en/index.html), an expert in pool technologies, with whom I develop innovative solutions for integrating swimming pools into landscape designs.\n\nFrom 2015 to 2017, I had the great opportunity to work under the excellent artistic direction of **Tony Woods** at [Garden Club London](https://gardenclublondon.co.uk/) as the chief architect: a fundamental experience that expanded my knowledge and understanding of the gardening world in London. Below are some of my drawings of projects completed by Garden Club London.",
-  "images": []
+  "images": [
+    {"src": "/images/portfolio/collaborations-1.jpg", "alt": "Collaboration project - landscape architecture partnership"},
+    {"src": "/images/portfolio/collaborations-2.jpg", "alt": "Collaboration project - joint garden design"},
+    {"src": "/images/portfolio/collaborations-3.jpg", "alt": "Collaboration project - collaborative landscape work"},
+    {"src": "/images/portfolio/collaborations-4.jpg", "alt": "Collaboration project - design partnership detail"},
+    {"src": "/images/portfolio/collaborations-5.jpg", "alt": "Collaboration project - joint outdoor design"},
+    {"src": "/images/portfolio/collaborations-6.jpg", "alt": "Collaboration project - collaborative garden installation"},
+    {"src": "/images/portfolio/collaborations-7.jpg", "alt": "Collaboration project - partnership landscape feature"},
+    {"src": "/images/portfolio/collaborations-8.jpg", "alt": "Collaboration project - joint design element"},
+    {"src": "/images/portfolio/collaborations-9.jpg", "alt": "Collaboration project - collaborative planting design"},
+    {"src": "/images/portfolio/collaborations-10.jpg", "alt": "Collaboration project - partnership garden work"},
+    {"src": "/images/portfolio/collaborations-11.jpg", "alt": "Collaboration project - joint landscape installation"},
+    {"src": "/images/portfolio/collaborations-12.jpg", "alt": "Collaboration project - collaborative outdoor design"},
+    {"src": "/images/portfolio/collaborations-13.jpg", "alt": "Collaboration project - design partnership feature"},
+    {"src": "/images/portfolio/collaborations-14.jpg", "alt": "Collaboration project - joint garden feature"},
+    {"src": "/images/portfolio/collaborations-15.jpg", "alt": "Collaboration project - collaborative landscape element"},
+    {"src": "/images/portfolio/collaborations-16.jpg", "alt": "Collaboration project - partnership design overview"}
+  ]
 }
