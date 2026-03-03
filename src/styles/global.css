@@ -8,15 +8,16 @@
 :root {
   --color-orange: #E87C1E;
   --color-dark: #3C3C3C;
-  --color-dark-bg: #333333;
-  --color-teal: #5B8E8E;
-  --color-tan: #D4B896;
+  --color-dark-bg: #404040;
+  --color-teal: #417586;
+  --color-tan: #FEE6C4;
   --color-light: #FAFAFA;
   --color-white: #FFFFFF;
   --color-text: #333333;
   --color-text-light: #EEEEEE;
-  --font-heading: 'Georgia', 'Times New Roman', serif;
-  --font-body: 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Quicksand', sans-serif;
+  --font-body: 'Quicksand', sans-serif;
+  --font-hero: 'Jost', sans-serif;
   --max-width: 1200px;
 }
 
@@ -130,15 +131,16 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .hero h2 {
-  font-family: var(--font-heading);
+  font-family: var(--font-hero);
   font-size: 1.8rem;
-  font-weight: normal;
+  font-weight: 300;
   max-width: 600px;
   margin: 0 auto;
 }
 
 .hero strong {
-  font-weight: bold;
+  font-family: var(--font-hero);
+  font-weight: 400;
 }
 
 /* ===== PORTFOLIO SECTION ===== */
