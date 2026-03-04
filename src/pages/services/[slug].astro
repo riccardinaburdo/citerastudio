@@ -51,13 +51,73 @@ const htmlContent = simpleMarkdown(service.content);
     <div class="service-gallery">
       {service.gallery.map((img: {src: string; alt: string; caption?: string; description?: string}) => (
         <div class="service-gallery-item">
-          <img src={img.src} alt={img.alt} />
+          <img src={img.src} alt={img.alt} class="gallery-clickable" />
           {img.caption && <h3>{img.caption}</h3>}
           {img.description && <p>{img.description}</p>}
         </div>
       ))}
     </div>
   )}
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightbox-close">&times;</button>
+    <button class="lightbox-prev" id="lightbox-prev">&#10094;</button>
+    <button class="lightbox-next" id="lightbox-next">&#10095;</button>
+    <img class="lightbox-img" id="lightbox-img" src="" alt="" />
+  </div>
+
+  <script>
+    const images = document.querySelectorAll('.gallery-clickable');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img') as HTMLImageElement;
+    const closeBtn = document.getElementById('lightbox-close');
+    const prevBtn = document.getElementById('lightbox-prev');
+    const nextBtn = document.getElementById('lightbox-next');
+    let currentIndex = 0;
+    const srcs = Array.from(images).map(img => (img as HTMLImageElement).src);
+
+    function openLightbox(index: number) {
+      currentIndex = index;
+      lightboxImg.src = srcs[currentIndex];
+      lightboxImg.alt = (images[currentIndex] as HTMLImageElement).alt;
+      lightbox!.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox!.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    images.forEach((img, i) => {
+      img.addEventListener('click', () => openLightbox(i));
+    });
+
+    closeBtn!.addEventListener('click', closeLightbox);
+    lightbox!.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    prevBtn!.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentIndex = (currentIndex - 1 + srcs.length) % srcs.length;
+      lightboxImg.src = srcs[currentIndex];
+    });
+
+    nextBtn!.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentIndex = (currentIndex + 1) % srcs.length;
+      lightboxImg.src = srcs[currentIndex];
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox!.classList.contains('active')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') prevBtn!.click();
+      if (e.key === 'ArrowRight') nextBtn!.click();
+    });
+  </script>
 
   {service.subPages && service.subPages.length > 0 && (
     <div class="service-subpages">

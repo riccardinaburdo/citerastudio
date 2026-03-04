@@ -1,0 +1,14 @@
+{
+  "title": "Plant list",
+  "slug": "plant-list",
+  "parent": "concept-design",
+  "content": "",
+  "gallery": [
+    {"src": "/images/services/plant-list/plant-1.jpg", "alt": "Plant list reference sheet 1"},
+    {"src": "/images/services/plant-list/plant-2.jpg", "alt": "Plant list reference sheet 2"},
+    {"src": "/images/services/plant-list/plant-3.jpg", "alt": "Plant list document 1"},
+    {"src": "/images/services/plant-list/plant-4.jpg", "alt": "Plant list document 2"},
+    {"src": "/images/services/plant-list/plant-5.jpg", "alt": "Plant species list 1"},
+    {"src": "/images/services/plant-list/plant-6.jpg", "alt": "Plant species list 2"}
+  ]
+}
