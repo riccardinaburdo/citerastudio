@@ -1,0 +1,12 @@
+{
+  "title": "Site Survey and Analysis",
+  "slug": "site-survey-and-analysis",
+  "step": 2,
+  "content": "A thorough site survey is the critical foundation of any successful landscape design project.\n\nWe conduct a detailed site analysis that includes:\n\n- Precise dimensional measurements\n- Comprehensive soil composition assessment\n- Detailed sunlight and microclimate evaluation\n- Comprehensive inventory of existing landscape features\n\nFor complex or extensive sites, we employ advanced technologies:\n\n- High-precision photogrammetry\n- Laser scanning detection\n- Three-dimensional point cloud terrain modeling\n\nThese advanced techniques allow us to:\n\n- Create a precise digital representation of the landscape\n- Provide clients with an immersive virtual project visualisation\n- Ensure accurate and detailed project planning\n\n**Aims and Purposes:**\n\n- Develop comprehensive site understanding\n- Identify potential challenges and opportunities\n- Create a detailed baseline for design interventions\n\n**Drawings and Documents Provided:**\n\n- Detailed three-dimensional terrain model\n- Compatible CAD format for architectural software integration\n- Comprehensive site analysis report",
+  "videoUrl": "https://video.wixstatic.com/video/11062b_e55321c53b02478b9bafa28958160488/1080p/mp4/file.mp4",
+  "gallery": [
+    {"src": "/images/services/survey-stage1.jpg", "alt": "First stage - 3D model superimposed on point cloud terrain", "caption": "First stage", "description": "In this phase, the three-dimensional model of the pool can be superimposed on the point cloud terrain model."},
+    {"src": "/images/services/survey-stage2.jpg", "alt": "Second stage - Stylized sketch of the intervention", "caption": "Second stage", "description": "In this second stage, a stylized sketch of the intervention can provide the client with an idea of how the finished product will appear."},
+    {"src": "/images/services/survey-stage3.jpg", "alt": "Third stage - Photorealistic rendering", "caption": "Third stage", "description": "In this final phase, control over the materials to be used can be further refined through photorealistic rendering."}
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "title": "Design Development",
+  "slug": "design-development",
+  "step": 4,
+  "content": "Following initial concept approval, we meticulously refine the design through:\n\n- Detailed planting scheme development\n- Precise hard landscaping specifications\n- Comprehensive material recommendations\n- Regulatory compliance verification\n\n**Aims and Purposes:**\n\n- Secure necessary regulatory approvals\n- Define precise intervention characteristics\n- Resolve technical design details\n- Ensure compliance with local regulations\n\n**Drawings and Documents Provided:**\n\n- Regulatory submission package (if required):\n  - Comprehensive design documentation\n- Specialised Technical Plans:\n  - Grading Plan: Exterior step elevations, Ramp specifications, Surface drainage structures, Utility line connections\n  - Detailed Planting Plan: Plant location mapping, Preservation of existing vegetation\n  - Comprehensive plant list with: Quantities, Size specifications, Varietal details\n- Construction Documentation:\n  - Detailed plans, sections, and elevations\n- Specific element designs: Retaining structures, Railings, Water features, Paving patterns, Irrigation system specifications, etc.",
+  "gallery": [
+    {"src": "/images/services/dev-1.jpg", "alt": "Garden design layout plan"},
+    {"src": "/images/services/dev-2.jpg", "alt": "Landscape planting plan"},
+    {"src": "/images/services/dev-3.jpg", "alt": "Garden technical drawing"},
+    {"src": "/images/services/dev-4.jpg", "alt": "Pool and garden design plan"},
+    {"src": "/images/services/dev-5.jpg", "alt": "Planting scheme detail"},
+    {"src": "/images/services/dev-6.jpg", "alt": "Landscape section drawing"},
+    {"src": "/images/services/dev-7.jpg", "alt": "Garden elevation drawing"},
+    {"src": "/images/services/dev-8.jpg", "alt": "Technical specification plan"},
+    {"src": "/images/services/dev-9.jpg", "alt": "Irrigation system plan"},
+    {"src": "/images/services/dev-10.jpg", "alt": "Construction detail drawing"},
+    {"src": "/images/services/dev-11.jpg", "alt": "Paving pattern plan"},
+    {"src": "/images/services/dev-12.jpg", "alt": "Water feature technical drawing"},
+    {"src": "/images/services/dev-13.jpg", "alt": "Site grading plan"}
+  ]
+}

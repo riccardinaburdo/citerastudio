@@ -317,7 +317,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .site-footer a {
-  color: var(--color-orange);
+  color: var(--color-white);
 }
 
 .site-footer a:hover {
@@ -452,6 +452,13 @@ h1, h2, h3, h4, h5, h6 {
   text-align: center;
 }
 
+.services-intro h1 {
+  font-size: 2.5rem;
+  font-weight: normal;
+  color: var(--color-white);
+  margin-bottom: 1.5rem;
+}
+
 .services-intro p {
   max-width: 800px;
   margin: 0 auto;
@@ -560,6 +567,91 @@ h1, h2, h3, h4, h5, h6 {
   color: #666;
   font-size: 0.9rem;
   line-height: 1.7;
+}
+
+.more-info-link {
+  display: inline-block;
+  margin-top: 0.8rem;
+  color: var(--color-orange);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.more-info-link:hover {
+  text-decoration: underline;
+}
+
+/* Service detail page */
+.service-detail li {
+  margin-bottom: 0.3rem;
+}
+
+.service-detail li.indent {
+  margin-left: 1.5rem;
+}
+
+.download-section {
+  text-align: center;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #eee;
+}
+
+.download-section h2 {
+  font-size: 2rem;
+  font-weight: normal;
+  margin-bottom: 1.5rem;
+}
+
+.btn-download {
+  display: inline-block;
+  padding: 0.7rem 2rem;
+  background: var(--color-orange);
+  color: var(--color-white) !important;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: opacity 0.3s;
+}
+
+.btn-download:hover {
+  opacity: 0.85;
+  text-decoration: none !important;
+}
+
+/* Service gallery */
+.service-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+.service-gallery-item {
+  text-align: center;
+}
+
+.service-gallery-item img {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-bottom: 0.8rem;
+}
+
+.service-gallery-item h3 {
+  font-size: 1.1rem;
+  color: var(--color-dark);
+  margin-bottom: 0.5rem;
+}
+
+.service-gallery-item p {
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.6;
 }
 
 /* ===== CONTACT FORM ===== */

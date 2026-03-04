@@ -1,11 +1,12 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import services from '../content/pages/services.json';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import services from '../../content/pages/services.json';
 ---
 
 <BaseLayout title="Services | citerastudio" currentPath="/services">
   <!-- Intro -->
   <section class="services-intro">
+    <h1>Our Services</h1>
     <p>{services.intro}</p>
   </section>
 
@@ -32,6 +33,9 @@ import services from '../content/pages/services.json';
           <div class="step-number">{step.number}</div>
           <h3>{step.title}</h3>
           <p>{step.description}</p>
+          {step.slug && (
+            <a href={`/services/${step.slug}`} class="more-info-link">More Info</a>
+          )}
         </div>
       ))}
     </div>

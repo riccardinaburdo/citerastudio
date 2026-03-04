@@ -1,0 +1,70 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+
+export function getStaticPaths() {
+  const servicesDir = path.join(process.cwd(), 'src/content/services');
+  const files = fs.readdirSync(servicesDir).filter(f => f.endsWith('.json'));
+  return files.map(f => {
+    const data = JSON.parse(fs.readFileSync(path.join(servicesDir, f), 'utf-8'));
+    return {
+      params: { slug: data.slug },
+      props: { service: data },
+    };
+  });
+}
+
+const { service } = Astro.props;
+
+function simpleMarkdown(text: string): string {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^  - (.+)$/gm, '<li class="indent">$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/\n\n/g, '</p><p>');
+}
+
+const htmlContent = simpleMarkdown(service.content);
+---
+
+<BaseLayout title={`Services - ${service.title} | citerastudio`} currentPath="/services">
+  <div class="page-header">
+    <h1>{service.title}</h1>
+  </div>
+
+  <div class="page-content service-detail">
+    <Fragment set:html={htmlContent} />
+  </div>
+
+  {service.videoUrl && (
+    <div class="video-container" style="max-width: 900px; margin: 2rem auto; padding: 0 2rem;">
+      <video controls preload="metadata">
+        <source src={service.videoUrl} type="video/mp4" />
+      </video>
+    </div>
+  )}
+
+  {service.gallery && service.gallery.length > 0 && (
+    <div class="service-gallery">
+      {service.gallery.map((img: {src: string; alt: string; caption?: string; description?: string}) => (
+        <div class="service-gallery-item">
+          <img src={img.src} alt={img.alt} />
+          {img.caption && <h3>{img.caption}</h3>}
+          {img.description && <p>{img.description}</p>}
+        </div>
+      ))}
+    </div>
+  )}
+
+  {service.downloadTitle && service.downloadUrl && (
+    <div class="download-section">
+      <h2>{service.downloadTitle}</h2>
+      <a href={service.downloadUrl} class="btn-download" target="_blank" rel="noopener noreferrer">
+        DOWNLOAD
+      </a>
+    </div>
+  )}
+</BaseLayout>
