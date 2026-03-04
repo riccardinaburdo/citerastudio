@@ -120,11 +120,13 @@ const htmlContent = simpleMarkdown(service.content);
   </script>
 
   {service.subPages && service.subPages.length > 0 && (
-    <div class="service-subpages">
+    <div class="service-subpages-stack">
       {service.subPages.map((sub: {title: string; slug: string; image: string}) => (
-        <a href={`/services/${sub.slug}`} class="service-subpage-card">
-          <img src={sub.image} alt={sub.title} />
-          <span>{sub.title}</span>
+        <a href={`/services/${sub.slug}`} class="service-banner" style={`background-image: url('${sub.image}')`}>
+          <div class="service-banner-overlay">
+            <h2>{sub.title}</h2>
+            <span class="btn-view-more">View more</span>
+          </div>
         </a>
       ))}
     </div>

@@ -571,14 +571,22 @@ h1, h2, h3, h4, h5, h6 {
 
 .more-info-link {
   display: inline-block;
-  margin-top: 0.8rem;
-  color: var(--color-orange);
-  font-size: 0.9rem;
+  margin-top: 1rem;
+  padding: 0.6rem 1.8rem;
+  background: var(--color-dark);
+  color: #fff;
+  text-decoration: none;
+  font-family: var(--font-heading);
   font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+  border: 2px solid var(--color-dark);
+  transition: background 0.3s, color 0.3s;
 }
 
 .more-info-link:hover {
-  text-decoration: underline;
+  background: transparent;
+  color: var(--color-dark);
 }
 
 /* Service detail page */
@@ -660,41 +668,63 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.6;
 }
 
-/* Service sub-pages (linked cards like Conceptual site plan, 3D renderings) */
-.service-subpages {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
-  max-width: 900px;
-  margin: 2rem auto;
-  padding: 0 2rem;
+/* Service sub-pages (full-width banners) */
+.service-subpages-stack {
+  display: flex;
+  flex-direction: column;
 }
 
-.service-subpage-card {
-  display: block;
-  text-align: center;
+.service-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  background-size: cover;
+  background-position: center;
   text-decoration: none;
-  color: var(--color-dark);
-  transition: transform 0.2s;
+  position: relative;
 }
 
-.service-subpage-card:hover {
-  transform: translateY(-3px);
-}
-
-.service-subpage-card img {
+.service-banner-overlay {
+  text-align: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 3rem 4rem;
   width: 100%;
-  height: 220px;
-  object-fit: cover;
-  border-radius: 5px;
-  margin-bottom: 0.8rem;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
 }
 
-.service-subpage-card span {
-  display: block;
+.service-banner:hover .service-banner-overlay {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.service-banner-overlay h2 {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
+  font-size: 2.2rem;
   font-weight: 600;
+  color: #fff;
+  margin-bottom: 1.5rem;
+}
+
+.btn-view-more {
+  display: inline-block;
+  padding: 0.7rem 2rem;
+  border: 2px solid #fff;
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: background 0.3s, color 0.3s;
+}
+
+.btn-view-more:hover {
+  background: #fff;
   color: var(--color-dark);
 }
 
