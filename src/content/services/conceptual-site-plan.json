@@ -1,0 +1,17 @@
+{
+  "title": "Conceptual site plan",
+  "slug": "conceptual-site-plan",
+  "parent": "concept-design",
+  "content": "",
+  "gallery": [
+    {"src": "/images/services/conceptual-site-plan/plan-1.jpg", "alt": "Conceptual site plan 1"},
+    {"src": "/images/services/conceptual-site-plan/plan-2.jpg", "alt": "Conceptual site plan 2"},
+    {"src": "/images/services/conceptual-site-plan/plan-3.jpg", "alt": "Conceptual site plan 3"},
+    {"src": "/images/services/conceptual-site-plan/plan-5.jpg", "alt": "Conceptual site plan 5"},
+    {"src": "/images/services/conceptual-site-plan/plan-6.jpg", "alt": "Conceptual site plan 6"},
+    {"src": "/images/services/conceptual-site-plan/plan-7.jpg", "alt": "Conceptual site plan 7"},
+    {"src": "/images/services/conceptual-site-plan/plan-8.jpg", "alt": "Conceptual site plan 8"},
+    {"src": "/images/services/conceptual-site-plan/plan-9.jpg", "alt": "Conceptual site plan 9"},
+    {"src": "/images/services/conceptual-site-plan/plan-10.jpg", "alt": "Conceptual site plan 10"}
+  ]
+}

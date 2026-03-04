@@ -59,6 +59,17 @@ const htmlContent = simpleMarkdown(service.content);
     </div>
   )}
 
+  {service.subPages && service.subPages.length > 0 && (
+    <div class="service-subpages">
+      {service.subPages.map((sub: {title: string; slug: string; image: string}) => (
+        <a href={`/services/${sub.slug}`} class="service-subpage-card">
+          <img src={sub.image} alt={sub.title} />
+          <span>{sub.title}</span>
+        </a>
+      ))}
+    </div>
+  )}
+
   {service.downloadTitle && service.downloadUrl && (
     <div class="download-section">
       <h2>{service.downloadTitle}</h2>

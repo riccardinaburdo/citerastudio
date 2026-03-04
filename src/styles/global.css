@@ -654,6 +654,44 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.6;
 }
 
+/* Service sub-pages (linked cards like Conceptual site plan, 3D renderings) */
+.service-subpages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+.service-subpage-card {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: var(--color-dark);
+  transition: transform 0.2s;
+}
+
+.service-subpage-card:hover {
+  transform: translateY(-3px);
+}
+
+.service-subpage-card img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-bottom: 0.8rem;
+}
+
+.service-subpage-card span {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-dark);
+}
+
 /* ===== CONTACT FORM ===== */
 .contact-layout {
   max-width: 700px;
