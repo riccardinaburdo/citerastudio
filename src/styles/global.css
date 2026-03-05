@@ -445,18 +445,50 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ===== SERVICES PAGE ===== */
+.services-hero {
+  background-size: cover;
+  background-position: center;
+  min-height: 450px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.services-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.services-hero h1 {
+  position: relative;
+  font-size: 2.8rem;
+  font-weight: normal;
+  color: var(--color-dark);
+  font-family: var(--font-heading);
+}
+
+.services-intro-text {
+  background: var(--color-tan);
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.services-intro-text p {
+  max-width: 800px;
+  margin: 0 auto;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--color-dark);
+}
+
 .services-intro {
   background: var(--color-dark-bg);
   color: var(--color-text-light);
   padding: 4rem 2rem;
   text-align: center;
-}
-
-.services-intro h1 {
-  font-size: 2.5rem;
-  font-weight: normal;
-  color: var(--color-white);
-  margin-bottom: 1.5rem;
 }
 
 .services-intro p {
