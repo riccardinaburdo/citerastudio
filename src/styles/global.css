@@ -107,7 +107,11 @@ h1, h2, h3, h4, h5, h6 {
   transition: background 0.3s, color 0.3s;
 }
 
-.site-nav a:hover,
+.site-nav a:hover {
+  background: var(--color-orange);
+  color: var(--color-white);
+}
+
 .site-nav a.active {
   background: var(--color-brown);
   color: var(--color-white);
