@@ -542,6 +542,17 @@ h1, h2, h3, h4, h5, h6 {
 .step-card {
   text-align: center;
   padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-card p {
+  flex: 1;
+}
+
+.step-card .more-info-link {
+  margin-top: auto;
 }
 
 .step-number {
