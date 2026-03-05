@@ -455,19 +455,13 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
 }
 
-.services-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.25);
-}
-
 .services-hero h1 {
-  position: relative;
   font-size: 2.8rem;
   font-weight: normal;
-  color: var(--color-dark);
+  color: #fff;
   font-family: var(--font-heading);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1rem 3rem;
 }
 
 .services-intro-text {
