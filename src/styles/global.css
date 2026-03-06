@@ -945,7 +945,7 @@ main {
 .contact-form button {
   align-self: center;
   padding: 0.8rem 3rem;
-  background: #000000;
+  background: var(--color-dark-bg);
   color: var(--color-white);
   border: none;
   border-radius: 0;
