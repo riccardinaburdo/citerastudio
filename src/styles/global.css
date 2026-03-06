@@ -129,13 +129,17 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
 }
 
+/* ===== MAIN CONTENT SPACING ===== */
+main {
+  margin-top: 2rem;
+}
+
 /* ===== HERO ===== */
 .hero {
   background: var(--color-dark-bg);
   color: var(--color-text-light);
   text-align: center;
   padding: 4rem 2rem;
-  margin-top: 2rem;
 }
 
 .hero h2 {
