@@ -190,6 +190,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .portfolio-grid .center-image {
   max-width: 280px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  padding: 6px;
 }
 
 .center-image img {
@@ -200,23 +202,28 @@ h1, h2, h3, h4, h5, h6 {
 .portfolio-link {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   color: var(--color-white);
   font-family: var(--font-heading);
   font-size: 1.1rem;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s, border-color 0.3s;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  width: 280px;
+  height: 52px;
 }
 
 .portfolio-link:hover {
   opacity: 0.8;
+  border-color: rgba(255, 255, 255, 0.8);
 }
 
 .portfolio-link.left {
-  justify-content: flex-end;
+  margin-left: auto;
 }
 
 .portfolio-link.right {
-  justify-content: flex-start;
+  margin-right: auto;
 }
 
 .portfolio-link .arrow {
