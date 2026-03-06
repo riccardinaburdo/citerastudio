@@ -323,7 +323,7 @@ main {
   background: var(--color-dark-bg);
   color: var(--color-white);
   padding: 2rem;
-  text-align: left;
+  text-align: center;
 }
 
 .site-footer p {
