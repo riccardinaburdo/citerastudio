@@ -11,8 +11,7 @@ import contact from '../content/pages/contact.json';
       <p style="margin-top: 1rem;">{contact.message}</p>
     </div>
 
-    <form class="contact-form" name="contact" method="POST" data-netlify="true">
-      <input type="hidden" name="form-name" value="contact" />
+    <form class="contact-form" id="contact-form">
       <div class="form-row">
         <div>
           <label for="firstName">First Name</label>
@@ -40,4 +39,25 @@ import contact from '../content/pages/contact.json';
       <button type="submit">Submit</button>
     </form>
   </div>
+
+  <script define:vars={{ email: contact.email }}>
+    document.getElementById('contact-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const firstName = document.getElementById('firstName').value;
+      const lastName = document.getElementById('lastName').value;
+      const senderEmail = document.getElementById('email').value;
+      const phone = document.getElementById('phone').value;
+      const message = document.getElementById('message').value;
+
+      const subject = encodeURIComponent('Contact from ' + firstName + ' ' + lastName);
+      const body = encodeURIComponent(
+        'From: ' + firstName + ' ' + lastName + '\n' +
+        'Email: ' + senderEmail + '\n' +
+        (phone ? 'Phone: ' + phone + '\n' : '') +
+        '\n' + message
+      );
+
+      window.location.href = 'mailto:' + email + '?subject=' + subject + '&body=' + body;
+    });
+  </script>
 </BaseLayout>
