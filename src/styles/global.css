@@ -1111,6 +1111,7 @@ main {
   justify-content: center;
   gap: 2rem;
   padding: 3rem 2rem;
+  margin-bottom: 3rem;
   background: var(--color-dark-bg);
 }
 
