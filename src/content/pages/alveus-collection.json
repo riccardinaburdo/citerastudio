@@ -1,0 +1,22 @@
+{
+  "title": "Key Features",
+  "features": [
+    {"label": "Luxurious Design", "text": "Crafted with premium materials and sleek aesthetics for a sophisticated look."},
+    {"label": "Advanced Hydrotherapy", "text": "Equipped with powerful bubble jets to provide the ultimate relaxation experience."},
+    {"label": "Efficient Heating System", "text": "Utilizes cutting-edge technology to maintain optimal water temperature for extended enjoyment."},
+    {"label": "Smart Controls", "text": "Easily manage temperature, jet strength, and lighting with intuitive controls for effortless customization."},
+    {"label": "Enhanced Comfort Features", "text": "Includes ergonomic seating, cushioned headrests, and LED lighting to enhance comfort and ambiance."},
+    {"label": "Durable Construction", "text": "Built to last with high-quality ecological materials, ensuring years of enjoyment with minimal maintenance: Geopolymers and Cocciopesto."}
+  ],
+  "gallery": [
+    {"src": "/images/alveus/hydria.jpg", "name": "Hydria"},
+    {"src": "/images/alveus/hydria-bronze.jpg", "name": "Hydria - Bronze"},
+    {"src": "/images/alveus/hydria-copper.jpg", "name": "Hydria - Copper"},
+    {"src": "/images/alveus/hydria-earth.jpg", "name": "Hydria - Earth"},
+    {"src": "/images/alveus/hydria-clay.jpg", "name": "Hydria - Clay"},
+    {"src": "/images/alveus/hydria-sky.jpg", "name": "Hydria - Sky"},
+    {"src": "/images/alveus/hydria-cotto.jpg", "name": "Hydria - Cotto"},
+    {"src": "/images/alveus/kylix.jpg", "name": "Kylix"},
+    {"src": "/images/alveus/pithos.jpg", "name": "Pithos"}
+  ]
+}

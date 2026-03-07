@@ -1,10 +1,11 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import data from '../../content/pages/alveus-technology.json';
 ---
 
 <BaseLayout title="Alveus Technology | citerastudio" currentPath="/alveus-project">
   <div class="page-header">
-    <h1>Technology</h1>
+    <h1>{data.title}</h1>
   </div>
 
   <section class="alveus-hero">
@@ -13,35 +14,24 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   <div class="page-content alveus-content">
     <ul class="features-list">
-      <li><strong>Luxurious Design:</strong> Crafted with premium materials and sleek aesthetics for a sophisticated look.</li>
-      <li><strong>Advanced Hydrotherapy:</strong> Equipped with powerful bubble jets to provide the ultimate relaxation experience.</li>
-      <li><strong>Efficient Heating System:</strong> Utilizes cutting-edge technology to maintain optimal water temperature for extended enjoyment.</li>
-      <li><strong>Smart Controls:</strong> Easily manage temperature, jet strength, and lighting with intuitive controls for effortless customization.</li>
-      <li><strong>Enhanced Comfort Features:</strong> Includes ergonomic seating, cushioned headrests, and LED lighting to enhance comfort and ambiance.</li>
-      <li><strong>Durable Construction:</strong> Built to last with high-quality ecological materials, ensuring years of enjoyment with minimal maintenance: Geopolymers and Cocciopesto.</li>
+      {data.features.map((f) => (
+        <li><strong>{f.label}:</strong> {f.text}</li>
+      ))}
     </ul>
   </div>
 
   <div class="page-content alveus-content alveus-materials">
-    <div class="material-section">
-      <div class="material-text">
-        <h2>Geopolymers</h2>
-        <p>Geopolymers are a type of synthetic material derived from natural minerals and industrial by-products. They have been utilized since ancient times for various applications due to their remarkable properties. In ancient civilizations, geopolymers were commonly employed in construction, pottery, and as binders for aggregates. These materials offered advantages such as durability, fire resistance, and the ability to set underwater, making them invaluable for ancient builders and craftsmen. Today, geopolymers continue to be researched and utilized in modern construction, infrastructure, and environmental remediation projects, showcasing their enduring relevance and versatility across millennia.</p>
+    {data.materials.map((mat, i) => (
+      <div class={`material-section ${i % 2 !== 0 ? 'reverse' : ''}`}>
+        <div class="material-text">
+          <h2>{mat.name}</h2>
+          <p>{mat.description}</p>
+        </div>
+        <div class="material-image">
+          <img src={mat.image} alt={mat.name} />
+        </div>
       </div>
-      <div class="material-image">
-        <img src="/images/alveus/geopolymers.jpg" alt="Geopolymers" />
-      </div>
-    </div>
-
-    <div class="material-section reverse">
-      <div class="material-text">
-        <h2>Cocciopesto</h2>
-        <p>Cocciopesto is an ancient construction and coating technique used in ancient Rome and other Mediterranean civilizations. It consists of a mixture of lime, sand, and fragments of ceramics or terracotta shards. In Roman baths, cocciopesto was primarily used to line the walls and floors of hot and humid rooms, such as saunas, hot pools, and baths. This material provided a durable and waterproof surface, essential for maintaining the thermal environment in hygienic and functional conditions. Additionally, cocciopesto offered beneficial thermal properties, contributing to the maintenance of a constant temperature within the thermal rooms, enhancing the overall bathing experience.</p>
-      </div>
-      <div class="material-image">
-        <img src="/images/alveus/cocciopesto.jpg" alt="Cocciopesto" />
-      </div>
-    </div>
+    ))}
   </div>
 
   <div class="alveus-subnav">

@@ -1,41 +1,47 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import data from '../../content/pages/alveus-team.json';
 ---
 
 <BaseLayout title="Alveus Team | citerastudio" currentPath="/alveus-project">
   <div class="page-header">
-    <h1>Team</h1>
+    <h1>{data.title}</h1>
   </div>
 
   <div class="page-content alveus-content" style="text-align: center;">
-    <p>The Alveus project was born from Vito and Claudio's innovative vision to introduce a groundbreaking outdoor hot tub concept to the market.</p>
-    <p>Leveraging the expertise of numerous specialists in advanced materials and 3D printing technologies, the project aims to revolutionize the outdoor thermal bath experience.</p>
-    <p>We are currently seeking a third co-founder to help expand our hot tub solution across the European market, with a primary initial focus on Italy and the United Kingdom. Our goal is to bring a fresh, technologically advanced approach to outdoor wellness and relaxation.</p>
+    {data.intro.split('\n\n').map((p) => (
+      <p>{p}</p>
+    ))}
   </div>
 
   <div class="team-members">
-    <div class="team-member">
-      <div class="team-photo">
-        <img src="/images/alveus/vito.jpg" alt="Vito Depalo" />
+    {data.members.map((member, i) => (
+      <div class={`team-member ${i % 2 !== 0 ? 'reverse' : ''}`}>
+        {i % 2 === 0 ? (
+          <>
+            <div class="team-photo">
+              <img src={member.photo} alt={member.name} />
+            </div>
+            <div class="team-info">
+              <h2>{member.name}</h2>
+              <h3>{member.role}</h3>
+              {member.bio.split('\n\n').map((p) => <p>{p}</p>)}
+            </div>
+          </>
+        ) : (
+          <>
+            <div class="team-info">
+              <h2>{member.name}</h2>
+              <h3>{member.role}</h3>
+              {member.bio.split('\n\n').map((p) => <p>{p}</p>)}
+            </div>
+            <div class="team-photo">
+              <img src={member.photo} alt={member.name} />
+            </div>
+          </>
+        )}
       </div>
-      <div class="team-info">
-        <h2>Vito Depalo</h2>
-        <h3>Lead designer</h3>
-        <p>For over 35 years, a landscape architect and garden designer has been designing parks, gardens and terraces in both Italy and London, both public and private, with careful attention to detail and quality.</p>
-      </div>
-    </div>
-
-    <div class="team-member reverse">
-      <div class="team-info">
-        <h2>Claudio Petrini</h2>
-        <h3>Product manager</h3>
-        <p>Trained in technical expertise, today collaborates with Indalo Piscine Srl in applied research and the use of materials and technologies for the functional and aesthetic aspects of swimming pools, including linings and accessories.</p>
-        <p>An expert in construction methods, supports both architects and structural engineers in finding functional solutions to enhance projects.</p>
-      </div>
-      <div class="team-photo">
-        <img src="/images/alveus/claudio.jpg" alt="Claudio Petrini" />
-      </div>
-    </div>
+    ))}
   </div>
 
   <div class="alveus-subnav">

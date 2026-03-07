@@ -1,60 +1,28 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import data from '../../content/pages/alveus-collection.json';
 ---
 
 <BaseLayout title="Alveus Collection | citerastudio" currentPath="/alveus-project">
   <div class="page-header">
-    <h1>Key Features</h1>
+    <h1>{data.title}</h1>
   </div>
 
   <div class="page-content alveus-content">
     <ul class="features-list">
-      <li><strong>Luxurious Design:</strong> Crafted with premium materials and sleek aesthetics for a sophisticated look.</li>
-      <li><strong>Advanced Hydrotherapy:</strong> Equipped with powerful bubble jets to provide the ultimate relaxation experience.</li>
-      <li><strong>Efficient Heating System:</strong> Utilizes cutting-edge technology to maintain optimal water temperature for extended enjoyment.</li>
-      <li><strong>Smart Controls:</strong> Easily manage temperature, jet strength, and lighting with intuitive controls for effortless customization.</li>
-      <li><strong>Enhanced Comfort Features:</strong> Includes ergonomic seating, cushioned headrests, and LED lighting to enhance comfort and ambiance.</li>
-      <li><strong>Durable Construction:</strong> Built to last with high-quality ecological materials, ensuring years of enjoyment with minimal maintenance: Geopolymers and Cocciopesto.</li>
+      {data.features.map((f) => (
+        <li><strong>{f.label}:</strong> {f.text}</li>
+      ))}
     </ul>
   </div>
 
   <div class="alveus-gallery">
-    <div class="gallery-item">
-      <img src="/images/alveus/hydria.jpg" alt="Hydria" />
-      <p>Hydria</p>
-    </div>
-    <div class="gallery-item">
-      <img src="/images/alveus/hydria-bronze.jpg" alt="Hydria - Bronze" />
-      <p>Hydria - Bronze</p>
-    </div>
-    <div class="gallery-item">
-      <img src="/images/alveus/hydria-copper.jpg" alt="Hydria - Copper" />
-      <p>Hydria - Copper</p>
-    </div>
-    <div class="gallery-item">
-      <img src="/images/alveus/hydria-earth.jpg" alt="Hydria - Earth" />
-      <p>Hydria - Earth</p>
-    </div>
-    <div class="gallery-item">
-      <img src="/images/alveus/hydria-clay.jpg" alt="Hydria - Clay" />
-      <p>Hydria - Clay</p>
-    </div>
-    <div class="gallery-item">
-      <img src="/images/alveus/hydria-sky.jpg" alt="Hydria - Sky" />
-      <p>Hydria - Sky</p>
-    </div>
-    <div class="gallery-item">
-      <img src="/images/alveus/hydria-cotto.jpg" alt="Hydria - Cotto" />
-      <p>Hydria - Cotto</p>
-    </div>
-    <div class="gallery-item">
-      <img src="/images/alveus/kylix.jpg" alt="Kylix" />
-      <p>Kylix</p>
-    </div>
-    <div class="gallery-item">
-      <img src="/images/alveus/pithos.jpg" alt="Pithos" />
-      <p>Pithos</p>
-    </div>
+    {data.gallery.map((item) => (
+      <div class="gallery-item">
+        <img src={item.src} alt={item.name} />
+        <p>{item.name}</p>
+      </div>
+    ))}
   </div>
 
   <div class="alveus-subnav">

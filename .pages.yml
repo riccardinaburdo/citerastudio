@@ -41,6 +41,43 @@ content:
         label: Houzz URL
         type: string
 
+  - name: services
+    label: Services
+    path: src/content/pages/services.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: intro
+        label: Introduzione
+        type: rich-text
+      - name: whatWeDo
+        label: Cosa facciamo
+        type: object
+        list: true
+        fields:
+          - name: title
+            label: Titolo
+            type: string
+          - name: description
+            label: Descrizione
+            type: rich-text
+      - name: howWeDo
+        label: Come lo facciamo
+        type: object
+        list: true
+        fields:
+          - name: number
+            label: Numero
+            type: string
+          - name: title
+            label: Titolo
+            type: string
+          - name: description
+            label: Descrizione
+            type: rich-text
+
   - name: contact
     label: Contact
     path: src/content/pages/contact.json
@@ -76,6 +113,100 @@ content:
       - name: videoUrl
         label: Video URL
         type: string
+
+  - name: alveus-collection
+    label: Alveus Collection
+    path: src/content/pages/alveus-collection.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: features
+        label: Features
+        type: object
+        list: true
+        fields:
+          - name: label
+            label: Nome
+            type: string
+          - name: text
+            label: Descrizione
+            type: string
+      - name: gallery
+        label: Galleria
+        type: object
+        list: true
+        fields:
+          - name: src
+            label: Immagine
+            type: image
+          - name: name
+            label: Nome modello
+            type: string
+
+  - name: alveus-technology
+    label: Alveus Technology
+    path: src/content/pages/alveus-technology.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: features
+        label: Features
+        type: object
+        list: true
+        fields:
+          - name: label
+            label: Nome
+            type: string
+          - name: text
+            label: Descrizione
+            type: string
+      - name: materials
+        label: Materiali
+        type: object
+        list: true
+        fields:
+          - name: name
+            label: Nome
+            type: string
+          - name: description
+            label: Descrizione
+            type: rich-text
+          - name: image
+            label: Immagine
+            type: image
+
+  - name: alveus-team
+    label: Alveus Team
+    path: src/content/pages/alveus-team.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: intro
+        label: Introduzione
+        type: rich-text
+      - name: members
+        label: Membri
+        type: object
+        list: true
+        fields:
+          - name: name
+            label: Nome
+            type: string
+          - name: role
+            label: Ruolo
+            type: string
+          - name: bio
+            label: Biografia
+            type: rich-text
+          - name: photo
+            label: Foto
+            type: image
 
   - name: footer
     label: Footer

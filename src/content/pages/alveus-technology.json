@@ -1,0 +1,23 @@
+{
+  "title": "Technology",
+  "features": [
+    {"label": "Luxurious Design", "text": "Crafted with premium materials and sleek aesthetics for a sophisticated look."},
+    {"label": "Advanced Hydrotherapy", "text": "Equipped with powerful bubble jets to provide the ultimate relaxation experience."},
+    {"label": "Efficient Heating System", "text": "Utilizes cutting-edge technology to maintain optimal water temperature for extended enjoyment."},
+    {"label": "Smart Controls", "text": "Easily manage temperature, jet strength, and lighting with intuitive controls for effortless customization."},
+    {"label": "Enhanced Comfort Features", "text": "Includes ergonomic seating, cushioned headrests, and LED lighting to enhance comfort and ambiance."},
+    {"label": "Durable Construction", "text": "Built to last with high-quality ecological materials, ensuring years of enjoyment with minimal maintenance: Geopolymers and Cocciopesto."}
+  ],
+  "materials": [
+    {
+      "name": "Geopolymers",
+      "description": "Geopolymers are a type of synthetic material derived from natural minerals and industrial by-products. They have been utilized since ancient times for various applications due to their remarkable properties. In ancient civilizations, geopolymers were commonly employed in construction, pottery, and as binders for aggregates. These materials offered advantages such as durability, fire resistance, and the ability to set underwater, making them invaluable for ancient builders and craftsmen. Today, geopolymers continue to be researched and utilized in modern construction, infrastructure, and environmental remediation projects, showcasing their enduring relevance and versatility across millennia.",
+      "image": "/images/alveus/geopolymers.jpg"
+    },
+    {
+      "name": "Cocciopesto",
+      "description": "Cocciopesto is an ancient construction and coating technique used in ancient Rome and other Mediterranean civilizations. It consists of a mixture of lime, sand, and fragments of ceramics or terracotta shards. In Roman baths, cocciopesto was primarily used to line the walls and floors of hot and humid rooms, such as saunas, hot pools, and baths. This material provided a durable and waterproof surface, essential for maintaining the thermal environment in hygienic and functional conditions. Additionally, cocciopesto offered beneficial thermal properties, contributing to the maintenance of a constant temperature within the thermal rooms, enhancing the overall bathing experience.",
+      "image": "/images/alveus/cocciopesto.jpg"
+    }
+  ]
+}

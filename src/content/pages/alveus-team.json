@@ -1,0 +1,18 @@
+{
+  "title": "Team",
+  "intro": "The Alveus project was born from Vito and Claudio's innovative vision to introduce a groundbreaking outdoor hot tub concept to the market.\n\nLeveraging the expertise of numerous specialists in advanced materials and 3D printing technologies, the project aims to revolutionize the outdoor thermal bath experience.\n\nWe are currently seeking a third co-founder to help expand our hot tub solution across the European market, with a primary initial focus on Italy and the United Kingdom. Our goal is to bring a fresh, technologically advanced approach to outdoor wellness and relaxation.",
+  "members": [
+    {
+      "name": "Vito Depalo",
+      "role": "Lead designer",
+      "bio": "For over 35 years, a landscape architect and garden designer has been designing parks, gardens and terraces in both Italy and London, both public and private, with careful attention to detail and quality.",
+      "photo": "/images/alveus/vito.jpg"
+    },
+    {
+      "name": "Claudio Petrini",
+      "role": "Product manager",
+      "bio": "Trained in technical expertise, today collaborates with Indalo Piscine Srl in applied research and the use of materials and technologies for the functional and aesthetic aspects of swimming pools, including linings and accessories.\n\nAn expert in construction methods, supports both architects and structural engineers in finding functional solutions to enhance projects.",
+      "photo": "/images/alveus/claudio.jpg"
+    }
+  ]
+}
