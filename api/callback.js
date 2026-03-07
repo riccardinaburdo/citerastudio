@@ -4,7 +4,8 @@ export default async function handler(req, res) {
   const clientSecret = process.env.OAUTH_CLIENT_SECRET;
 
   if (!code || !clientId || !clientSecret) {
-    return res.status(400).json({ error: 'Missing parameters' });
+    res.status(400).json({ error: 'Missing parameters' });
+    return;
   }
 
   try {
