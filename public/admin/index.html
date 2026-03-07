@@ -7,6 +7,26 @@
   <title>CiteraStudio - Admin</title>
 </head>
 <body>
+  <script>
+    window.CMS_MANUAL_INIT = true;
+  </script>
   <script src="https://unpkg.com/decap-cms@^3.3.3/dist/decap-cms.js"></script>
+  <script>
+    CMS.init({
+      config: {
+        backend: {
+          name: 'github',
+          repo: 'riccardinaburdo/citerastudio',
+          branch: 'main',
+          base_url: 'https://citerastudio.vercel.app',
+          auth_endpoint: '/api/auth'
+        },
+        media_folder: 'public/images',
+        public_folder: '/images',
+        locale: 'it',
+        load_config_file: true
+      }
+    });
+  </script>
 </body>
 </html>
