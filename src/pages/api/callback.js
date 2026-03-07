@@ -7,7 +7,7 @@ export async function GET({ request }) {
   const clientSecret = import.meta.env.OAUTH_CLIENT_SECRET;
 
   if (!code || !clientId || !clientSecret) {
-    return new Response(JSON.stringify({ error: 'Missing parameters' }), { status: 400 });
+    return new Response('Missing parameters', { status: 400 });
   }
 
   try {
@@ -26,33 +26,34 @@ export async function GET({ request }) {
 
     const data = await response.json();
 
-    if (data.error) {
-      const errorHtml = `<!DOCTYPE html><html><body><script>
-        window.opener && window.opener.postMessage(
-          'authorization:github:error:${JSON.stringify(data)}',
-          window.opener.location.origin
-        );
-      </script></body></html>`;
-      return new Response(errorHtml, { status: 200, headers: { 'Content-Type': 'text/html' } });
+    if (data.error || !data.access_token) {
+      const html = `<!DOCTYPE html><html><body><script>
+        var msg = "authorization:github:error:" + JSON.stringify(${JSON.stringify(data)});
+        if (window.opener) {
+          window.opener.postMessage(msg, "*");
+        }
+        window.close();
+      </script><p>Auth error. You can close this window.</p></body></html>`;
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
     }
 
     const token = data.access_token;
-    const provider = 'github';
-
     const html = `<!DOCTYPE html><html><body><script>
-      var data = { token: "${token}", provider: "${provider}" };
-      var msg = "authorization:github:success:" + JSON.stringify(data);
-      if (window.opener) {
-        window.opener.postMessage(msg, window.opener.location.origin);
-      }
-      window.close();
-    </script></body></html>`;
+      (function() {
+        var content = JSON.stringify({ token: "${token}", provider: "github" });
+        var msg = "authorization:github:success:" + content;
+        if (window.opener) {
+          window.opener.postMessage(msg, "*");
+          window.close();
+        }
+      })();
+    </script><p>Authenticating... you can close this window if it doesn't close automatically.</p></body></html>`;
 
     return new Response(html, {
       status: 200,
       headers: { 'Content-Type': 'text/html' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response('Error: ' + err.message, { status: 500 });
   }
 }
