@@ -5,28 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
   <title>CiteraStudio - Admin</title>
+  <link href="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.css" rel="stylesheet" />
 </head>
 <body>
-  <script>
-    window.CMS_MANUAL_INIT = true;
-  </script>
-  <script src="https://unpkg.com/decap-cms@^3.3.3/dist/decap-cms.js"></script>
-  <script>
-    CMS.init({
-      config: {
-        backend: {
-          name: 'github',
-          repo: 'riccardinaburdo/citerastudio',
-          branch: 'main',
-          base_url: 'https://citerastudio.vercel.app',
-          auth_endpoint: '/api/auth'
-        },
-        media_folder: 'public/images',
-        public_folder: '/images',
-        locale: 'it',
-        load_config_file: true
-      }
-    });
-  </script>
+  <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script>
 </body>
 </html>

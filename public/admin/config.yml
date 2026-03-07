@@ -2,8 +2,6 @@ backend:
   name: github
   repo: riccardinaburdo/citerastudio
   branch: main
-  base_url: https://citerastudio.vercel.app
-  auth_endpoint: /api/auth
 
 media_folder: "public/images"
 public_folder: "/images"
