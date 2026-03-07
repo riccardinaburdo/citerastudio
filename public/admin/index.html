@@ -6,48 +6,30 @@
   <meta name="robots" content="noindex" />
   <title>CiteraStudio - Admin</title>
   <style>
-    .login-screen {
+    body {
       display: flex; flex-direction: column; align-items: center;
       justify-content: center; height: 100vh;
       font-family: 'Quicksand', sans-serif; background: #fafafa;
+      margin: 0;
     }
-    .login-screen h1 { color: #FB8503; margin-bottom: 1rem; font-size: 2.5rem; }
-    .login-screen p { color: #666; max-width: 500px; text-align: center; margin-bottom: 1.5rem; line-height: 1.6; }
-    .login-screen input { padding: 0.8rem 1rem; width: 400px; max-width: 90vw; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; margin-bottom: 1rem; }
-    .login-screen button { padding: 0.8rem 2rem; background: #404040; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
-    .login-screen button:hover { background: #FB8503; }
-    .login-screen a { color: #FB8503; }
+    h1 { color: #FB8503; margin-bottom: 0.5rem; font-size: 2.5rem; }
+    h2 { color: #404040; font-weight: 400; margin-bottom: 2rem; }
+    .btn {
+      display: inline-block; padding: 1rem 2.5rem;
+      background: #404040; color: white; text-decoration: none;
+      border-radius: 4px; font-size: 1.1rem; font-family: inherit;
+      transition: background 0.3s;
+    }
+    .btn:hover { background: #FB8503; }
+    p { color: #888; margin-top: 2rem; font-size: 0.9rem; }
   </style>
 </head>
 <body>
-  <script>
-    // Check for stored token
-    var stored = localStorage.getItem('netlify-cms-user');
-    if (!stored || !JSON.parse(stored).token) {
-      // Show login form
-      document.write(
-        '<div class="login-screen">' +
-        '<h1>citerastudio</h1>' +
-        '<p>Per accedere al CMS, inserisci un GitHub Personal Access Token.<br><br>' +
-        'Creane uno su <a href="https://github.com/settings/tokens/new?scopes=repo&description=CiteraStudio+CMS" target="_blank">GitHub &rarr; Settings &rarr; Tokens (classic)</a><br>' +
-        'Seleziona il permesso <strong>repo</strong> e clicca "Generate token".</p>' +
-        '<input type="password" id="token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />' +
-        '<button id="login-btn">Accedi</button>' +
-        '</div>'
-      );
-      document.getElementById('login-btn').addEventListener('click', function() {
-        var token = document.getElementById('token-input').value.trim();
-        if (token) {
-          localStorage.setItem('netlify-cms-user', JSON.stringify({ token: token }));
-          window.location.reload();
-        }
-      });
-    } else {
-      // Load CMS
-      var script = document.createElement('script');
-      script.src = 'https://unpkg.com/decap-cms@^3.3.3/dist/decap-cms.js';
-      document.body.appendChild(script);
-    }
-  </script>
+  <h1>citerastudio</h1>
+  <h2>Content Manager</h2>
+  <a class="btn" href="https://pagescms.org/edit/riccardinaburdo/citerastudio/" target="_blank">
+    Apri Editor
+  </a>
+  <p>Si aprirà Pages CMS — accedi con il tuo account GitHub per modificare i contenuti.</p>
 </body>
 </html>

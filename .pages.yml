@@ -1,0 +1,143 @@
+content:
+  - name: home
+    label: Home
+    path: src/content/pages/home.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: heroSubtitle
+        label: Sottotitolo Hero
+        type: string
+      - name: heroImage
+        label: Immagine Hero
+        type: image
+
+  - name: about
+    label: About
+    path: src/content/pages/about.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: name
+        label: Nome
+        type: string
+      - name: bio
+        label: Biografia
+        type: rich-text
+      - name: photo
+        label: Foto
+        type: image
+      - name: cvUrl
+        label: CV URL
+        type: string
+      - name: linkedinUrl
+        label: LinkedIn URL
+        type: string
+      - name: houzzUrl
+        label: Houzz URL
+        type: string
+
+  - name: contact
+    label: Contact
+    path: src/content/pages/contact.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: subtitle
+        label: Sottotitolo
+        type: string
+      - name: email
+        label: Email
+        type: string
+      - name: message
+        label: Messaggio
+        type: string
+
+  - name: alveus
+    label: Alveus Project
+    path: src/content/pages/alveus.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: subtitle
+        label: Sottotitolo
+        type: string
+      - name: content
+        label: Contenuto
+        type: rich-text
+      - name: videoUrl
+        label: Video URL
+        type: string
+
+  - name: footer
+    label: Footer
+    path: src/content/pages/footer.json
+    type: file
+    fields:
+      - name: address1
+        label: Indirizzo Linea 1
+        type: string
+      - name: address2
+        label: Indirizzo Linea 2
+        type: string
+      - name: address3
+        label: Indirizzo Linea 3
+        type: string
+
+  - name: navigation
+    label: Navigazione
+    path: src/content/pages/navigation.json
+    type: file
+    fields:
+      - name: menu
+        label: Menu
+        type: object
+        list: true
+        fields:
+          - name: label
+            label: Etichetta
+            type: string
+          - name: url
+            label: URL
+            type: string
+
+  - name: portfolio
+    label: Portfolio
+    path: src/content/portfolio
+    type: collection
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: slug
+        label: Slug
+        type: string
+      - name: order
+        label: Ordine
+        type: number
+      - name: description
+        label: Descrizione
+        type: rich-text
+      - name: images
+        label: Immagini
+        type: object
+        list: true
+        fields:
+          - name: src
+            label: Immagine
+            type: image
+          - name: alt
+            label: Alt text
+            type: string
+
+media:
+  input: public/images
+  output: /images
