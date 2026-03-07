@@ -25,19 +25,28 @@ export async function GET({ request }) {
     });
 
     const data = await response.json();
-    const token = data.access_token;
 
-    const html = '<html><body><script>'
-      + '(function() {'
-      + '  var token = "' + token + '";'
-      + '  var content = JSON.stringify({ token: token, provider: "github" });'
-      + '  function recieveMessage(e) {'
-      + '    window.opener.postMessage("authorization:github:success:" + content, e.origin);'
-      + '  }'
-      + '  window.addEventListener("message", recieveMessage, false);'
-      + '  window.opener.postMessage("authorizing:github", "*");'
-      + '})();'
-      + '</script></body></html>';
+    if (data.error) {
+      const errorHtml = `<!DOCTYPE html><html><body><script>
+        window.opener && window.opener.postMessage(
+          'authorization:github:error:${JSON.stringify(data)}',
+          window.opener.location.origin
+        );
+      </script></body></html>`;
+      return new Response(errorHtml, { status: 200, headers: { 'Content-Type': 'text/html' } });
+    }
+
+    const token = data.access_token;
+    const provider = 'github';
+
+    const html = `<!DOCTYPE html><html><body><script>
+      var data = { token: "${token}", provider: "${provider}" };
+      var msg = "authorization:github:success:" + JSON.stringify(data);
+      if (window.opener) {
+        window.opener.postMessage(msg, window.opener.location.origin);
+      }
+      window.close();
+    </script></body></html>`;
 
     return new Response(html, {
       status: 200,
