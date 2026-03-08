@@ -239,6 +239,17 @@ content:
           - name: url
             label: URL
             type: string
+          - name: children
+            label: Sottomenu
+            type: object
+            list: true
+            fields:
+              - name: label
+                label: Etichetta
+                type: string
+              - name: url
+                label: URL
+                type: string
 
   - name: portfolio
     label: Portfolio

@@ -37,10 +37,21 @@ const { title, currentPath = '' } = Astro.props;
     <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">&#9776;</button>
     <ul>
       {navigation.menu.map((item) => (
-        <li>
-          <a href={item.url} class={currentPath === item.url ? 'active' : ''}>
+        <li class={item.children ? 'has-dropdown' : ''}>
+          <a href={item.url} class={currentPath === item.url || (item.children && currentPath.startsWith('/portfolio')) ? 'active' : ''}>
             {item.label}
           </a>
+          {item.children && (
+            <ul class="dropdown">
+              {item.children.map((child) => (
+                <li>
+                  <a href={child.url} class={currentPath === child.url ? 'active' : ''}>
+                    {child.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </li>
       ))}
     </ul>
