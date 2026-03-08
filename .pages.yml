@@ -251,10 +251,184 @@ content:
                 label: URL
                 type: string
 
-  - name: portfolio
-    label: Portfolio
-    path: src/content/portfolio
-    type: collection
+  - name: portfolio-planting-design
+    label: "Portfolio: Planting Design"
+    path: src/content/portfolio/planting-design.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: slug
+        label: Slug
+        type: string
+      - name: order
+        label: Ordine
+        type: number
+      - name: description
+        label: Descrizione
+        type: rich-text
+      - name: images
+        label: Immagini
+        type: object
+        list: true
+        fields:
+          - name: src
+            label: Immagine
+            type: image
+          - name: alt
+            label: Alt text
+            type: string
+
+  - name: portfolio-water-features
+    label: "Portfolio: Water Features"
+    path: src/content/portfolio/water-features.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: slug
+        label: Slug
+        type: string
+      - name: order
+        label: Ordine
+        type: number
+      - name: description
+        label: Descrizione
+        type: rich-text
+      - name: images
+        label: Immagini
+        type: object
+        list: true
+        fields:
+          - name: src
+            label: Immagine
+            type: image
+          - name: alt
+            label: Alt text
+            type: string
+
+  - name: portfolio-swimming-pools
+    label: "Portfolio: Swimming Pools"
+    path: src/content/portfolio/swimming-pools.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: slug
+        label: Slug
+        type: string
+      - name: order
+        label: Ordine
+        type: number
+      - name: description
+        label: Descrizione
+        type: rich-text
+      - name: images
+        label: Immagini
+        type: object
+        list: true
+        fields:
+          - name: src
+            label: Immagine
+            type: image
+          - name: alt
+            label: Alt text
+            type: string
+
+  - name: portfolio-roof-gardens
+    label: "Portfolio: Roof Gardens"
+    path: src/content/portfolio/roof-gardens.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: slug
+        label: Slug
+        type: string
+      - name: order
+        label: Ordine
+        type: number
+      - name: description
+        label: Descrizione
+        type: rich-text
+      - name: images
+        label: Immagini
+        type: object
+        list: true
+        fields:
+          - name: src
+            label: Immagine
+            type: image
+          - name: alt
+            label: Alt text
+            type: string
+
+  - name: portfolio-bespoke-outdoor
+    label: "Portfolio: Bespoke Outdoor Furnishings"
+    path: src/content/portfolio/bespoke-outdoor-furnishings.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: slug
+        label: Slug
+        type: string
+      - name: order
+        label: Ordine
+        type: number
+      - name: description
+        label: Descrizione
+        type: rich-text
+      - name: images
+        label: Immagini
+        type: object
+        list: true
+        fields:
+          - name: src
+            label: Immagine
+            type: image
+          - name: alt
+            label: Alt text
+            type: string
+
+  - name: portfolio-collaborations
+    label: "Portfolio: Collaborations"
+    path: src/content/portfolio/collaborations.json
+    type: file
+    fields:
+      - name: title
+        label: Titolo
+        type: string
+      - name: slug
+        label: Slug
+        type: string
+      - name: order
+        label: Ordine
+        type: number
+      - name: description
+        label: Descrizione
+        type: rich-text
+      - name: images
+        label: Immagini
+        type: object
+        list: true
+        fields:
+          - name: src
+            label: Immagine
+            type: image
+          - name: alt
+            label: Alt text
+            type: string
+
+  - name: portfolio-work-in-progress
+    label: "Portfolio: Work in Progress"
+    path: src/content/portfolio/work-in-progress.json
+    type: file
     fields:
       - name: title
         label: Titolo
