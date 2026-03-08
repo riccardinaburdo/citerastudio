@@ -1,7 +1,14 @@
 {
   "menu": [
     { "label": "Home", "url": "/" },
-    { "label": "Services", "url": "/services" },
+    { "label": "Services", "url": "/services", "children": [
+      { "label": "Consultation", "url": "/services/consultation" },
+      { "label": "Site Survey and Analysis", "url": "/services/site-survey-and-analysis" },
+      { "label": "Concept Design", "url": "/services/concept-design" },
+      { "label": "Design Development", "url": "/services/design-development" },
+      { "label": "Implementation Plan", "url": "/services/implementation-plan" },
+      { "label": "Construction Site Management", "url": "/services/construction-site-management" }
+    ]},
     { "label": "Portfolio", "url": "#", "children": [
       { "label": "Planting Design", "url": "/portfolio/planting-design" },
       { "label": "Water Features", "url": "/portfolio/water-features" },

@@ -38,7 +38,7 @@ const { title, currentPath = '' } = Astro.props;
     <ul>
       {navigation.menu.map((item) => (
         <li class={item.children ? 'has-dropdown' : ''}>
-          <a href={item.url} class={currentPath === item.url || (item.children && currentPath.startsWith('/portfolio')) ? 'active' : ''}>
+          <a href={item.url} class={currentPath === item.url || (item.children && item.children.some(c => currentPath === c.url || currentPath.startsWith(c.url + '/'))) ? 'active' : ''}>
             {item.label}
           </a>
           {item.children && (
