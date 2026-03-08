@@ -1,6 +1,7 @@
 {
   "menu": [
     { "label": "Home", "url": "/" },
+    { "label": "Services", "url": "/services" },
     { "label": "Portfolio", "url": "#", "children": [
       { "label": "Planting Design", "url": "/portfolio/planting-design" },
       { "label": "Water Features", "url": "/portfolio/water-features" },
@@ -9,7 +10,6 @@
       { "label": "Bespoke Outdoor Furnishings", "url": "/portfolio/bespoke-outdoor-furnishings" },
       { "label": "Collaborations", "url": "/portfolio/collaborations" }
     ]},
-    { "label": "Services", "url": "/services" },
     { "label": "Alveus Project", "url": "/alveus-project" },
     { "label": "About", "url": "/about" },
     { "label": "Contact", "url": "/contact" }
