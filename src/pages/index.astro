@@ -39,7 +39,7 @@ const rightItems = portfolioItems.filter((_, i) => i % 2 !== 0);
       <div class="portfolio-col portfolio-left">
         {leftItems.map((item) => (
           <a href={`/portfolio/${item.slug}`} class="portfolio-link left">
-            {item.title} <span class="arrow">&#10095;</span>
+            {item.title}
           </a>
         ))}
       </div>
@@ -51,7 +51,7 @@ const rightItems = portfolioItems.filter((_, i) => i % 2 !== 0);
       <div class="portfolio-col portfolio-right">
         {rightItems.map((item) => (
           <a href={`/portfolio/${item.slug}`} class="portfolio-link right">
-            <span class="arrow">&#10095;</span> {item.title}
+            {item.title}
           </a>
         ))}
       </div>
