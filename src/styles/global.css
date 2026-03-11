@@ -1256,6 +1256,12 @@ main {
   width: 100%;
   height: auto;
   display: block;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.gallery-item img:hover {
+  opacity: 0.85;
 }
 
 .gallery-item p {
