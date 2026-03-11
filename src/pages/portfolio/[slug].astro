@@ -47,9 +47,71 @@ const htmlContent = simpleMarkdown(project.description);
     {project.images && project.images.length > 0 && (
       <div class="gallery">
         {project.images.map((img: {src: string; alt: string}) => (
-          <img src={img.src} alt={img.alt} />
+          <img src={img.src} alt={img.alt} class="gallery-thumb" />
         ))}
       </div>
     )}
   </div>
+
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightbox-close">&times;</button>
+    <button class="lightbox-prev" id="lightbox-prev">&#10094;</button>
+    <img class="lightbox-img" id="lightbox-img" src="" alt="" />
+    <button class="lightbox-next" id="lightbox-next">&#10095;</button>
+  </div>
+
+  <script>
+    const thumbs = document.querySelectorAll('.gallery-thumb');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img') as HTMLImageElement;
+    const closeBtn = document.getElementById('lightbox-close');
+    const prevBtn = document.getElementById('lightbox-prev');
+    const nextBtn = document.getElementById('lightbox-next');
+    let currentIndex = 0;
+    const images = Array.from(thumbs) as HTMLImageElement[];
+
+    function openLightbox(index: number) {
+      currentIndex = index;
+      lightboxImg.src = images[currentIndex].src;
+      lightboxImg.alt = images[currentIndex].alt;
+      lightbox!.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox!.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function showPrev() {
+      currentIndex = (currentIndex - 1 + images.length) % images.length;
+      lightboxImg.src = images[currentIndex].src;
+      lightboxImg.alt = images[currentIndex].alt;
+    }
+
+    function showNext() {
+      currentIndex = (currentIndex + 1) % images.length;
+      lightboxImg.src = images[currentIndex].src;
+      lightboxImg.alt = images[currentIndex].alt;
+    }
+
+    thumbs.forEach((thumb, i) => {
+      thumb.addEventListener('click', () => openLightbox(i));
+    });
+
+    closeBtn!.addEventListener('click', closeLightbox);
+    prevBtn!.addEventListener('click', showPrev);
+    nextBtn!.addEventListener('click', showNext);
+
+    lightbox!.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox!.classList.contains('active')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') showPrev();
+      if (e.key === 'ArrowRight') showNext();
+    });
+  </script>
 </BaseLayout>

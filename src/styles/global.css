@@ -189,6 +189,11 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
 }
 
+/* On desktop, never hide the menu regardless of .closed class */
+.site-nav.closed > ul {
+  display: flex;
+}
+
 /* ===== MAIN CONTENT SPACING ===== */
 main {
   margin-top: 2rem;
@@ -1087,13 +1092,22 @@ main {
     margin-top: 1rem;
   }
 
-  .site-nav ul {
+  .site-nav > ul {
     flex-direction: column;
     border-radius: 10px;
+    margin-top: 0.5rem;
   }
 
-  .site-nav.closed ul {
+  .site-nav.closed > ul {
     display: none;
+  }
+
+  .site-nav > ul > li:first-child > a {
+    border-radius: 10px 10px 0 0;
+  }
+
+  .site-nav > ul > li:last-child > a {
+    border-radius: 0 0 10px 10px;
   }
 
   .dropdown {
@@ -1126,6 +1140,7 @@ main {
   .portfolio-grid .center-image {
     max-width: 200px;
     margin: 0 auto;
+    order: -1;
   }
 
   .portfolio-left,
@@ -1135,7 +1150,7 @@ main {
 
   .portfolio-link.left,
   .portfolio-link.right {
-    justify-content: center;
+    margin: 0 auto;
   }
 
   .testimonial-grid {
