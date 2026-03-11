@@ -190,8 +190,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* On desktop, never hide the menu regardless of .closed class */
-.site-nav.closed > ul {
-  display: flex;
+@media (min-width: 769px) {
+  .site-nav.closed > ul {
+    display: flex;
+  }
 }
 
 /* ===== MAIN CONTENT SPACING ===== */
