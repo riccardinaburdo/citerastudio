@@ -5,4 +5,7 @@ import vercel from '@astrojs/vercel';
 export default defineConfig({
   site: 'https://citerastudio.com',
   adapter: vercel(),
+  security: {
+    checkOrigin: false,
+  },
 });
