@@ -1,0 +1,165 @@
+---
+export const prerender = false;
+
+import { verifyToken } from '../../lib/auth';
+
+const token = Astro.cookies.get('ar_token')?.value;
+if (token) {
+  const role = await verifyToken(token);
+  if (role) return Astro.redirect('/area-riservata/portal');
+}
+
+const error = Astro.url.searchParams.get('error') === '1';
+---
+
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Area Riservata — CiteraStudio</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #1a3a5c;
+      --orange: #FB8503;
+      --grey-1: #f8fafc;
+      --grey-2: #e2e8f0;
+      --grey-3: #94a3b8;
+      --text:   #1e293b;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, var(--navy) 0%, #2d5a8e 100%);
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+    }
+
+    .login-wrap {
+      width: 100%; max-width: 400px; padding: 1rem;
+    }
+
+    .brand {
+      text-align: center; margin-bottom: 2.5rem;
+    }
+    .brand-name {
+      font-family: 'Quicksand', sans-serif;
+      font-size: 1.8rem; font-weight: 700;
+      color: var(--orange); letter-spacing: -.01em;
+    }
+    .brand-sub {
+      font-size: 0.75rem; color: rgba(255,255,255,.5);
+      letter-spacing: .12em; text-transform: uppercase; margin-top: .2rem;
+    }
+
+    .card {
+      background: #fff; border-radius: 14px;
+      padding: 2rem 2rem 1.8rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+
+    .card-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--navy); margin: 0 auto 1.2rem;
+      font-size: 1.3rem;
+    }
+
+    .card-title {
+      font-family: 'Quicksand', sans-serif;
+      font-size: 1.15rem; font-weight: 700;
+      color: var(--navy); text-align: center; margin-bottom: .25rem;
+    }
+
+    .card-sub {
+      font-size: 0.75rem; color: var(--grey-3);
+      text-align: center; margin-bottom: 1.8rem;
+    }
+
+    label {
+      display: block; font-size: 0.7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .07em;
+      color: var(--grey-3); margin-bottom: .4rem;
+    }
+
+    input[type="password"] {
+      width: 100%; padding: .7rem 1rem;
+      border: 1.5px solid var(--grey-2); border-radius: 8px;
+      font-size: 0.95rem; font-family: inherit;
+      color: var(--text); background: var(--grey-1);
+      outline: none; transition: border-color .2s;
+      letter-spacing: .1em;
+    }
+    input[type="password"]:focus {
+      border-color: var(--navy); background: #fff;
+    }
+
+    .error-msg {
+      display: flex; align-items: center; gap: .4rem;
+      font-size: 0.75rem; color: #dc2626;
+      background: #fef2f2; border: 1px solid #fecaca;
+      border-radius: 6px; padding: .5rem .75rem;
+      margin-top: .75rem;
+    }
+
+    button[type="submit"] {
+      width: 100%; margin-top: 1.2rem;
+      padding: .75rem; border: none; border-radius: 8px;
+      background: var(--navy); color: #fff;
+      font-family: inherit; font-size: 0.88rem; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase;
+      cursor: pointer; transition: background .2s;
+    }
+    button[type="submit"]:hover { background: #14304f; }
+
+    .footer-note {
+      text-align: center; margin-top: 1.5rem;
+      font-size: 0.68rem; color: rgba(255,255,255,.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+
+    <div class="brand">
+      <div class="brand-name">citerastudio</div>
+      <div class="brand-sub">Landscape Architecture</div>
+    </div>
+
+    <div class="card">
+      <div class="card-icon">🔒</div>
+      <div class="card-title">Area Riservata</div>
+      <div class="card-sub">Accesso riservato ai clienti del progetto</div>
+
+      <form method="POST" action="/api/area-riservata/login">
+        <label for="password">Codice di accesso</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          autofocus
+        />
+        {error && (
+          <div class="error-msg">
+            <span>⚠</span> Codice non valido. Riprova.
+          </div>
+        )}
+        <button type="submit">Accedi</button>
+      </form>
+    </div>
+
+    <p class="footer-note">
+      Hai problemi di accesso? Contatta lo studio.
+    </p>
+  </div>
+</body>
+</html>

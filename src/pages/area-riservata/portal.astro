@@ -1,0 +1,628 @@
+---
+export const prerender = false;
+
+const role = Astro.locals.role; // set by middleware
+
+const project = {
+  name:       'Villa delle Azalee — Full Renovation',
+  client:     'Mr. & Mrs. James Thompson',
+  location:   'Contrada Monti Ausoni, Alberobello (BA) — Puglia, Italy',
+  architect:  'Arch. Vito Depalo — CiteraStudio',
+  contractor: 'Costruzioni Generali S.r.l.',
+  start:      '15 April 2024',
+  end:        '31 January 2025',
+  updated:    '1 November 2024',
+  updateNum:  3,
+};
+
+interface WorkItem { id: string; desc: string; unit: string; qty: number; unitPrice: number; doneQty: number; }
+interface Category  { id: string; label: string; items: WorkItem[]; }
+
+const categories: Category[] = [
+  { id: 'A', label: 'Site Preparation & Demolition', items: [
+    { id: 'A.01', desc: 'Demolition of existing masonry structures',      unit: 'm³',  qty: 48,   unitPrice: 73.50,   doneQty: 40   },
+    { id: 'A.02', desc: 'Removal of old roof covering and flashings',     unit: 'm²',  qty: 320,  unitPrice: 9.63,    doneQty: 320  },
+    { id: 'A.03', desc: 'Removal of existing floor finishes and screed',  unit: 'm²',  qty: 415,  unitPrice: 7.00,    doneQty: 370  },
+    { id: 'A.04', desc: 'Stripping of deteriorated internal plaster',     unit: 'm²',  qty: 580,  unitPrice: 6.56,    doneQty: 400  },
+  ]},
+  { id: 'B', label: 'Structural Works', items: [
+    { id: 'B.01', desc: 'Reinforced concrete — foundations & ring beams', unit: 'm³',  qty: 85,   unitPrice: 175.00,  doneQty: 80   },
+    { id: 'B.02', desc: 'Steel reinforcement bars, cut & fixed',          unit: 'kg',  qty: 8500, unitPrice: 1.75,    doneQty: 8000 },
+    { id: 'B.03', desc: 'Load-bearing concrete block masonry walls',      unit: 'm²',  qty: 280,  unitPrice: 68.25,   doneQty: 230  },
+  ]},
+  { id: 'C', label: 'Internal Finishes', items: [
+    { id: 'C.01', desc: 'Three-coat internal plaster with skim finish',   unit: 'm²',  qty: 1250, unitPrice: 18.40,   doneQty: 950  },
+    { id: 'C.02', desc: 'Screed flooring base, 60 mm thick',              unit: 'm²',  qty: 850,  unitPrice: 12.25,   doneQty: 780  },
+    { id: 'C.03', desc: 'Porcelain floor tiles 60×60 cm, laid & grouted', unit: 'm²',  qty: 780,  unitPrice: 48.00,   doneQty: 600  },
+    { id: 'C.04', desc: 'Ceramic wall tiles, bathrooms & kitchen',        unit: 'm²',  qty: 320,  unitPrice: 42.00,   doneQty: 280  },
+    { id: 'C.05', desc: 'Interior emulsion paint, two finish coats',      unit: 'm²',  qty: 2100, unitPrice: 6.30,    doneQty: 1800 },
+  ]},
+  { id: 'D', label: 'Roofing Works', items: [
+    { id: 'D.01', desc: 'Torch-on waterproofing membrane, 4 mm',          unit: 'm²',  qty: 320,  unitPrice: 24.50,   doneQty: 320  },
+    { id: 'D.02', desc: 'XPS thermal insulation boards, 80 mm',           unit: 'm²',  qty: 320,  unitPrice: 21.00,   doneQty: 320  },
+    { id: 'D.03', desc: 'Clay roof tiles, ridges, verges & flashings',    unit: 'm²',  qty: 285,  unitPrice: 38.50,   doneQty: 270  },
+  ]},
+  { id: 'E', label: 'Doors & Windows', items: [
+    { id: 'E.01', desc: 'PVC triple-glazed windows (Uw ≤ 1.2 W/m²K)',    unit: 'unit', qty: 28,  unitPrice: 485.00,  doneQty: 24   },
+    { id: 'E.02', desc: 'Internal timber doors, frame & ironmongery',     unit: 'unit', qty: 45,  unitPrice: 320.00,  doneQty: 37   },
+    { id: 'E.03', desc: 'Security entrance doors, Class 3 anti-burglary', unit: 'unit', qty: 8,   unitPrice: 1850.00, doneQty: 6    },
+    { id: 'E.04', desc: 'Motorised aluminium external shutters',          unit: 'unit', qty: 28,  unitPrice: 380.00,  doneQty: 18   },
+  ]},
+  { id: 'F', label: 'Plumbing & Drainage', items: [
+    { id: 'F.01', desc: 'Hot & cold water supply pipework (multi-layer)', unit: 'lump', qty: 1,   unitPrice: 18500.00, doneQty: 1   },
+    { id: 'F.02', desc: 'Internal drainage & soil pipework, PVC',         unit: 'lump', qty: 1,   unitPrice: 8750.00,  doneQty: 1   },
+    { id: 'F.03', desc: 'Bathroom fittings & sanitary ware (8 bathrooms)',unit: 'lump', qty: 1,   unitPrice: 22400.00, doneQty: 0   },
+  ]},
+  { id: 'G', label: 'Electrical Installation', items: [
+    { id: 'G.01', desc: 'Full electrical installation, 8 units',          unit: 'lump', qty: 1,   unitPrice: 28500.00, doneQty: 0   },
+    { id: 'G.02', desc: 'TV, data & structured cabling Cat.6',            unit: 'lump', qty: 1,   unitPrice: 4800.00,  doneQty: 0   },
+  ]},
+  { id: 'H', label: 'Site Management & Safety', items: [
+    { id: 'H.01', desc: 'Health & safety plan implementation (PSC)',       unit: 'lump', qty: 1,   unitPrice: 12500.00, doneQty: 1   },
+  ]},
+];
+
+const enrich = (item: WorkItem) => {
+  const budget = item.qty * item.unitPrice;
+  const done   = item.doneQty * item.unitPrice;
+  const perc   = budget > 0 ? (done / budget) * 100 : 0;
+  return { ...item, budget, done, perc };
+};
+const enrichedCats = categories.map(cat => {
+  const items     = cat.items.map(enrich);
+  const catBudget = items.reduce((s, i) => s + i.budget, 0);
+  const catDone   = items.reduce((s, i) => s + i.done,   0);
+  const catPerc   = catBudget > 0 ? (catDone / catBudget) * 100 : 0;
+  return { ...cat, items, catBudget, catDone, catPerc };
+});
+const totalBudget = enrichedCats.reduce((s, c) => s + c.catBudget, 0);
+const totalDone   = enrichedCats.reduce((s, c) => s + c.catDone,   0);
+const totalPerc   = totalBudget > 0 ? (totalDone / totalBudget) * 100 : 0;
+const totalLeft   = totalBudget - totalDone;
+
+const rawMilestones = [
+  { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   amount: totalBudget * 0.20, note: 'On contract signing' },
+  { id: 'SAL1', label: 'Progress Payment 1', trigger: 30,  amount: totalBudget * 0.10, note: 'Triggered at 30% completion' },
+  { id: 'SAL2', label: 'Progress Payment 2', trigger: 60,  amount: totalBudget * 0.30, note: 'Triggered at 60% completion' },
+  { id: 'SAL3', label: 'Progress Payment 3', trigger: 90,  amount: totalBudget * 0.30, note: 'Triggered at 90% completion' },
+  { id: 'FIN',  label: 'Final Balance',       trigger: 100, amount: totalBudget * 0.10, note: 'On practical completion' },
+];
+let nextFound = false;
+const payMilestones = rawMilestones.map(m => {
+  let status: 'paid' | 'next' | 'pending';
+  if (totalPerc >= m.trigger)   { status = 'paid'; }
+  else if (!nextFound)          { status = 'next'; nextFound = true; }
+  else                          { status = 'pending'; }
+  return { ...m, status };
+});
+const paidToDate     = payMilestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.amount, 0);
+const nextMilestone  = payMilestones.find(m => m.status === 'next');
+const nextPayNet     = nextMilestone?.amount ?? 0;
+const nextPayVat     = nextPayNet * 0.10;
+const nextPayGross   = nextPayNet + nextPayVat;
+const nextTriggerPct = nextMilestone?.trigger ?? 100;
+const progressNeeded = Math.max(0, nextTriggerPct - totalPerc);
+const remainingPend  = payMilestones.filter(m => m.status === 'pending').reduce((s, m) => s + m.amount, 0);
+
+const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtQ = (n: number, unit: string) => unit === 'lump' ? (n === 0 ? '–' : '✓') : n.toLocaleString('en-GB');
+const statusLabel = (p: number) => p >= 100 ? 'Complete' : p > 0 ? 'In Progress' : 'Not Started';
+const statusClass = (p: number) => p >= 100 ? 'complete' : p > 0 ? 'progress' : 'pending';
+const catColor    = (p: number) => p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : p > 0 ? '#f59e0b' : '#cbd5e1';
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Portal — {project.name} | CiteraStudio</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:   #1a3a5c; --orange: #FB8503; --green: #22c55e;
+      --amber:  #f59e0b; --slate:  #64748b;
+      --grey-1: #f8fafc; --grey-2: #e2e8f0; --grey-3: #94a3b8;
+      --text:   #1e293b; --sans:   'Inter', sans-serif; --brand: 'Quicksand', sans-serif;
+      --radius: 10px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--sans); color: var(--text); background: var(--grey-1); font-size: 14px; }
+
+    /* TOP BAR */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 1rem;
+      background: var(--navy); color: #fff;
+      padding: .6rem 1.5rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,.25);
+    }
+    .topbar-brand   { font-family: var(--brand); font-weight: 700; font-size: 1rem; color: var(--orange); flex-shrink: 0; }
+    .topbar-sep     { color: rgba(255,255,255,.25); }
+    .topbar-project { font-size: 0.82rem; color: rgba(255,255,255,.8); flex: 1; }
+    .topbar-lock {
+      display: flex; align-items: center; gap: .4rem;
+      font-size: 0.72rem; color: rgba(255,255,255,.5);
+      border: 1px solid rgba(255,255,255,.2); border-radius: 20px;
+      padding: .25rem .7rem; flex-shrink: 0;
+    }
+    .topbar-lock .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .role-badge {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      padding: .2rem .6rem; border-radius: 20px; flex-shrink: 0;
+    }
+    .role-badge.client { background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
+    .role-badge.admin  { background: var(--orange); color: #fff; }
+    .btn-top {
+      padding: .3rem .9rem; border: 1px solid rgba(255,255,255,.3);
+      background: transparent; color: #fff; border-radius: 5px;
+      font-size: 0.75rem; cursor: pointer; transition: background .2s; flex-shrink: 0;
+    }
+    .btn-top:hover { background: rgba(255,255,255,.12); }
+    .btn-logout {
+      padding: .3rem .9rem; border: 1px solid rgba(255,80,80,.4);
+      background: transparent; color: rgba(255,150,150,.9); border-radius: 5px;
+      font-size: 0.75rem; cursor: pointer; transition: background .2s; flex-shrink: 0;
+    }
+    .btn-logout:hover { background: rgba(255,80,80,.15); }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, var(--navy) 0%, #2d5a8e 100%); color: #fff; padding: 2.5rem 2rem 2rem; }
+    .hero-inner { max-width: 1400px; margin: 0 auto; }
+    .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem; flex-wrap: wrap; }
+    .hero-title { font-family: var(--brand); font-size: 1.8rem; font-weight: 700; color: #fff; line-height: 1.2; }
+    .hero-sub   { font-size: 0.85rem; color: rgba(255,255,255,.6); margin-top: .3rem; }
+    .hero-meta  { display: grid; grid-template-columns: repeat(2,1fr); gap: .4rem .8rem; font-size: 0.75rem; }
+    .hero-meta dt { color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .06em; font-size: 0.62rem; }
+    .hero-meta dd { color: rgba(255,255,255,.85); font-weight: 500; }
+    .update-badge {
+      margin-top: 1.5rem; display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+      border-radius: 20px; padding: .35rem 1rem; font-size: 0.75rem; color: rgba(255,255,255,.8);
+    }
+    .update-badge .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+    /* LAYOUT */
+    .main { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+    /* METRIC CARDS */
+    .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 2rem; }
+    .metric-card { background: #fff; border-radius: var(--radius); padding: 1.2rem 1.5rem; border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .metric-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-3); font-weight: 600; margin-bottom: .5rem; }
+    .metric-value { font-size: 1.6rem; font-weight: 700; color: var(--navy); line-height: 1; }
+    .metric-sub   { font-size: 0.75rem; color: var(--slate); margin-top: .3rem; }
+    .metric-card.highlight .metric-value { color: var(--orange); }
+
+    /* PAYMENT CARD */
+    .payment-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 1.5rem; margin-bottom: 2rem; }
+    .pay-summary { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 0; margin-bottom: 1.6rem; }
+    .pay-sum-item { padding: 1.1rem 1.4rem; border-radius: var(--radius); }
+    .pay-sum-item.paid    { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .pay-sum-item.next    { background: #fff7ed; border: 2px solid var(--orange); box-shadow: 0 4px 20px rgba(251,133,3,.18); }
+    .pay-sum-item.pending { background: #f8fafc; border: 1px solid var(--grey-2); }
+    .pay-sum-arrow { display: flex; align-items: center; padding: 0 .5rem; color: var(--grey-3); font-size: 1.1rem; }
+    .pay-sum-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-3); font-weight: 700; margin-bottom: .5rem; }
+    .pay-sum-item.next .pay-sum-label { color: var(--orange); }
+    .pay-sum-amount { font-size: 1.55rem; font-weight: 700; line-height: 1; margin-bottom: .3rem; }
+    .pay-sum-item.paid    .pay-sum-amount { color: #16a34a; }
+    .pay-sum-item.next    .pay-sum-amount { color: var(--orange); }
+    .pay-sum-item.pending .pay-sum-amount { color: var(--slate); }
+    .pay-sum-sub { font-size: 0.72rem; color: var(--slate); line-height: 1.5; }
+    .pay-sum-trigger { display: inline-block; margin-top: .6rem; font-size: 0.72rem; font-weight: 600; color: var(--orange); background: rgba(251,133,3,.1); border-radius: 4px; padding: .2rem .5rem; }
+    .pay-sum-paid-note { display: inline-block; margin-top: .4rem; font-size: 0.68rem; color: #16a34a; font-weight: 600; }
+    .pay-timeline-wrap { position: relative; margin: 0 .5rem 1.5rem; overflow: visible; }
+    .pay-track-spacer { height: 44px; }
+    .pay-track { position: relative; height: 8px; background: var(--grey-2); border-radius: 4px; margin: 0 1rem; overflow: visible; }
+    .pay-track-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(to right, #16a34a, #22c55e); border-radius: 4px; }
+    .pay-tick { position: absolute; top: 50%; transform: translate(-50%,-50%); z-index: 2; }
+    .pay-tick-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; }
+    .pay-tick.paid .pay-tick-dot  { background: #22c55e; box-shadow: 0 0 0 1.5px #16a34a; }
+    .pay-tick.next .pay-tick-dot  { background: var(--orange); border-color: var(--orange); box-shadow: 0 0 0 3px rgba(251,133,3,.25); width: 16px; height: 16px; animation: pulse-tick 2s infinite; }
+    .pay-tick.pending .pay-tick-dot { background: var(--grey-2); box-shadow: 0 0 0 1.5px var(--grey-3); }
+    @keyframes pulse-tick { 0%,100% { box-shadow: 0 0 0 3px rgba(251,133,3,.25); } 50% { box-shadow: 0 0 0 6px rgba(251,133,3,.12); } }
+    .pay-tick-lbl { position: absolute; top: 13px; left: 50%; transform: translateX(-50%); font-size: 0.58rem; text-align: center; white-space: nowrap; line-height: 1.4; color: var(--slate); }
+    .pay-tick.paid .pay-tick-lbl  { color: #16a34a; font-weight: 600; }
+    .pay-tick.next .pay-tick-lbl  { color: var(--orange); font-weight: 700; }
+    .pay-tick-id { position: absolute; bottom: 13px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; font-weight: 700; white-space: nowrap; color: var(--slate); font-family: monospace; }
+    .pay-tick.paid .pay-tick-id   { color: #16a34a; }
+    .pay-tick.next .pay-tick-id   { color: var(--orange); }
+    .pay-now { position: absolute; top: 50%; transform: translate(-50%,-50%); z-index: 3; }
+    .pay-now-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--navy); border: 2px solid #fff; box-shadow: 0 0 0 2px var(--navy); }
+    .pay-now-lbl { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; font-weight: 700; white-space: nowrap; background: var(--navy); color: #fff; padding: .15rem .4rem; border-radius: 3px; }
+    .pay-now-lbl::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 3px solid transparent; border-top-color: var(--navy); }
+    .pay-now-line { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 1.5px; height: 12px; background: var(--navy); opacity: .4; }
+    .pay-track-labels { margin: 0 1rem; padding-top: 2.5rem; display: flex; justify-content: space-between; }
+    .pay-track-edge { font-size: 0.6rem; color: var(--grey-3); }
+    .pay-table-wrap { border-top: 1px solid var(--grey-2); padding-top: 1rem; }
+    table.pay-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    table.pay-table th { font-size: 0.62rem; text-transform: uppercase; letter-spacing: .06em; color: var(--grey-3); font-weight: 600; padding: .4rem .75rem; border-bottom: 1px solid var(--grey-2); text-align: left; }
+    table.pay-table th.right { text-align: right; }
+    table.pay-table td { padding: .55rem .75rem; border-bottom: 1px solid var(--grey-2); vertical-align: middle; }
+    table.pay-table tr:last-child td { border-bottom: none; }
+    table.pay-table tr.pay-row-paid td { background: #f0fdf4; }
+    table.pay-table tr.pay-row-next td { background: #fff7ed; }
+    .pay-col-id { font-size: 0.68rem; font-weight: 700; font-family: monospace; color: var(--navy); white-space: nowrap; }
+    .pay-col-label { font-weight: 500; }
+    .pay-col-trigger { font-size: 0.72rem; color: var(--slate); }
+    .pay-col-money { text-align: right; font-family: monospace; font-size: 0.75rem; white-space: nowrap; }
+    .pay-col-gross { text-align: right; font-family: monospace; font-size: 0.78rem; font-weight: 700; color: var(--navy); white-space: nowrap; }
+    .pay-badge { display: inline-block; font-size: 0.62rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .2rem .65rem; border-radius: 20px; white-space: nowrap; }
+    .pay-badge.paid    { background: #dcfce7; color: #15803d; }
+    .pay-badge.next    { background: #fff7ed; color: #c2410c; border: 1px solid #fb923c; }
+    .pay-badge.pending { background: #f1f5f9; color: #94a3b8; }
+    tr.pay-row-next .pay-col-label { font-weight: 700; color: var(--orange); }
+    tr.pay-row-next .pay-col-gross { color: var(--orange); }
+
+    /* OVERVIEW */
+    .overview { display: grid; grid-template-columns: 280px 1fr; gap: 2rem; margin-bottom: 2rem; }
+    .donut-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; text-align: center; }
+    .donut-wrap { position: relative; width: 160px; height: 160px; margin-bottom: 1.2rem; }
+    .donut-ring { width: 160px; height: 160px; border-radius: 50%; background: conic-gradient(var(--orange) 0% var(--p,0%), var(--grey-2) var(--p,0%) 100%); }
+    .donut-inner { position: absolute; inset: 20px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .donut-pct  { font-size: 1.8rem; font-weight: 700; color: var(--navy); line-height: 1; }
+    .donut-lbl  { font-size: 0.65rem; text-transform: uppercase; letter-spacing: .06em; color: var(--grey-3); margin-top: .15rem; }
+    .donut-title{ font-size: 0.8rem; font-weight: 600; color: var(--navy); }
+    .donut-sub  { font-size: 0.72rem; color: var(--slate); margin-top: .3rem; }
+    .cat-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 1.5rem; }
+    .cat-card-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--grey-3); font-weight: 600; margin-bottom: 1.2rem; }
+    .cat-bar-row { display: flex; align-items: center; gap: 1rem; margin-bottom: .85rem; }
+    .cat-bar-row:last-child { margin-bottom: 0; }
+    .cat-bar-id    { font-size: 0.7rem; font-weight: 700; color: var(--navy); width: 20px; flex-shrink: 0; }
+    .cat-bar-label { font-size: 0.78rem; color: var(--text); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cat-bar-track { width: 160px; height: 8px; background: var(--grey-2); border-radius: 4px; flex-shrink: 0; overflow: hidden; }
+    .cat-bar-fill  { height: 100%; border-radius: 4px; }
+    .cat-bar-pct   { font-size: 0.72rem; font-weight: 600; width: 38px; text-align: right; flex-shrink: 0; }
+    .cat-status    { font-size: 0.62rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: .15rem .5rem; border-radius: 10px; flex-shrink: 0; width: 80px; text-align: center; }
+    .cat-status.complete { background: #dcfce7; color: #16a34a; }
+    .cat-status.progress { background: #fff7ed; color: #c2410c; }
+    .cat-status.pending  { background: #f1f5f9; color: var(--grey-3); }
+
+    /* WORKS TABLE */
+    .section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-3); font-weight: 600; margin-bottom: 1rem; }
+    .works-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: hidden; margin-bottom: 2rem; }
+    .works-scroll { overflow-x: auto; }
+    table.works { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    table.works thead th { background: var(--navy); color: rgba(255,255,255,.85); padding: .55rem .75rem; text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; white-space: nowrap; }
+    table.works thead th.right { text-align: right; }
+    tr.works-cat td { background: #f0f6ff; color: var(--navy); padding: .4rem .75rem; font-weight: 700; font-size: 0.72rem; border-top: 2px solid var(--grey-2); border-bottom: 1px solid #c7d9f0; }
+    tr.works-cat .cat-letter { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 0.65rem; font-weight: 700; margin-right: .5rem; }
+    table.works tbody tr.item td { padding: .45rem .75rem; border-bottom: 1px solid var(--grey-2); vertical-align: middle; }
+    table.works tbody tr.item:last-child td { border-bottom: none; }
+    table.works tbody tr.item:hover td { background: #f8fafc; }
+    .item-id    { color: var(--grey-3); font-size: 0.68rem; font-family: monospace; white-space: nowrap; }
+    .item-desc  { max-width: 320px; line-height: 1.4; }
+    .item-num   { text-align: right; white-space: nowrap; }
+    .item-money { text-align: right; font-family: monospace; font-size: 0.75rem; white-space: nowrap; }
+    .item-done-qty { text-align: right; font-size: 0.78rem; }
+    .perc-cell { min-width: 90px; }
+    .perc-wrap { display: flex; align-items: center; gap: .4rem; }
+    .perc-mini { flex: 1; height: 5px; background: var(--grey-2); border-radius: 3px; overflow: hidden; }
+    .perc-mini-fill { height: 100%; border-radius: 3px; }
+    .perc-num  { font-size: 0.72rem; font-weight: 600; width: 35px; text-align: right; white-space: nowrap; }
+    .badge { display: inline-block; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: .2rem .6rem; border-radius: 20px; white-space: nowrap; }
+    .badge.complete { background: #dcfce7; color: #15803d; }
+    .badge.progress { background: #fff7ed; color: #c2410c; }
+    .badge.pending  { background: #f1f5f9; color: #94a3b8; }
+    tr.subtotal td { background: #f8fafc; padding: .4rem .75rem; font-size: 0.72rem; font-weight: 600; color: var(--navy); border-top: 1px dashed #c7d9f0; border-bottom: 2px solid var(--grey-2); }
+    tr.subtotal .sub-label { color: var(--slate); font-weight: 400; }
+    tr.grand-total td { background: var(--navy); color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: 0.8rem; }
+
+    /* UPDATES */
+    .updates-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 2rem; }
+    .update-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 1.2rem; border-left: 4px solid var(--orange); }
+    .update-card.latest { border-left-color: var(--green); }
+    .update-num  { font-size: 0.65rem; text-transform: uppercase; letter-spacing: .07em; color: var(--grey-3); font-weight: 600; }
+    .update-date { font-size: 0.88rem; font-weight: 700; color: var(--navy); margin: .25rem 0; }
+    .update-pct  { font-size: 1.4rem; font-weight: 700; color: var(--orange); line-height: 1; }
+    .update-pct span { font-size: 0.72rem; color: var(--grey-3); font-weight: 400; }
+    .update-note { font-size: 0.75rem; color: var(--slate); margin-top: .6rem; line-height: 1.5; }
+    .update-card.latest .update-pct { color: var(--green); }
+
+    /* FOOTER */
+    .page-footer { background: var(--navy); color: rgba(255,255,255,.6); text-align: center; padding: 1.2rem; font-size: 0.72rem; margin-top: 2rem; }
+    .page-footer strong { color: var(--orange); }
+
+    @media print {
+      .topbar, .btn-top, .btn-logout { display: none; }
+      body { background: #fff; }
+      .main { padding: .5rem; }
+    }
+    @media (max-width: 1100px) { .overview { grid-template-columns: 1fr; } .cat-bar-track { width: 120px; } }
+    @media (max-width: 900px) {
+      .metrics { grid-template-columns: repeat(2,1fr); }
+      .updates-grid { grid-template-columns: 1fr; }
+      .hero-top { flex-direction: column; }
+      .pay-summary { grid-template-columns: 1fr; }
+      .pay-sum-arrow { display: none; }
+      .pay-timeline-wrap { display: none; }
+    }
+    @media (max-width: 600px) { .metrics { grid-template-columns: 1fr; } .topbar-project { display: none; } .main { padding: 1rem; } }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-brand">citerastudio</span>
+  <span class="topbar-sep">|</span>
+  <span class="topbar-project">{project.name}</span>
+  <div class="topbar-lock">
+    <span class="dot"></span>
+    Private Access
+  </div>
+  <span class={`role-badge ${role}`}>{role === 'admin' ? '⚙ Admin' : 'Client'}</span>
+  <button class="btn-top" onclick="window.print()">⎙ Print</button>
+  <form method="POST" action="/api/area-riservata/logout" style="display:inline">
+    <button type="submit" class="btn-logout">Sign out</button>
+  </form>
+</div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-top">
+      <div>
+        <div class="hero-title">{project.name}</div>
+        <div class="hero-sub">{project.location}</div>
+        <div class="update-badge">
+          <span class="pulse"></span>
+          Progress Update #{project.updateNum} — Last updated {project.updated}
+        </div>
+      </div>
+      <dl class="hero-meta">
+        <dt>Client</dt>            <dd>{project.client}</dd>
+        <dt>Architect / D.L.</dt> <dd>{project.architect}</dd>
+        <dt>Main Contractor</dt>  <dd>{project.contractor}</dd>
+        <dt>Contract period</dt>  <dd>{project.start} → {project.end}</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="metrics">
+    <div class="metric-card">
+      <div class="metric-label">Contract Budget</div>
+      <div class="metric-value">{fmt(totalBudget)}</div>
+      <div class="metric-sub">inc. VAT 10%: {fmt(totalBudget * 1.10)}</div>
+    </div>
+    <div class="metric-card highlight">
+      <div class="metric-label">Completed to Date</div>
+      <div class="metric-value">{fmt(totalDone)}</div>
+      <div class="metric-sub">{totalPerc.toFixed(1)}% of contract value</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Remaining Works</div>
+      <div class="metric-value">{fmt(totalLeft)}</div>
+      <div class="metric-sub">to be executed</div>
+    </div>
+    <div class="metric-card highlight">
+      <div class="metric-label">Next Payment Due</div>
+      <div class="metric-value">{fmt(nextPayGross)}</div>
+      <div class="metric-sub">inc. VAT — triggers at {nextTriggerPct}% ({progressNeeded.toFixed(1)}% to go)</div>
+    </div>
+  </div>
+
+  <div class="section-title">Payment Schedule</div>
+  <div class="payment-card">
+    <div class="pay-summary">
+      <div class="pay-sum-item paid">
+        <div class="pay-sum-label">Paid to Date</div>
+        <div class="pay-sum-amount">{fmt(paidToDate)}</div>
+        <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(paidToDate * 1.10)}</div>
+        <div class="pay-sum-paid-note">&#10003; Deposit + 2 progress payments</div>
+      </div>
+      <div class="pay-sum-arrow">&#8594;</div>
+      <div class="pay-sum-item next">
+        <div class="pay-sum-label">&#9654; Next Payment Due</div>
+        <div class="pay-sum-amount">{fmt(nextPayGross)}</div>
+        <div class="pay-sum-sub">ex. VAT {fmt(nextPayNet)} + VAT {fmt(nextPayVat)}</div>
+        <div class="pay-sum-trigger">Triggers when works reach {nextTriggerPct}% &nbsp;&mdash;&nbsp; {progressNeeded.toFixed(1)}% still to complete</div>
+      </div>
+      <div class="pay-sum-arrow">&#8594;</div>
+      <div class="pay-sum-item pending">
+        <div class="pay-sum-label">Remaining After</div>
+        <div class="pay-sum-amount">{fmt(remainingPend * 1.10)}</div>
+        <div class="pay-sum-sub">ex. VAT {fmt(remainingPend)}</div>
+        <div class="pay-sum-sub" style="margin-top:.3rem">Final balance — due on practical completion</div>
+      </div>
+    </div>
+    <div class="pay-timeline-wrap">
+      <div class="pay-track-spacer"></div>
+      <div class="pay-track">
+        <div class="pay-track-fill" style={`width:${Math.min(totalPerc,100).toFixed(1)}%`}></div>
+        {payMilestones.map(m => (
+          <div class={`pay-tick ${m.status}`} style={`left:${m.trigger}%`}>
+            <div class="pay-tick-id">{m.id}</div>
+            <div class="pay-tick-dot"></div>
+            <div class="pay-tick-lbl">{m.trigger === 0 ? 'Signing' : m.trigger + '%'}</div>
+          </div>
+        ))}
+        <div class="pay-now" style={`left:${totalPerc.toFixed(1)}%`}>
+          <div class="pay-now-lbl">{totalPerc.toFixed(1)}% today</div>
+          <div class="pay-now-line"></div>
+          <div class="pay-now-dot"></div>
+        </div>
+      </div>
+      <div class="pay-track-labels">
+        <span class="pay-track-edge">0% — Contract signed</span>
+        <span class="pay-track-edge">100% — Practical completion</span>
+      </div>
+    </div>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead>
+          <tr>
+            <th style="width:55px">Ref.</th>
+            <th>Milestone</th>
+            <th>Trigger</th>
+            <th class="right">Net (ex. VAT)</th>
+            <th class="right">VAT 10%</th>
+            <th class="right">Total inc. VAT</th>
+            <th style="width:100px">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {payMilestones.map(m => (
+            <tr class={`pay-row-${m.status}`}>
+              <td class="pay-col-id">{m.id}</td>
+              <td class="pay-col-label">{m.label}</td>
+              <td class="pay-col-trigger">{m.note}</td>
+              <td class="pay-col-money">{fmt(m.amount)}</td>
+              <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * 0.10)}</td>
+              <td class="pay-col-gross">{fmt(m.amount * 1.10)}</td>
+              <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? 'Next Due' : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
+            </tr>
+          ))}
+          <tr style="background:var(--grey-1)">
+            <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">CONTRACT TOTAL</td>
+            <td class="pay-col-money" style="font-weight:700; color:var(--navy)">{fmt(totalBudget)}</td>
+            <td class="pay-col-money" style="font-weight:700; color:var(--slate)">{fmt(totalBudget * 0.10)}</td>
+            <td class="pay-col-gross">{fmt(totalBudget * 1.10)}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="overview">
+    <div class="donut-card">
+      <div class="donut-wrap">
+        <div class="donut-ring" style={`--p:${totalPerc.toFixed(1)}%`}></div>
+        <div class="donut-inner">
+          <div class="donut-pct">{totalPerc.toFixed(1)}%</div>
+          <div class="donut-lbl">Complete</div>
+        </div>
+      </div>
+      <div class="donut-title">Overall Progress</div>
+      <div class="donut-sub">Progress Update #{project.updateNum}<br/>{project.updated}</div>
+    </div>
+    <div class="cat-card">
+      <div class="cat-card-title">Progress by work category</div>
+      {enrichedCats.map(cat => (
+        <div class="cat-bar-row">
+          <span class="cat-bar-id">{cat.id}</span>
+          <span class="cat-bar-label" title={cat.label}>{cat.label}</span>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" style={`width:${cat.catPerc.toFixed(1)}%; background:${catColor(cat.catPerc)}`}></div>
+          </div>
+          <span class="cat-bar-pct" style={`color:${catColor(cat.catPerc)}`}>{cat.catPerc.toFixed(0)}%</span>
+          <span class={`cat-status ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <div class="section-title">Works Breakdown</div>
+  <div class="works-card">
+    <div class="works-scroll">
+      <table class="works">
+        <thead>
+          <tr>
+            <th style="width:50px">#</th>
+            <th>Description</th>
+            <th style="width:55px">Unit</th>
+            <th class="right" style="width:75px">Qty</th>
+            <th class="right" style="width:90px">Unit Price</th>
+            <th class="right" style="width:105px">Budget</th>
+            <th class="right" style="width:80px">Done</th>
+            <th class="right" style="width:105px">Value Done</th>
+            <th style="width:110px">Progress</th>
+            <th style="width:90px">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {enrichedCats.map(cat => (
+            <>
+              <tr class="works-cat">
+                <td colspan="10">
+                  <span class="cat-letter">{cat.id}</span>
+                  {cat.label}
+                  <span style="margin-left:.5rem; font-weight:400; color:var(--slate); font-size:0.68rem">
+                    Budget: {fmt(cat.catBudget)} &nbsp;|&nbsp; Completed: {fmt(cat.catDone)} &nbsp;|&nbsp; {cat.catPerc.toFixed(0)}%
+                  </span>
+                </td>
+              </tr>
+              {cat.items.map(item => (
+                <tr class="item">
+                  <td class="item-id">{item.id}</td>
+                  <td class="item-desc">{item.desc}</td>
+                  <td style="color:var(--slate); font-size:0.72rem">{item.unit}</td>
+                  <td class="item-num">{fmtQ(item.qty, item.unit)}</td>
+                  <td class="item-money">{fmt(item.unitPrice)}</td>
+                  <td class="item-money" style="font-weight:500">{fmt(item.budget)}</td>
+                  <td class="item-done-qty" style={`color:${catColor(item.perc)}; font-weight:600`}>{fmtQ(item.doneQty, item.unit)}</td>
+                  <td class="item-money" style={`color:${catColor(item.perc)}; font-weight:500`}>{item.done > 0 ? fmt(item.done) : '–'}</td>
+                  <td class="perc-cell">
+                    <div class="perc-wrap">
+                      <div class="perc-mini"><div class="perc-mini-fill" style={`width:${item.perc.toFixed(0)}%; background:${catColor(item.perc)}`}></div></div>
+                      <span class="perc-num" style={`color:${catColor(item.perc)}`}>{item.perc.toFixed(0)}%</span>
+                    </div>
+                  </td>
+                  <td><span class={`badge ${statusClass(item.perc)}`}>{statusLabel(item.perc)}</span></td>
+                </tr>
+              ))}
+              <tr class="subtotal">
+                <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
+                <td class="item-money">{fmt(cat.catBudget)}</td>
+                <td></td>
+                <td class="item-money" style="color:var(--navy)">{fmt(cat.catDone)}</td>
+                <td class="perc-cell">
+                  <div class="perc-wrap">
+                    <div class="perc-mini"><div class="perc-mini-fill" style={`width:${cat.catPerc.toFixed(0)}%; background:${catColor(cat.catPerc)}`}></div></div>
+                    <span class="perc-num">{cat.catPerc.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td><span class={`badge ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span></td>
+              </tr>
+            </>
+          ))}
+          <tr class="grand-total">
+            <td colspan="5" style="text-align:right; padding-right:1rem; letter-spacing:.04em">TOTAL</td>
+            <td class="item-money">{fmt(totalBudget)}</td>
+            <td></td>
+            <td class="item-money">{fmt(totalDone)}</td>
+            <td colspan="2" style="padding-left:.75rem; font-size:0.88rem">{totalPerc.toFixed(2)}% complete</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-title">Progress Updates</div>
+  <div class="updates-grid">
+    <div class="update-card latest">
+      <div class="update-num">Progress Update #3 — Latest</div>
+      <div class="update-date">October 2024</div>
+      <div class="update-pct">{totalPerc.toFixed(1)}% <span>overall complete</span></div>
+      <div class="update-note">Roofing now 98% complete. Internal finishes progressing well — tiling underway in all units. Doors & windows 78% installed. Plumbing first-fix 100%. Electrical works to start next month.</div>
+    </div>
+    <div class="update-card">
+      <div class="update-num">Progress Update #2</div>
+      <div class="update-date">September 2024</div>
+      <div class="update-pct">51.6% <span>overall complete</span></div>
+      <div class="update-note">Structural works substantially complete. Roof waterproofing and insulation installed. First-fix plumbing complete. Internal plaster commenced on ground floor.</div>
+    </div>
+    <div class="update-card">
+      <div class="update-num">Progress Update #1</div>
+      <div class="update-date">June 2024</div>
+      <div class="update-pct">26.7% <span>overall complete</span></div>
+      <div class="update-note">All demolition and site preparation works complete. Foundations and ring beams cast. Steel reinforcement 70% in place. Site hoarding and welfare facilities established.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="page-footer">
+  <strong>CiteraStudio</strong> — Landscape Architecture &amp; Project Management &nbsp;|&nbsp;
+  Arch. Vito Depalo &nbsp;|&nbsp; {project.location} &nbsp;|&nbsp;
+  This document is confidential and intended solely for {project.client}.
+</div>
+
+</body>
+</html>
