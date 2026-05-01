@@ -15,12 +15,12 @@ const project = {
   updateNum:  3,
 };
 
-interface WorkItem { id: string; desc: string; unit: string; qty: number; unitPrice: number; doneQty: number; }
+interface WorkItem { id: string; desc: string; unit: string; qty: number; unitPrice: number; doneQty: number; isExtra?: boolean; }
 interface Category  { id: string; label: string; items: WorkItem[]; }
 
 const categories: Category[] = [
   { id: 'A', label: 'Site Preparation & Demolition', items: [
-    { id: 'A.01', desc: 'Demolition of existing masonry structures',      unit: 'm³',  qty: 48,   unitPrice: 73.50,   doneQty: 40   },
+    { id: 'A.01', desc: 'Demolition of existing masonry structures',      unit: 'm³',  qty: 48,   unitPrice: 73.50,   doneQty: 52   },
     { id: 'A.02', desc: 'Removal of old roof covering and flashings',     unit: 'm²',  qty: 320,  unitPrice: 9.63,    doneQty: 320  },
     { id: 'A.03', desc: 'Removal of existing floor finishes and screed',  unit: 'm²',  qty: 415,  unitPrice: 7.00,    doneQty: 370  },
     { id: 'A.04', desc: 'Stripping of deteriorated internal plaster',     unit: 'm²',  qty: 580,  unitPrice: 6.56,    doneQty: 400  },
@@ -36,6 +36,7 @@ const categories: Category[] = [
     { id: 'C.03', desc: 'Porcelain floor tiles 60×60 cm, laid & grouted', unit: 'm²',  qty: 780,  unitPrice: 48.00,   doneQty: 600  },
     { id: 'C.04', desc: 'Ceramic wall tiles, bathrooms & kitchen',        unit: 'm²',  qty: 320,  unitPrice: 42.00,   doneQty: 280  },
     { id: 'C.05', desc: 'Interior emulsion paint, two finish coats',      unit: 'm²',  qty: 2100, unitPrice: 6.30,    doneQty: 1800 },
+    { id: 'C.EX1', desc: 'Feature stone cladding — entrance hall (variation agreed 12/09/2024)', unit: 'm²', qty: 0, unitPrice: 185.00, doneQty: 45, isExtra: true },
   ]},
   { id: 'D', label: 'Roofing Works', items: [
     { id: 'D.01', desc: 'Torch-on waterproofing membrane, 4 mm',          unit: 'm²',  qty: 320,  unitPrice: 24.50,   doneQty: 320  },
@@ -52,6 +53,7 @@ const categories: Category[] = [
     { id: 'F.01', desc: 'Hot & cold water supply pipework (multi-layer)', unit: 'lump', qty: 1,   unitPrice: 18500.00, doneQty: 1   },
     { id: 'F.02', desc: 'Internal drainage & soil pipework, PVC',         unit: 'lump', qty: 1,   unitPrice: 8750.00,  doneQty: 1   },
     { id: 'F.03', desc: 'Bathroom fittings & sanitary ware (8 bathrooms)',unit: 'lump', qty: 1,   unitPrice: 22400.00, doneQty: 0   },
+    { id: 'F.EX1', desc: 'Additional external rainwater harvesting tank (extra works)', unit: 'lump', qty: 0, unitPrice: 4800.00, doneQty: 1, isExtra: true },
   ]},
   { id: 'G', label: 'Electrical Installation', items: [
     { id: 'G.01', desc: 'Full electrical installation, 8 units',          unit: 'lump', qty: 1,   unitPrice: 28500.00, doneQty: 0   },
@@ -63,22 +65,27 @@ const categories: Category[] = [
 ];
 
 const enrich = (item: WorkItem) => {
-  const budget = item.qty * item.unitPrice;
-  const done   = item.doneQty * item.unitPrice;
-  const perc   = budget > 0 ? (done / budget) * 100 : 0;
-  return { ...item, budget, done, perc };
+  const budget  = item.isExtra ? 0 : item.qty * item.unitPrice;
+  const done    = item.doneQty * item.unitPrice;
+  const perc    = (!item.isExtra && budget > 0) ? (done / budget) * 100 : null;
+  const overrun = !item.isExtra && item.doneQty > item.qty;
+  return { ...item, budget, done, perc, overrun };
 };
 const enrichedCats = categories.map(cat => {
-  const items     = cat.items.map(enrich);
-  const catBudget = items.reduce((s, i) => s + i.budget, 0);
-  const catDone   = items.reduce((s, i) => s + i.done,   0);
-  const catPerc   = catBudget > 0 ? (catDone / catBudget) * 100 : 0;
-  return { ...cat, items, catBudget, catDone, catPerc };
+  const items        = cat.items.map(enrich);
+  const catBudget    = items.filter(i => !i.isExtra).reduce((s, i) => s + i.budget, 0);
+  const catDoneContr = items.filter(i => !i.isExtra).reduce((s, i) => s + i.done,   0);
+  const catDoneExtra = items.filter(i =>  i.isExtra).reduce((s, i) => s + i.done,   0);
+  const catDone      = catDoneContr + catDoneExtra;
+  const catPerc      = catBudget > 0 ? (catDoneContr / catBudget) * 100 : 0;
+  return { ...cat, items, catBudget, catDoneContr, catDoneExtra, catDone, catPerc };
 });
-const totalBudget = enrichedCats.reduce((s, c) => s + c.catBudget, 0);
-const totalDone   = enrichedCats.reduce((s, c) => s + c.catDone,   0);
-const totalPerc   = totalBudget > 0 ? (totalDone / totalBudget) * 100 : 0;
-const totalLeft   = totalBudget - totalDone;
+const totalBudget    = enrichedCats.reduce((s, c) => s + c.catBudget,    0);
+const totalDoneContr = enrichedCats.reduce((s, c) => s + c.catDoneContr, 0);
+const totalDoneExtra = enrichedCats.reduce((s, c) => s + c.catDoneExtra, 0);
+const totalDone      = totalDoneContr + totalDoneExtra;
+const totalPerc      = totalBudget > 0 ? (totalDoneContr / totalBudget) * 100 : 0;
+const totalLeft      = totalBudget - totalDoneContr;
 
 const rawMilestones = [
   { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   amount: totalBudget * 0.20, note: 'On contract signing' },
@@ -106,9 +113,9 @@ const remainingPend  = payMilestones.filter(m => m.status === 'pending').reduce(
 
 const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtQ = (n: number, unit: string) => unit === 'lump' ? (n === 0 ? '–' : '✓') : n.toLocaleString('en-GB');
-const statusLabel = (p: number) => p >= 100 ? 'Complete' : p > 0 ? 'In Progress' : 'Not Started';
-const statusClass = (p: number) => p >= 100 ? 'complete' : p > 0 ? 'progress' : 'pending';
-const catColor    = (p: number) => p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : p > 0 ? '#f59e0b' : '#cbd5e1';
+const statusLabel = (p: number | null) => p === null ? 'Extra' : p >= 100 ? 'Complete' : p > 0 ? 'In Progress' : 'Not Started';
+const statusClass = (p: number | null) => p === null ? 'extra' : p >= 100 ? 'complete' : p > 0 ? 'progress' : 'pending';
+const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : p > 0 ? '#f59e0b' : '#cbd5e1';
 ---
 
 <!doctype html>
@@ -308,6 +315,12 @@ const catColor    = (p: number) => p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : 
     .badge.complete { background: #dcfce7; color: #15803d; }
     .badge.progress { background: #fff7ed; color: #c2410c; }
     .badge.pending  { background: #f1f5f9; color: #94a3b8; }
+    .badge.overrun  { background: #fff7ed; color: #c2410c; }
+    .badge.extra    { background: #fef3c7; color: #92400e; }
+    tr.item.extra-item td { background: #fffdf5; }
+    tr.item.extra-item:hover td { background: #fef9e7; }
+    .extra-badge { display: inline-block; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; padding: .12rem .4rem; border-radius: 3px; background: #f59e0b; color: #fff; margin-right: .35rem; vertical-align: middle; line-height: 1.6; }
+    .overrun-num { color: #f59e0b; font-weight: 700; }
     tr.subtotal td { background: #f8fafc; padding: .4rem .75rem; font-size: 0.72rem; font-weight: 600; color: var(--navy); border-top: 1px dashed #c7d9f0; border-bottom: 2px solid var(--grey-2); }
     tr.subtotal .sub-label { color: var(--slate); font-weight: 400; }
     tr.grand-total td { background: var(--navy); color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: 0.8rem; }
@@ -386,24 +399,27 @@ const catColor    = (p: number) => p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : 
 
   <div class="metrics">
     <div class="metric-card">
-      <div class="metric-label">Contract Budget</div>
+      <div class="metric-label">Contract Budget <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
       <div class="metric-value">{fmt(totalBudget)}</div>
       <div class="metric-sub">inc. VAT 10%: {fmt(totalBudget * 1.10)}</div>
     </div>
     <div class="metric-card highlight">
-      <div class="metric-label">Completed to Date</div>
+      <div class="metric-label">Works Completed <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
       <div class="metric-value">{fmt(totalDone)}</div>
-      <div class="metric-sub">{totalPerc.toFixed(1)}% of contract value</div>
+      <div class="metric-sub">
+        {totalPerc.toFixed(1)}% of contract
+        {totalDoneExtra > 0 && <> &nbsp;|&nbsp; <span style="color:var(--amber)">+{fmt(totalDoneExtra)} extras</span></>}
+      </div>
     </div>
     <div class="metric-card">
-      <div class="metric-label">Remaining Works</div>
+      <div class="metric-label">Remaining Works <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
       <div class="metric-value">{fmt(totalLeft)}</div>
-      <div class="metric-sub">to be executed</div>
+      <div class="metric-sub">contracted works to execute</div>
     </div>
     <div class="metric-card highlight">
       <div class="metric-label">Next Payment Due</div>
       <div class="metric-value">{fmt(nextPayGross)}</div>
-      <div class="metric-sub">inc. VAT — triggers at {nextTriggerPct}% ({progressNeeded.toFixed(1)}% to go)</div>
+      <div class="metric-sub">inc. VAT 10% — triggers at {nextTriggerPct}% ({progressNeeded.toFixed(1)}% to go)</div>
     </div>
   </div>
 
@@ -527,11 +543,11 @@ const catColor    = (p: number) => p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : 
             <th style="width:50px">#</th>
             <th>Description</th>
             <th style="width:55px">Unit</th>
-            <th class="right" style="width:75px">Qty</th>
-            <th class="right" style="width:90px">Unit Price</th>
-            <th class="right" style="width:105px">Budget</th>
-            <th class="right" style="width:80px">Done</th>
-            <th class="right" style="width:105px">Value Done</th>
+            <th class="right" style="width:75px">Contracted<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
+            <th class="right" style="width:90px">Unit Price<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+            <th class="right" style="width:105px">Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+            <th class="right" style="width:80px">Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
+            <th class="right" style="width:105px">Value Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
             <th style="width:110px">Progress</th>
             <th style="width:90px">Status</th>
           </tr>
@@ -544,37 +560,73 @@ const catColor    = (p: number) => p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : 
                   <span class="cat-letter">{cat.id}</span>
                   {cat.label}
                   <span style="margin-left:.5rem; font-weight:400; color:var(--slate); font-size:0.68rem">
-                    Budget: {fmt(cat.catBudget)} &nbsp;|&nbsp; Completed: {fmt(cat.catDone)} &nbsp;|&nbsp; {cat.catPerc.toFixed(0)}%
+                    Budget: {fmt(cat.catBudget)} &nbsp;|&nbsp; Contracted done: {fmt(cat.catDoneContr)} ({cat.catPerc.toFixed(0)}%)
+                    {cat.catDoneExtra > 0 && <> &nbsp;|&nbsp; <span style="color:var(--amber)">Extra: {fmt(cat.catDoneExtra)}</span></>}
                   </span>
                 </td>
               </tr>
               {cat.items.map(item => (
-                <tr class="item">
+                <tr class={`item${item.isExtra ? ' extra-item' : ''}`}>
                   <td class="item-id">{item.id}</td>
-                  <td class="item-desc">{item.desc}</td>
-                  <td style="color:var(--slate); font-size:0.72rem">{item.unit}</td>
-                  <td class="item-num">{fmtQ(item.qty, item.unit)}</td>
-                  <td class="item-money">{fmt(item.unitPrice)}</td>
-                  <td class="item-money" style="font-weight:500">{fmt(item.budget)}</td>
-                  <td class="item-done-qty" style={`color:${catColor(item.perc)}; font-weight:600`}>{fmtQ(item.doneQty, item.unit)}</td>
-                  <td class="item-money" style={`color:${catColor(item.perc)}; font-weight:500`}>{item.done > 0 ? fmt(item.done) : '–'}</td>
-                  <td class="perc-cell">
-                    <div class="perc-wrap">
-                      <div class="perc-mini"><div class="perc-mini-fill" style={`width:${item.perc.toFixed(0)}%; background:${catColor(item.perc)}`}></div></div>
-                      <span class="perc-num" style={`color:${catColor(item.perc)}`}>{item.perc.toFixed(0)}%</span>
-                    </div>
+                  <td class="item-desc">
+                    {item.isExtra && <span class="extra-badge">Extra</span>}
+                    {item.desc}
                   </td>
-                  <td><span class={`badge ${statusClass(item.perc)}`}>{statusLabel(item.perc)}</span></td>
+                  <td style="color:var(--slate); font-size:0.72rem">{item.unit}</td>
+                  <td class="item-num" style={item.isExtra ? 'color:var(--grey-3)' : ''}>
+                    {item.isExtra ? '–' : fmtQ(item.qty, item.unit)}
+                  </td>
+                  <td class="item-money">{fmt(item.unitPrice)}</td>
+                  <td class="item-money" style={`font-weight:500; ${item.isExtra ? 'color:var(--grey-3)' : ''}`}>
+                    {item.isExtra ? '–' : fmt(item.budget)}
+                  </td>
+                  <td class="item-done-qty" style={`color:${item.overrun ? 'var(--amber)' : catColor(item.perc)}; font-weight:600`}>
+                    {fmtQ(item.doneQty, item.unit)}
+                    {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
+                  </td>
+                  <td class="item-money" style={`color:${item.isExtra ? 'var(--amber)' : catColor(item.perc)}; font-weight:500`}>
+                    {item.done > 0 ? fmt(item.done) : '–'}
+                  </td>
+                  <td class="perc-cell">
+                    {item.isExtra ? (
+                      <span style="font-size:0.7rem; color:var(--amber); font-weight:600">Extra works</span>
+                    ) : item.perc !== null ? (
+                      <div class="perc-wrap">
+                        <div class="perc-mini">
+                          <div class="perc-mini-fill" style={`width:${Math.min(item.perc, 100).toFixed(0)}%; background:${item.overrun ? 'var(--amber)' : catColor(item.perc)}`}></div>
+                        </div>
+                        <span class={item.overrun ? 'perc-num overrun-num' : 'perc-num'} style={`color:${item.overrun ? 'var(--amber)' : catColor(item.perc)}`}>
+                          {item.perc.toFixed(0)}%
+                        </span>
+                      </div>
+                    ) : (
+                      <span style="color:var(--grey-3)">–</span>
+                    )}
+                  </td>
+                  <td>
+                    {item.isExtra ? (
+                      <span class="badge extra">Extra</span>
+                    ) : item.overrun ? (
+                      <span class="badge overrun">Overrun</span>
+                    ) : item.perc !== null ? (
+                      <span class={`badge ${statusClass(item.perc)}`}>{statusLabel(item.perc)}</span>
+                    ) : (
+                      <span class="badge pending">–</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               <tr class="subtotal">
                 <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
                 <td class="item-money">{fmt(cat.catBudget)}</td>
                 <td></td>
-                <td class="item-money" style="color:var(--navy)">{fmt(cat.catDone)}</td>
+                <td class="item-money" style="color:var(--navy)">
+                  {fmt(cat.catDone)}
+                  {cat.catDoneExtra > 0 && <span style="display:block; font-size:0.62rem; color:var(--amber); font-weight:400">incl. {fmt(cat.catDoneExtra)} extras</span>}
+                </td>
                 <td class="perc-cell">
                   <div class="perc-wrap">
-                    <div class="perc-mini"><div class="perc-mini-fill" style={`width:${cat.catPerc.toFixed(0)}%; background:${catColor(cat.catPerc)}`}></div></div>
+                    <div class="perc-mini"><div class="perc-mini-fill" style={`width:${Math.min(cat.catPerc,100).toFixed(0)}%; background:${catColor(cat.catPerc)}`}></div></div>
                     <span class="perc-num">{cat.catPerc.toFixed(0)}%</span>
                   </div>
                 </td>
@@ -583,11 +635,17 @@ const catColor    = (p: number) => p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : 
             </>
           ))}
           <tr class="grand-total">
-            <td colspan="5" style="text-align:right; padding-right:1rem; letter-spacing:.04em">TOTAL</td>
+            <td colspan="5" style="text-align:right; padding-right:1rem; letter-spacing:.04em">TOTAL <span style="font-size:0.65rem; opacity:.65; font-weight:400">(net ex. VAT)</span></td>
             <td class="item-money">{fmt(totalBudget)}</td>
             <td></td>
-            <td class="item-money">{fmt(totalDone)}</td>
-            <td colspan="2" style="padding-left:.75rem; font-size:0.88rem">{totalPerc.toFixed(2)}% complete</td>
+            <td class="item-money">
+              {fmt(totalDone)}
+              {totalDoneExtra > 0 && <span style="display:block; font-size:0.62rem; opacity:.7; font-weight:400">incl. {fmt(totalDoneExtra)} extras</span>}
+            </td>
+            <td colspan="2" style="padding-left:.75rem; font-size:0.88rem">
+              {totalPerc.toFixed(2)}% contracted complete
+              {totalDoneExtra > 0 && <span style="display:block; font-size:0.7rem; opacity:.7; font-weight:400">+ {fmt(totalDoneExtra)} extra works (net)</span>}
+            </td>
           </tr>
         </tbody>
       </table>
