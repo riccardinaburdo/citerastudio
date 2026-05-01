@@ -315,12 +315,12 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
     .badge.complete { background: #dcfce7; color: #15803d; }
     .badge.progress { background: #fff7ed; color: #c2410c; }
     .badge.pending  { background: #f1f5f9; color: #94a3b8; }
-    .badge.overrun  { background: #fff7ed; color: #c2410c; }
+    .badge.overrun  { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
     .badge.extra    { background: #fef3c7; color: #92400e; }
     tr.item.extra-item td { background: #fffdf5; }
     tr.item.extra-item:hover td { background: #fef9e7; }
     .extra-badge { display: inline-block; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; padding: .12rem .4rem; border-radius: 3px; background: #f59e0b; color: #fff; margin-right: .35rem; vertical-align: middle; line-height: 1.6; }
-    .overrun-num { color: #f59e0b; font-weight: 700; }
+    .overrun-num { color: #dc2626; font-weight: 700; }
     tr.subtotal td { background: #f8fafc; padding: .4rem .75rem; font-size: 0.72rem; font-weight: 600; color: var(--navy); border-top: 1px dashed #c7d9f0; border-bottom: 2px solid var(--grey-2); }
     tr.subtotal .sub-label { color: var(--slate); font-weight: 400; }
     tr.grand-total td { background: var(--navy); color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: 0.8rem; }
@@ -580,7 +580,7 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
                   <td class="item-money" style={`font-weight:500; ${item.isExtra ? 'color:var(--grey-3)' : ''}`}>
                     {item.isExtra ? '–' : fmt(item.budget)}
                   </td>
-                  <td class="item-done-qty" style={`color:${item.overrun ? 'var(--amber)' : catColor(item.perc)}; font-weight:600`}>
+                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : catColor(item.perc)}; font-weight:600`}>
                     {fmtQ(item.doneQty, item.unit)}
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
@@ -593,7 +593,7 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
                     ) : item.perc !== null ? (
                       <div class="perc-wrap">
                         <div class="perc-mini">
-                          <div class="perc-mini-fill" style={`width:${Math.min(item.perc, 100).toFixed(0)}%; background:${item.overrun ? 'var(--amber)' : catColor(item.perc)}`}></div>
+                          <div class="perc-mini-fill" style={`width:${Math.min(item.perc, 100).toFixed(0)}%; background:${item.overrun ? '#dc2626' : catColor(item.perc)}`}></div>
                         </div>
                         <span class={item.overrun ? 'perc-num overrun-num' : 'perc-num'} style={`color:${item.overrun ? 'var(--amber)' : catColor(item.perc)}`}>
                           {item.perc.toFixed(0)}%
