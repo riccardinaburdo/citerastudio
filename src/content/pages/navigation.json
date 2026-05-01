@@ -19,7 +19,6 @@
     ]},
     { "label": "Alveus Project", "url": "/alveus-project" },
     { "label": "About", "url": "/about" },
-    { "label": "Contact", "url": "/contact" },
-    { "label": "🔒 Client Portal", "url": "/area-riservata/" }
+    { "label": "Contact", "url": "/contact" }
   ]
 }

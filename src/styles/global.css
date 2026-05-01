@@ -56,7 +56,20 @@ h1, h2, h3, h4, h5, h6 {
   max-width: var(--max-width);
   margin: 0 auto;
   text-align: center;
+  position: relative;
 }
+
+.portal-icon {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  font-size: 1.2rem;
+  opacity: 0.45;
+  text-decoration: none;
+  transition: opacity 0.2s;
+  line-height: 1;
+}
+.portal-icon:hover { opacity: 0.9; }
 
 .site-brand a {
   display: inline-block;
