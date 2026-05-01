@@ -459,7 +459,7 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
           </div>
         ))}
         <div class="pay-now" style={`left:${totalPerc.toFixed(1)}%`}>
-          <div class="pay-now-lbl">{totalPerc.toFixed(1)}% today</div>
+          <div class="pay-now-lbl">at {project.updated}</div>
           <div class="pay-now-line"></div>
           <div class="pay-now-dot"></div>
         </div>
