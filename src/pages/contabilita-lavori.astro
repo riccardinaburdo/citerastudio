@@ -1,0 +1,751 @@
+---
+// Stato Avanzamento Lavori n. 3 – Contabilità dei Lavori
+// Formato tipo PriMus (ACCA Software) – D.Lgs. 36/2023
+
+interface WorkItem {
+  num: string;
+  cod: string;
+  desc: string;
+  um: string;
+  qc: number;
+  pu: number;
+  qp: number;
+  qa: number;
+}
+
+interface Category {
+  label: string;
+  sicurezza?: boolean;
+  items: WorkItem[];
+}
+
+const categories: Category[] = [
+  {
+    label: 'CAT. 1 – DEMOLIZIONI E RIMOZIONI',
+    items: [
+      { num: '1', cod: 'D.01', desc: 'Demolizione di muratura piena in mattoni o blocchi, eseguita a mano o con mezzi meccanici, con asportazione e trasporto a rifiuto del materiale di risulta', um: 'm³', qc: 48.00, pu: 73.50, qp: 25.00, qa: 15.00 },
+      { num: '2', cod: 'D.02', desc: 'Rimozione del manto di copertura in tegole curve o piane, con scossaline e compluvi, compresi movimentazione e trasporto a rifiuto', um: 'm²', qc: 320.00, pu: 9.63, qp: 320.00, qa: 0.00 },
+      { num: '3', cod: 'D.03', desc: 'Rimozione di pavimentazioni in ceramica o gres, compreso lo strato di allettamento in malta cementizia, con trasporto a rifiuto', um: 'm²', qc: 415.00, pu: 7.00, qp: 250.00, qa: 120.00 },
+      { num: '4', cod: 'D.04', desc: 'Taglio e rimozione di intonaci ammalorati e distaccati da pareti verticali, a qualsiasi altezza, compresi movimentazione e trasporto a rifiuto', um: 'm²', qc: 580.00, pu: 6.56, qp: 400.00, qa: 0.00 },
+    ],
+  },
+  {
+    label: 'CAT. 2 – OPERE STRUTTURALI IN C.A.',
+    items: [
+      { num: '5', cod: 'S.01', desc: 'Calcestruzzo per fondazioni, travi e cordoli in c.a., classe C25/30 – consistenza S4, inclusi getto, vibrazione e stagionatura', um: 'm³', qc: 85.00, pu: 175.00, qp: 60.00, qa: 20.00 },
+      { num: '6', cod: 'S.02', desc: 'Acciaio per armature ordinarie in barre ad aderenza migliorata tipo B450C, inclusi taglio, piegatura, legatura e posa in opera', um: 'kg', qc: 8500.00, pu: 1.75, qp: 6000.00, qa: 2000.00 },
+      { num: '7', cod: 'S.03', desc: 'Muratura portante in blocchi di calcestruzzo alleggerito 20×30×50 cm, in malta cementizia tipo M10, con stilatura dei giunti', um: 'm²', qc: 280.00, pu: 68.25, qp: 150.00, qa: 80.00 },
+    ],
+  },
+  {
+    label: 'CAT. 3 – OPERE EDILI',
+    items: [
+      { num: '8',  cod: 'E.01', desc: 'Intonaco civile a tre strati su pareti verticali interne, inclusa rasatura finale con gesso, a qualsiasi altezza', um: 'm²', qc: 1250.00, pu: 18.40, qp: 600.00, qa: 350.00 },
+      { num: '9',  cod: 'E.02', desc: 'Massetto in calcestruzzo alleggerito con fibrorinforzante sintetico, spessore 6 cm, per la successiva posa di pavimenti', um: 'm²', qc: 850.00, pu: 12.25, qp: 500.00, qa: 280.00 },
+      { num: '10', cod: 'E.03', desc: 'Pavimento in piastrelle di gres porcellanato rettificato 60×60 cm, finitura naturale, fornitura e posa con fughe colorate', um: 'm²', qc: 780.00, pu: 48.00, qp: 400.00, qa: 200.00 },
+      { num: '11', cod: 'E.04', desc: 'Rivestimento in piastrelle ceramiche smaltate 30×60 cm per bagni e cucine, fornitura e posa con stucco idrofugo', um: 'm²', qc: 320.00, pu: 42.00, qp: 180.00, qa: 100.00 },
+      { num: '12', cod: 'E.05', desc: 'Tinteggiatura con pittura lavabile a base di resine acriliche, ciclo completo con fondo e due mani di finitura, su pareti e soffitti', um: 'm²', qc: 2100.00, pu: 6.30, qp: 1200.00, qa: 600.00 },
+    ],
+  },
+  {
+    label: 'CAT. 4 – OPERE DI COPERTURA',
+    items: [
+      { num: '13', cod: 'C.01', desc: 'Impermeabilizzazione con guaina bituminosa armata con velovetro spessore 4 mm, applicata a fiamma su supporto preparato', um: 'm²', qc: 320.00, pu: 24.50, qp: 200.00, qa: 120.00 },
+      { num: '14', cod: 'C.02', desc: 'Coibentazione termica con pannelli in polistirene estruso (XPS) sp. 8 cm, incollati con adesivo cementizio', um: 'm²', qc: 320.00, pu: 21.00, qp: 200.00, qa: 120.00 },
+      { num: '15', cod: 'C.03', desc: 'Manto di copertura in tegole marsigliesi in laterizio pressato, compresa posa di colmi, comignoli, gronde e scossaline', um: 'm²', qc: 285.00, pu: 38.50, qp: 150.00, qa: 120.00 },
+    ],
+  },
+  {
+    label: 'CAT. 5 – INFISSI E SERRAMENTI',
+    items: [
+      { num: '16', cod: 'I.01', desc: 'Finestra in PVC a due ante con triplo vetrocamera basso emissivo 4-16-4, Uw ≤ 1,2 W/m²K, con davanzale e cassonetto coibentato', um: 'cad', qc: 28.00, pu: 485.00, qp: 14.00, qa: 10.00 },
+      { num: '17', cod: 'I.02', desc: 'Porta interna in legno tamburato impiallacciato, con telaio e controtelaio, guarnizione perimetrale e ferramenta di chiusura', um: 'cad', qc: 45.00, pu: 320.00, qp: 25.00, qa: 12.00 },
+      { num: '18', cod: 'I.03', desc: 'Portone blindato di ingresso classe 3 antieffrazione EN 1627, con serratura a più punti e tre cerniere a scomparsa', um: 'cad', qc: 8.00, pu: 1850.00, qp: 4.00, qa: 2.00 },
+      { num: '19', cod: 'I.04', desc: 'Veneziane motorizzate esterne in alluminio preverniciato per oscuramento, con motore 230 V e trasmettitore a radiocomando', um: 'cad', qc: 28.00, pu: 380.00, qp: 10.00, qa: 8.00 },
+    ],
+  },
+  {
+    label: 'CAT. 6 – IMPIANTO IDRO-SANITARIO',
+    items: [
+      { num: '20', cod: 'H.01', desc: 'Impianto idrico con tubazioni in multistrato per distribuzione acqua calda e fredda a tutti i servizi, inclusi raccordi e valvole – a corpo', um: 'corpo', qc: 1.00, pu: 18500.00, qp: 1.00, qa: 0.00 },
+      { num: '21', cod: 'H.02', desc: 'Impianto di scarico fognario interno in PVC rigido, inclusi raccordi, sifoni, bocchettoni a pavimento e pozzetti di ispezione – a corpo', um: 'corpo', qc: 1.00, pu: 8750.00, qp: 1.00, qa: 0.00 },
+      { num: '22', cod: 'H.03', desc: 'Sanitari completi (WC monoblocco, lavabo con colonna, bidet, piatto doccia in acrilico) per n. 8 bagni, fornitura e posa – a corpo', um: 'corpo', qc: 1.00, pu: 22400.00, qp: 0.00, qa: 0.00 },
+    ],
+  },
+  {
+    label: 'CAT. 7 – IMPIANTO ELETTRICO',
+    items: [
+      { num: '23', cod: 'El.01', desc: 'Impianto elettrico civile completo: quadro generale, cablaggio, prese e punti luce per n. 8 unità abitative – a corpo', um: 'corpo', qc: 1.00, pu: 28500.00, qp: 0.00, qa: 0.00 },
+      { num: '24', cod: 'El.02', desc: 'Impianto TV-SAT e rete dati con cablaggio strutturato Cat. 6 UTP, inclusi prese, centralini multimediali e dorsali verticali – a corpo', um: 'corpo', qc: 1.00, pu: 4800.00, qp: 0.00, qa: 0.00 },
+    ],
+  },
+  {
+    label: 'CAT. 8 – ONERI DELLA SICUREZZA (NON SOGGETTI A RIBASSO)',
+    sicurezza: true,
+    items: [
+      { num: '25', cod: 'Sic.01', desc: "Oneri per l'attuazione del Piano di Sicurezza e Coordinamento (P.S.C.) ai sensi del D.Lgs. 81/2008 e s.m.i. – a corpo", um: 'corpo', qc: 1.00, pu: 12500.00, qp: 1.00, qa: 0.00 },
+    ],
+  },
+];
+
+const fmt = (n: number, d = 2) =>
+  n.toLocaleString('it-IT', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const fmtQ = (n: number, um: string) => {
+  if (um === 'corpo') return n === 0 ? '–' : '1';
+  return fmt(n);
+};
+
+const enriched = categories.map(cat => ({
+  ...cat,
+  items: cat.items.map(item => {
+    const ic = item.qc * item.pu;
+    const ip = item.qp * item.pu;
+    const ia = item.qa * item.pu;
+    const qt = item.qp + item.qa;
+    const it = qt * item.pu;
+    const perc = item.qc > 0 ? (qt / item.qc) * 100 : 0;
+    return { ...item, ic, ip, ia, qt, it, perc };
+  }),
+}));
+
+const catsWithSub = enriched.map(cat => {
+  const sub = cat.items.reduce(
+    (a, i) => ({ ic: a.ic + i.ic, ip: a.ip + i.ip, ia: a.ia + i.ia, it: a.it + i.it }),
+    { ic: 0, ip: 0, ia: 0, it: 0 },
+  );
+  return { ...cat, sub };
+});
+
+const gt = catsWithSub.reduce(
+  (a, c) => ({ ic: a.ic + c.sub.ic, ip: a.ip + c.sub.ip, ia: a.ia + c.sub.ia, it: a.it + c.sub.it }),
+  { ic: 0, ip: 0, ia: 0, it: 0 },
+);
+
+const percGt    = gt.ic > 0 ? (gt.it / gt.ic) * 100 : 0;
+const residuo   = gt.ic - gt.it;
+const ritenuta  = gt.it * 0.05;
+const nettoRit  = gt.it - ritenuta;
+const accPrec   = 155000.00;
+const netto3    = nettoRit - accPrec;
+const iva3      = netto3 * 0.10;
+const totLiq    = netto3 + iva3;
+---
+
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contabilità dei Lavori – SAL n. 3 | CiteraStudio</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Roboto+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #1a3a5c;
+      --blue:   #2563a8;
+      --blue-lt:#dbeafe;
+      --teal:   #0d6b74;
+      --orange: #FB8503;
+      --grey-1: #f0f4f8;
+      --grey-2: #e2e8f0;
+      --grey-3: #94a3b8;
+      --text:   #1e293b;
+      --mono:   'Roboto Mono', monospace;
+      --sans:   'Inter', sans-serif;
+      --brand:  'Quicksand', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--sans); background: var(--grey-1); color: var(--text); font-size: 13px; }
+
+    /* ── Top bar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 1rem;
+      background: var(--navy); color: #fff;
+      padding: 0.55rem 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    .topbar-brand { font-family: var(--brand); font-weight: 700; font-size: 1.1rem; color: #FB8503; flex-shrink: 0; }
+    .topbar-sep   { color: rgba(255,255,255,.3); }
+    .topbar-title { font-size: 0.85rem; color: rgba(255,255,255,.75); flex: 1; }
+    .topbar-back  { font-size: 0.8rem; color: rgba(255,255,255,.6); text-decoration: none; transition: color .2s; flex-shrink: 0; }
+    .topbar-back:hover { color: var(--orange); }
+    .btn-print {
+      margin-left: auto;
+      padding: 0.35rem 1rem; border: 1px solid rgba(255,255,255,.4);
+      background: transparent; color: #fff; border-radius: 4px;
+      font-size: 0.78rem; cursor: pointer; transition: background .2s;
+      flex-shrink: 0;
+    }
+    .btn-print:hover { background: rgba(255,255,255,.15); }
+
+    /* ── Document wrapper ── */
+    .document { max-width: 1500px; margin: 1.5rem auto; background: #fff; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,.1); overflow: hidden; }
+
+    /* ── Doc header ── */
+    .doc-header {
+      display: grid; grid-template-columns: auto 1fr auto;
+      align-items: center; gap: 1.5rem;
+      background: var(--navy); color: #fff; padding: 1.2rem 2rem;
+    }
+    .doc-logo .brand-name { font-family: var(--brand); font-size: 1.6rem; font-weight: 700; color: var(--orange); line-height: 1; }
+    .doc-logo .brand-sub  { font-size: 0.7rem; color: rgba(255,255,255,.6); letter-spacing: .08em; text-transform: uppercase; }
+    .doc-title-block { text-align: center; }
+    .doc-type    { font-size: 1rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #fff; }
+    .doc-subtitle{ font-size: 0.7rem; color: rgba(255,255,255,.55); margin-top: .2rem; }
+    .doc-meta    { text-align: right; font-size: 0.72rem; line-height: 1.8; color: rgba(255,255,255,.65); }
+    .doc-meta strong { color: #fff; }
+
+    /* ── Project info grid ── */
+    .proj-info {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      border-bottom: 2px solid var(--grey-2); background: #fafcff;
+    }
+    .proj-cell {
+      padding: .6rem 1rem; border-right: 1px solid var(--grey-2);
+      border-bottom: 1px solid var(--grey-2);
+    }
+    .proj-cell:nth-child(4n) { border-right: none; }
+    .proj-cell.full { grid-column: 1 / -1; }
+    .proj-cell.half { grid-column: span 2; }
+    .proj-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-3); font-weight: 600; margin-bottom: .2rem; }
+    .proj-value { font-size: 0.8rem; font-weight: 500; color: var(--text); }
+    .proj-value.highlight { color: var(--blue); font-weight: 600; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; background: var(--grey-1); border-bottom: 2px solid var(--grey-2); padding: 0 1rem; gap: 2px; }
+    .tab {
+      padding: .55rem 1.2rem; border: none; background: transparent;
+      font-family: var(--sans); font-size: 0.78rem; font-weight: 500;
+      color: var(--grey-3); cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: color .2s, border-color .2s;
+    }
+    .tab:hover  { color: var(--blue); }
+    .tab.active { color: var(--navy); border-bottom-color: var(--orange); font-weight: 600; }
+
+    /* ── Tab content ── */
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Legend strip ── */
+    .legend {
+      display: flex; gap: 2rem; align-items: center;
+      padding: .5rem 1.5rem; background: #fafcff; border-bottom: 1px solid var(--grey-2);
+      font-size: 0.7rem; color: #64748b;
+    }
+    .legend-item { display: flex; align-items: center; gap: .4rem; }
+    .legend-dot  { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* ── SAL Table ── */
+    .table-scroll { overflow-x: auto; }
+    table.sal {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.72rem; font-family: var(--sans);
+    }
+
+    /* header rows */
+    table.sal thead tr.hdr-top th {
+      background: var(--navy); color: #fff;
+      padding: .45rem .5rem; text-align: center;
+      font-size: 0.67rem; letter-spacing: .04em; text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,.15);
+    }
+    table.sal thead tr.hdr-sub th {
+      background: #223f62; color: rgba(255,255,255,.85);
+      padding: .35rem .5rem; text-align: center;
+      font-size: 0.63rem; border: 1px solid rgba(255,255,255,.1);
+    }
+    /* group separators */
+    th.grp-contr { background: #15345a !important; }
+    th.grp-prec  { background: #1e4976 !important; }
+    th.grp-att   { background: #1a6060 !important; }
+    th.grp-tot   { background: #7c3300 !important; }
+
+    /* body rows */
+    table.sal tbody tr.item-row td {
+      padding: .35rem .5rem; border-bottom: 1px solid var(--grey-2);
+      vertical-align: middle;
+    }
+    table.sal tbody tr.item-row:nth-child(even) td { background: #fafcff; }
+    table.sal tbody tr.item-row:hover td { background: #eff6ff; }
+
+    /* category header row */
+    tr.cat-row td {
+      background: var(--blue); color: #fff;
+      font-weight: 600; font-size: 0.72rem; letter-spacing: .03em;
+      padding: .4rem .8rem; border: none;
+    }
+    tr.cat-row.sicurezza td { background: #7c3300; }
+
+    /* subtotal row */
+    tr.sub-row td {
+      background: var(--blue-lt); color: var(--navy);
+      font-weight: 600; font-size: 0.7rem;
+      padding: .35rem .5rem; border-top: 1px solid #93c5fd;
+      border-bottom: 2px solid #93c5fd;
+    }
+
+    /* grand total row */
+    tr.total-row td {
+      background: var(--navy); color: #fff;
+      font-weight: 700; font-size: 0.78rem;
+      padding: .5rem .5rem; border: none;
+    }
+
+    /* column alignment */
+    td.col-num  { text-align: center; color: var(--grey-3); width: 30px; }
+    td.col-cod  { font-family: var(--mono); font-size: 0.65rem; color: #4a5568; width: 60px; }
+    td.col-desc { min-width: 280px; max-width: 350px; line-height: 1.4; }
+    td.col-um   { text-align: center; font-family: var(--mono); font-size: 0.65rem; width: 45px; }
+    td.col-num-val, td.col-imp, td.col-pu, td.col-perc {
+      text-align: right; font-family: var(--mono); white-space: nowrap;
+    }
+    td.col-num-val { width: 75px; }
+    td.col-pu      { width: 85px; color: #4a5568; }
+    td.col-imp     { width: 95px; }
+    td.col-perc    { width: 55px; }
+
+    /* colour zones for executed columns */
+    td.zone-prec { background: rgba(37,99,168,.05); }
+    td.zone-att  { background: rgba(13,107,116,.07); }
+    td.zone-tot  { background: rgba(251,133,3,.05); }
+    tr.item-row:hover td.zone-prec { background: rgba(37,99,168,.1); }
+    tr.item-row:hover td.zone-att  { background: rgba(13,107,116,.12); }
+    tr.item-row:hover td.zone-tot  { background: rgba(251,133,3,.1); }
+
+    /* zero amounts */
+    .zero { color: var(--grey-3); }
+
+    /* progress bar inside % cell */
+    .perc-bar { position: relative; }
+    .perc-bar::after {
+      content: ''; position: absolute; bottom: 0; left: 0;
+      height: 3px; background: var(--orange); opacity: .6;
+      width: var(--w, 0%); border-radius: 0 2px 2px 0;
+    }
+
+    /* ── Summary panel ── */
+    .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 3px solid var(--navy); }
+
+    .sum-block { padding: 1.5rem 2rem; }
+    .sum-block:first-child { border-right: 1px solid var(--grey-2); }
+    .sum-title {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--grey-3); font-weight: 600; margin-bottom: 1rem;
+      padding-bottom: .4rem; border-bottom: 1px solid var(--grey-2);
+    }
+
+    .sum-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: .28rem 0; border-bottom: 1px dashed var(--grey-2);
+      font-size: 0.78rem; gap: 1rem;
+    }
+    .sum-row:last-child { border-bottom: none; }
+    .sum-row.total-line {
+      font-weight: 700; font-size: 0.85rem;
+      border-top: 2px solid var(--navy); margin-top: .5rem; padding-top: .5rem;
+      color: var(--navy);
+    }
+    .sum-row.orange-line {
+      font-weight: 700; font-size: 0.85rem; color: var(--orange);
+      border-top: 2px solid var(--orange); margin-top: .5rem; padding-top: .5rem;
+    }
+    .sum-row.deduct .sum-val { color: #dc2626; }
+    .sum-label { color: #475569; }
+    .sum-val { font-family: var(--mono); font-size: 0.8rem; font-weight: 500; white-space: nowrap; }
+
+    /* progress overview */
+    .progress-overview {
+      display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+      background: var(--grey-1); border-radius: 6px; padding: 1rem;
+    }
+    .prog-circle {
+      flex-shrink: 0;
+      width: 72px; height: 72px; border-radius: 50%;
+      background: conic-gradient(var(--orange) 0% var(--p, 0%), var(--grey-2) var(--p, 0%) 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700; color: var(--navy);
+      box-shadow: inset 0 0 0 12px #fff;
+    }
+    .prog-labels { font-size: 0.72rem; line-height: 2; }
+    .prog-labels strong { font-size: 0.82rem; color: var(--navy); display: block; }
+
+    /* ── Signatures ── */
+    .signatures {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 2rem; padding: 2rem; border-top: 1px solid var(--grey-2);
+      background: #fafcff;
+    }
+    .sig-block { text-align: center; }
+    .sig-line  { border-top: 1px solid var(--text); margin: 2.5rem 1rem 0.4rem; }
+    .sig-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--grey-3); }
+    .sig-name  { font-size: 0.78rem; font-weight: 600; color: var(--navy); margin-top: .2rem; }
+
+    /* ── Other tab panes ── */
+    .placeholder-pane {
+      padding: 4rem 2rem; text-align: center; color: var(--grey-3);
+    }
+    .placeholder-pane .placeholder-icon { font-size: 3rem; margin-bottom: 1rem; opacity: .4; }
+    .placeholder-pane h3 { font-size: 1rem; color: #64748b; margin-bottom: .5rem; }
+    .placeholder-pane p  { font-size: 0.82rem; }
+
+    /* ── Print ── */
+    @media print {
+      .topbar, .tabs, .btn-print { display: none; }
+      .document { box-shadow: none; border-radius: 0; margin: 0; }
+      body { background: #fff; }
+      .tab-pane { display: block !important; }
+      .placeholder-pane { display: none; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .doc-header   { grid-template-columns: 1fr; text-align: center; }
+      .proj-info    { grid-template-columns: repeat(2,1fr); }
+      .proj-cell.half  { grid-column: span 2; }
+      .summary      { grid-template-columns: 1fr; }
+      .sum-block:first-child { border-right: none; border-bottom: 1px solid var(--grey-2); }
+      .signatures   { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <span class="topbar-brand">citerastudio</span>
+  <span class="topbar-sep">|</span>
+  <span class="topbar-title">Contabilità dei Lavori – Stato Avanzamento Lavori n. 3</span>
+  <a href="/" class="topbar-back">← Torna al sito</a>
+  <button class="btn-print" onclick="window.print()">⎙ Stampa / PDF</button>
+</div>
+
+<!-- Document -->
+<div class="document">
+
+  <!-- Header -->
+  <div class="doc-header">
+    <div class="doc-logo">
+      <div class="brand-name">citerastudio</div>
+      <div class="brand-sub">Landscape Architecture</div>
+    </div>
+    <div class="doc-title-block">
+      <div class="doc-type">Stato di Avanzamento Lavori n. 3</div>
+      <div class="doc-subtitle">Contabilità dei lavori ai sensi dell'art. 194 D.Lgs. 36/2023 (Codice dei Contratti Pubblici)</div>
+    </div>
+    <div class="doc-meta">
+      <div><strong>Data emissione:</strong> 05/11/2024</div>
+      <div><strong>Periodo:</strong> 01/10/2024 – 31/10/2024</div>
+      <div><strong>CIG:</strong> Z3A1247B9F</div>
+      <div><strong>CUP:</strong> J89H23000120006</div>
+    </div>
+  </div>
+
+  <!-- Project info -->
+  <div class="proj-info">
+    <div class="proj-cell full">
+      <div class="proj-label">Oggetto dei lavori</div>
+      <div class="proj-value">Ristrutturazione e risanamento conservativo di edificio residenziale plurifamiliare – Via delle Azalee, 12 – 70125 Bari (BA)</div>
+    </div>
+    <div class="proj-cell half">
+      <div class="proj-label">Committente / Stazione Appaltante</div>
+      <div class="proj-value">Comune di Bari – Settore Lavori Pubblici e Manutenzione</div>
+    </div>
+    <div class="proj-cell half">
+      <div class="proj-label">Impresa Appaltatrice</div>
+      <div class="proj-value">Costruzioni Generali S.r.l. – P.IVA 04521930723 – Bari</div>
+    </div>
+    <div class="proj-cell half">
+      <div class="proj-label">Progettista / Direttore dei Lavori</div>
+      <div class="proj-value">Arch. Vito Depalo – CiteraStudio, Landscape Architecture</div>
+    </div>
+    <div class="proj-cell half">
+      <div class="proj-label">Coordinatore Sicurezza in Esecuzione</div>
+      <div class="proj-value">Ing. Marco Russo – Studio Tecnico Russo Associati</div>
+    </div>
+    <div class="proj-cell">
+      <div class="proj-label">Contratto</div>
+      <div class="proj-value">Rep. n. 1.247 del 15/03/2024</div>
+    </div>
+    <div class="proj-cell">
+      <div class="proj-label">Importo contrattuale (IVA escl.)</div>
+      <div class="proj-value highlight">€ {fmt(gt.ic)}</div>
+    </div>
+    <div class="proj-cell">
+      <div class="proj-label">Ribasso d'asta applicato</div>
+      <div class="proj-value">12,50 % sull'elenco prezzi</div>
+    </div>
+    <div class="proj-cell">
+      <div class="proj-label">Consegna lavori / Fine contrattuale</div>
+      <div class="proj-value">15/04/2024 &nbsp;/&nbsp; 09/04/2025 (360 gg)</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-tab="sal">S.A.L. n. 3</button>
+    <button class="tab" role="tab" data-tab="libretto">Libretto delle Misure</button>
+    <button class="tab" role="tab" data-tab="registro">Registro di Contabilità</button>
+    <button class="tab" role="tab" data-tab="sommario">Sommario del Registro</button>
+  </div>
+
+  <!-- ═══ TAB: SAL ═══ -->
+  <div class="tab-pane active" id="pane-sal" role="tabpanel">
+
+    <!-- Legend -->
+    <div class="legend">
+      <span style="font-weight:600; color: var(--navy);">Prezzi al netto del ribasso d'asta 12,50%</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--blue);"></span>Categoria</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--blue-lt); border:1px solid #93c5fd;"></span>Subtotale categoria</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(37,99,168,.08); border:1px solid #93c5fd;"></span>Lavori precedenti (SAL 1+2)</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(13,107,116,.1); border:1px solid #5eead4;"></span>Lavori periodo attuale (SAL 3)</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(251,133,3,.08); border:1px solid #fbbf24;"></span>Totale cumulativo</span>
+    </div>
+
+    <!-- Table -->
+    <div class="table-scroll">
+      <table class="sal">
+        <thead>
+          <tr class="hdr-top">
+            <th rowspan="2" style="width:30px">N°</th>
+            <th rowspan="2" style="width:60px">Codice</th>
+            <th rowspan="2" style="min-width:280px; text-align:left">Descrizione dei lavori</th>
+            <th rowspan="2" style="width:45px">U.M.</th>
+            <th colspan="3" class="grp-contr">CONTRATTO</th>
+            <th colspan="2" class="grp-prec">SAL PRECEDENTI (1+2)</th>
+            <th colspan="2" class="grp-att">SAL ATTUALE (n. 3)</th>
+            <th colspan="3" class="grp-tot">TOTALE CUMULATIVO</th>
+          </tr>
+          <tr class="hdr-sub">
+            <th class="grp-contr">Q.tà</th>
+            <th class="grp-contr">P.U. (€)</th>
+            <th class="grp-contr">Importo (€)</th>
+            <th class="grp-prec">Q.tà</th>
+            <th class="grp-prec">Importo (€)</th>
+            <th class="grp-att">Q.tà</th>
+            <th class="grp-att">Importo (€)</th>
+            <th class="grp-tot">Q.tà</th>
+            <th class="grp-tot">Importo (€)</th>
+            <th class="grp-tot">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {catsWithSub.map((cat) => (
+            <>
+              {/* Category header */}
+              <tr class={`cat-row${cat.sicurezza ? ' sicurezza' : ''}`}>
+                <td colspan="14">{cat.label}</td>
+              </tr>
+
+              {/* Items */}
+              {cat.items.map((item) => (
+                <tr class="item-row">
+                  <td class="col-num">{item.num}</td>
+                  <td class="col-cod">{item.cod}</td>
+                  <td class="col-desc">{item.desc}</td>
+                  <td class="col-um">{item.um}</td>
+                  <td class="col-num-val">{fmtQ(item.qc, item.um)}</td>
+                  <td class="col-pu">{fmt(item.pu)}</td>
+                  <td class="col-imp">{fmt(item.ic)}</td>
+                  <td class={`col-num-val zone-prec${item.ip === 0 ? ' zero' : ''}`}>{fmtQ(item.qp, item.um)}</td>
+                  <td class={`col-imp zone-prec${item.ip === 0 ? ' zero' : ''}`}>{item.ip === 0 ? '–' : fmt(item.ip)}</td>
+                  <td class={`col-num-val zone-att${item.ia === 0 ? ' zero' : ''}`}>{item.qa === 0 ? '–' : fmtQ(item.qa, item.um)}</td>
+                  <td class={`col-imp zone-att${item.ia === 0 ? ' zero' : ''}`}>{item.ia === 0 ? '–' : fmt(item.ia)}</td>
+                  <td class={`col-num-val zone-tot${item.it === 0 ? ' zero' : ''}`}>{fmtQ(item.qt, item.um)}</td>
+                  <td class={`col-imp zone-tot${item.it === 0 ? ' zero' : ''}`}>{item.it === 0 ? '–' : fmt(item.it)}</td>
+                  <td class={`col-perc zone-tot perc-bar${item.perc === 0 ? ' zero' : ''}`}
+                      style={`--w:${Math.min(item.perc,100).toFixed(1)}%`}>
+                    {item.perc === 0 ? '–' : `${fmt(item.perc, 1)} %`}
+                  </td>
+                </tr>
+              ))}
+
+              {/* Subtotal */}
+              <tr class="sub-row">
+                <td colspan="4" style="text-align:right; padding-right:1rem">Subtotale {cat.label.split('–')[0].trim()}</td>
+                <td></td>
+                <td></td>
+                <td class="col-imp">{fmt(cat.sub.ic)}</td>
+                <td></td>
+                <td class="col-imp">{fmt(cat.sub.ip)}</td>
+                <td></td>
+                <td class="col-imp">{fmt(cat.sub.ia)}</td>
+                <td></td>
+                <td class="col-imp">{fmt(cat.sub.it)}</td>
+                <td class="col-perc">{cat.sub.ic > 0 ? `${fmt((cat.sub.it/cat.sub.ic)*100,1)} %` : '–'}</td>
+              </tr>
+            </>
+          ))}
+
+          {/* Grand total */}
+          <tr class="total-row">
+            <td colspan="4" style="text-align:right; padding-right:1rem; letter-spacing:.04em">TOTALE GENERALE</td>
+            <td></td>
+            <td></td>
+            <td class="col-imp">€ {fmt(gt.ic)}</td>
+            <td></td>
+            <td class="col-imp">€ {fmt(gt.ip)}</td>
+            <td></td>
+            <td class="col-imp">€ {fmt(gt.ia)}</td>
+            <td></td>
+            <td class="col-imp">€ {fmt(gt.it)}</td>
+            <td class="col-perc">{fmt(percGt, 2)} %</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary">
+
+      <!-- Left: avanzamento -->
+      <div class="sum-block">
+        <div class="sum-title">Riepilogo avanzamento lavori</div>
+
+        <div class="progress-overview" style={`--p:${percGt.toFixed(1)}%`}>
+          <div class="prog-circle">{fmt(percGt,1)}%</div>
+          <div class="prog-labels">
+            <strong>Avanzamento al 31/10/2024</strong>
+            <span>Importo contrattuale: <b>€ {fmt(gt.ic)}</b></span><br/>
+            <span>Lavori eseguiti (tot.): <b>€ {fmt(gt.it)}</b></span><br/>
+            <span>Residuo a completamento: <b>€ {fmt(residuo)}</b></span>
+          </div>
+        </div>
+
+        <div class="sum-row">
+          <span class="sum-label">Lavori eseguiti SAL 1 (periodo 15/04–30/06/2024)</span>
+          <span class="sum-val">€ 89.432,10</span>
+        </div>
+        <div class="sum-row">
+          <span class="sum-label">Lavori eseguiti SAL 2 (periodo 01/07–30/09/2024)</span>
+          <span class="sum-val">€ 83.198,50</span>
+        </div>
+        <div class="sum-row">
+          <span class="sum-label">Lavori eseguiti SAL 3 – periodo corrente</span>
+          <span class="sum-val">€ {fmt(gt.ia)}</span>
+        </div>
+        <div class="sum-row total-line">
+          <span class="sum-label">TOTALE LAVORI ESEGUITI (cumulativo)</span>
+          <span class="sum-val">€ {fmt(gt.it)}</span>
+        </div>
+        <div class="sum-row" style="margin-top:.8rem">
+          <span class="sum-label">di cui Oneri della Sicurezza (CAT.8)</span>
+          <span class="sum-val">€ 12.500,00</span>
+        </div>
+        <div class="sum-row">
+          <span class="sum-label">Residuo a completamento</span>
+          <span class="sum-val">€ {fmt(residuo)}</span>
+        </div>
+      </div>
+
+      <!-- Right: liquidazione -->
+      <div class="sum-block">
+        <div class="sum-title">Certificato di pagamento – SAL n. 3</div>
+
+        <div class="sum-row">
+          <span class="sum-label">Importo totale lavori eseguiti (cumulativo)</span>
+          <span class="sum-val">€ {fmt(gt.it)}</span>
+        </div>
+        <div class="sum-row deduct">
+          <span class="sum-label">Ritenuta di garanzia 5% (art. 117 D.Lgs. 36/2023)</span>
+          <span class="sum-val">– € {fmt(ritenuta)}</span>
+        </div>
+        <div class="sum-row">
+          <span class="sum-label">Importo netto spettante all'impresa</span>
+          <span class="sum-val">€ {fmt(nettoRit)}</span>
+        </div>
+        <div class="sum-row deduct">
+          <span class="sum-label">Acconti corrisposti (SAL 1 + SAL 2)</span>
+          <span class="sum-val">– € {fmt(accPrec)}</span>
+        </div>
+        <div class="sum-row total-line">
+          <span class="sum-label">NETTO A LIQUIDARE (al netto IVA)</span>
+          <span class="sum-val">€ {fmt(netto3)}</span>
+        </div>
+        <div class="sum-row" style="margin-top:.8rem">
+          <span class="sum-label">IVA 10% (edilizia agevolata – D.P.R. 633/72 Tab. A)</span>
+          <span class="sum-val">€ {fmt(iva3)}</span>
+        </div>
+        <div class="sum-row orange-line">
+          <span class="sum-label">TOTALE DA CORRISPONDERE SAL 3</span>
+          <span class="sum-val">€ {fmt(totLiq)}</span>
+        </div>
+
+        <div style="margin-top:1.2rem; padding:.8rem; background:var(--grey-1); border-radius:4px; font-size:0.7rem; color:#64748b; line-height:1.7;">
+          Il presente Stato di Avanzamento Lavori è redatto ai sensi dell'art. 194 del D.Lgs. 36/2023 e dell'art. 28 del Capitolato Speciale d'Appalto.<br/>
+          Il pagamento dell'acconto è subordinato all'acquisizione del DURC regolare e alla verifica della corretta esecuzione dei lavori.
+        </div>
+      </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Il Direttore dei Lavori</div>
+        <div class="sig-name">Arch. Vito Depalo</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Il Responsabile Unico del Procedimento</div>
+        <div class="sig-name">Ing. Luisa Ferrante</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Il Rappresentante dell'Impresa</div>
+        <div class="sig-name">Sig. Antonio Gentile</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-pane SAL -->
+
+  <!-- ═══ TAB: LIBRETTO MISURE ═══ -->
+  <div class="tab-pane" id="pane-libretto" role="tabpanel">
+    <div class="placeholder-pane">
+      <div class="placeholder-icon">📐</div>
+      <h3>Libretto delle Misure – SAL n. 3</h3>
+      <p>Il libretto delle misure riporta il dettaglio analitico delle misurazioni eseguite in cantiere<br/>per ciascuna voce di elenco, con i relativi schizzi e disegni quotati.</p>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: REGISTRO CONTABILITÀ ═══ -->
+  <div class="tab-pane" id="pane-registro" role="tabpanel">
+    <div class="placeholder-pane">
+      <div class="placeholder-icon">📒</div>
+      <h3>Registro di Contabilità</h3>
+      <p>Il registro di contabilità raccoglie in ordine cronologico tutte le scritture contabili<br/>relative all'appalto, comprese le annotazioni del Direttore dei Lavori.</p>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: SOMMARIO ═══ -->
+  <div class="tab-pane" id="pane-sommario" role="tabpanel">
+    <div class="placeholder-pane">
+      <div class="placeholder-icon">📊</div>
+      <h3>Sommario del Registro di Contabilità</h3>
+      <p>Il sommario riepiloga per categorie di lavoro gli importi progressivi del registro di contabilità,<br/>con il confronto tra importi contrattuali e lavori eseguiti.</p>
+    </div>
+  </div>
+
+</div><!-- /document -->
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = (tab as HTMLElement).dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('pane-' + target)?.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
