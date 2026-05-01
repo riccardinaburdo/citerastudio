@@ -355,6 +355,7 @@ const catColor    = (p: number) => p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : 
     Private Access
   </div>
   <span class={`role-badge ${role}`}>{role === 'admin' ? '⚙ Admin' : 'Client'}</span>
+  <a href="/" class="btn-top" style="text-decoration:none">&#8592; Home</a>
   <button class="btn-top" onclick="window.print()">⎙ Print</button>
   <form method="POST" action="/api/area-riservata/logout" style="display:inline">
     <button type="submit" class="btn-logout">Sign out</button>
