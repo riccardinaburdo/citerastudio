@@ -97,6 +97,38 @@ const totalDone   = enrichedCats.reduce((s, c) => s + c.catDone,   0);
 const totalPerc   = totalBudget > 0 ? (totalDone / totalBudget) * 100 : 0;
 const totalLeft   = totalBudget - totalDone;
 
+// ── Payment schedule ─────────────────────────────────────────────
+const rawMilestones = [
+  { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   amount: totalBudget * 0.20, note: 'On contract signing' },
+  { id: 'SAL1', label: 'Progress Payment 1', trigger: 30,  amount: totalBudget * 0.10, note: 'Triggered at 30% completion' },
+  { id: 'SAL2', label: 'Progress Payment 2', trigger: 60,  amount: totalBudget * 0.30, note: 'Triggered at 60% completion' },
+  { id: 'SAL3', label: 'Progress Payment 3', trigger: 90,  amount: totalBudget * 0.30, note: 'Triggered at 90% completion' },
+  { id: 'FIN',  label: 'Final Balance',       trigger: 100, amount: totalBudget * 0.10, note: 'On practical completion' },
+];
+
+let nextFound = false;
+const payMilestones = rawMilestones.map(m => {
+  let status: 'paid' | 'next' | 'pending';
+  if (totalPerc >= m.trigger) {
+    status = 'paid';
+  } else if (!nextFound) {
+    status = 'next';
+    nextFound = true;
+  } else {
+    status = 'pending';
+  }
+  return { ...m, status };
+});
+
+const paidToDate     = payMilestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.amount, 0);
+const nextMilestone  = payMilestones.find(m => m.status === 'next');
+const nextPayNet     = nextMilestone?.amount ?? 0;
+const nextPayVat     = nextPayNet * 0.10;
+const nextPayGross   = nextPayNet + nextPayVat;
+const nextTriggerPct = nextMilestone?.trigger ?? 100;
+const progressNeeded = Math.max(0, nextTriggerPct - totalPerc);
+const remainingPend  = payMilestones.filter(m => m.status === 'pending').reduce((s, m) => s + m.amount, 0);
+
 const fmt = (n: number) =>
   '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -404,6 +436,157 @@ const catColor = (p: number) =>
     }
     .access-note { font-size: 0.68rem; color: var(--grey-3); margin-top: .4rem; width: 100%; }
 
+    /* ── PAYMENT SCHEDULE ── */
+    .payment-card {
+      background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2);
+      box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 1.5rem; margin-bottom: 2rem;
+    }
+
+    /* summary boxes */
+    .pay-summary {
+      display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: stretch; gap: 0; margin-bottom: 1.6rem;
+    }
+    .pay-sum-item { padding: 1.1rem 1.4rem; border-radius: var(--radius); }
+    .pay-sum-item.paid    { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .pay-sum-item.next    {
+      background: #fff7ed; border: 2px solid var(--orange);
+      box-shadow: 0 4px 20px rgba(251,133,3,.18);
+    }
+    .pay-sum-item.pending { background: #f8fafc; border: 1px solid var(--grey-2); }
+    .pay-sum-arrow {
+      display: flex; align-items: center; padding: 0 .5rem;
+      color: var(--grey-3); font-size: 1.1rem;
+    }
+    .pay-sum-label {
+      font-size: 0.63rem; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--grey-3); font-weight: 700; margin-bottom: .5rem;
+    }
+    .pay-sum-item.next .pay-sum-label { color: var(--orange); }
+    .pay-sum-amount {
+      font-size: 1.55rem; font-weight: 700; line-height: 1; margin-bottom: .3rem;
+    }
+    .pay-sum-item.paid    .pay-sum-amount { color: #16a34a; }
+    .pay-sum-item.next    .pay-sum-amount { color: var(--orange); }
+    .pay-sum-item.pending .pay-sum-amount { color: var(--slate); }
+    .pay-sum-sub { font-size: 0.72rem; color: var(--slate); line-height: 1.5; }
+    .pay-sum-trigger {
+      display: inline-block; margin-top: .6rem; font-size: 0.72rem; font-weight: 600;
+      color: var(--orange); background: rgba(251,133,3,.1); border-radius: 4px; padding: .2rem .5rem;
+    }
+    .pay-sum-paid-note {
+      display: inline-block; margin-top: .4rem;
+      font-size: 0.68rem; color: #16a34a; font-weight: 600;
+    }
+
+    /* progress timeline */
+    .pay-timeline-wrap {
+      position: relative; margin: 0 .5rem 1.5rem; overflow: visible;
+    }
+    .pay-track-spacer {
+      height: 44px;  /* room for "Today" callout above */
+    }
+    .pay-track {
+      position: relative; height: 8px; background: var(--grey-2); border-radius: 4px;
+      margin: 0 1rem; overflow: visible;
+    }
+    .pay-track-fill {
+      position: absolute; left: 0; top: 0; height: 100%;
+      background: linear-gradient(to right, #16a34a, #22c55e); border-radius: 4px;
+    }
+    /* milestone tick */
+    .pay-tick {
+      position: absolute; top: 50%; transform: translate(-50%, -50%); z-index: 2;
+    }
+    .pay-tick-dot {
+      width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff;
+    }
+    .pay-tick.paid    .pay-tick-dot { background: #22c55e; box-shadow: 0 0 0 1.5px #16a34a; }
+    .pay-tick.next    .pay-tick-dot {
+      background: var(--orange); border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(251,133,3,.25); width: 16px; height: 16px;
+      animation: pulse-tick 2s infinite;
+    }
+    .pay-tick.pending .pay-tick-dot { background: var(--grey-2); box-shadow: 0 0 0 1.5px var(--grey-3); }
+    @keyframes pulse-tick {
+      0%,100% { box-shadow: 0 0 0 3px rgba(251,133,3,.25); }
+      50%      { box-shadow: 0 0 0 6px rgba(251,133,3,.12); }
+    }
+    .pay-tick-lbl {
+      position: absolute; top: 13px; left: 50%; transform: translateX(-50%);
+      font-size: 0.58rem; text-align: center; white-space: nowrap; line-height: 1.4; color: var(--slate);
+    }
+    .pay-tick.paid    .pay-tick-lbl { color: #16a34a; font-weight: 600; }
+    .pay-tick.next    .pay-tick-lbl { color: var(--orange); font-weight: 700; }
+    .pay-tick-id {
+      position: absolute; bottom: 13px; left: 50%; transform: translateX(-50%);
+      font-size: 0.6rem; font-weight: 700; white-space: nowrap; color: var(--slate); font-family: monospace;
+    }
+    .pay-tick.paid    .pay-tick-id { color: #16a34a; }
+    .pay-tick.next    .pay-tick-id { color: var(--orange); }
+    /* current position marker */
+    .pay-now {
+      position: absolute; top: 50%; transform: translate(-50%, -50%); z-index: 3;
+    }
+    .pay-now-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--navy); border: 2px solid #fff;
+      box-shadow: 0 0 0 2px var(--navy);
+    }
+    .pay-now-lbl {
+      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+      font-size: 0.6rem; font-weight: 700; white-space: nowrap;
+      background: var(--navy); color: #fff; padding: .15rem .4rem; border-radius: 3px;
+    }
+    .pay-now-lbl::after {
+      content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      border: 3px solid transparent; border-top-color: var(--navy);
+    }
+    .pay-now-line {
+      position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+      width: 1.5px; height: 12px; background: var(--navy); opacity: .4;
+    }
+    .pay-track-labels { margin: 0 1rem; padding-top: 2.5rem; display: flex; justify-content: space-between; }
+    .pay-track-edge { font-size: 0.6rem; color: var(--grey-3); }
+
+    /* milestones table */
+    .pay-table-wrap {
+      border-top: 1px solid var(--grey-2); padding-top: 1rem;
+    }
+    table.pay-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    table.pay-table th {
+      font-size: 0.62rem; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--grey-3); font-weight: 600; padding: .4rem .75rem;
+      border-bottom: 1px solid var(--grey-2); text-align: left;
+    }
+    table.pay-table th.right { text-align: right; }
+    table.pay-table td { padding: .55rem .75rem; border-bottom: 1px solid var(--grey-2); vertical-align: middle; }
+    table.pay-table tr:last-child td { border-bottom: none; }
+    table.pay-table tr.pay-row-paid td { background: #f0fdf4; }
+    table.pay-table tr.pay-row-next td { background: #fff7ed; }
+    table.pay-table tr.pay-row-next:hover td { background: #ffedd5; }
+    table.pay-table tbody tr.pay-row-paid:hover td { background: #dcfce7; }
+    .pay-col-id { font-size: 0.68rem; font-weight: 700; font-family: monospace; color: var(--navy); white-space: nowrap; }
+    .pay-col-label { font-weight: 500; }
+    .pay-col-trigger { font-size: 0.72rem; color: var(--slate); }
+    .pay-col-money { text-align: right; font-family: monospace; font-size: 0.75rem; white-space: nowrap; }
+    .pay-col-gross { text-align: right; font-family: monospace; font-size: 0.78rem; font-weight: 700; color: var(--navy); white-space: nowrap; }
+    .pay-badge {
+      display: inline-block; font-size: 0.62rem; font-weight: 700; letter-spacing: .04em;
+      text-transform: uppercase; padding: .2rem .65rem; border-radius: 20px; white-space: nowrap;
+    }
+    .pay-badge.paid    { background: #dcfce7; color: #15803d; }
+    .pay-badge.next    { background: #fff7ed; color: #c2410c; border: 1px solid #fb923c; }
+    .pay-badge.pending { background: #f1f5f9; color: #94a3b8; }
+    tr.pay-row-next .pay-col-label { font-weight: 700; color: var(--orange); }
+    tr.pay-row-next .pay-col-gross { color: var(--orange); }
+
+    @media (max-width: 900px) {
+      .pay-summary { grid-template-columns: 1fr; }
+      .pay-sum-arrow { display: none; }
+      .pay-timeline-wrap { display: none; }
+    }
+
     /* ── PRINT ── */
     @media print {
       .mockup-banner, .topbar, .btn-top, .access-panel { display: none; }
@@ -502,11 +685,102 @@ const catColor = (p: number) =>
       <div class="metric-value">{fmt(totalLeft)}</div>
       <div class="metric-sub">to be executed</div>
     </div>
-    <div class="metric-card green">
-      <div class="metric-label">Programme Status</div>
-      <div class="metric-value">On Track</div>
-      <div class="metric-sub">Est. completion: {project.end}</div>
+    <div class="metric-card highlight">
+      <div class="metric-label">Next Payment Due</div>
+      <div class="metric-value">{fmt(nextPayGross)}</div>
+      <div class="metric-sub">inc. VAT — triggers at {nextTriggerPct}% ({progressNeeded.toFixed(1)}% to go)</div>
     </div>
+  </div>
+
+  <!-- Payment Schedule -->
+  <div class="section-title">Payment Schedule</div>
+  <div class="payment-card">
+
+    <!-- Three-box summary -->
+    <div class="pay-summary">
+      <div class="pay-sum-item paid">
+        <div class="pay-sum-label">Paid to Date</div>
+        <div class="pay-sum-amount">{fmt(paidToDate)}</div>
+        <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(paidToDate * 1.10)}</div>
+        <div class="pay-sum-paid-note">&#10003; Deposit + 2 progress payments</div>
+      </div>
+      <div class="pay-sum-arrow">&#8594;</div>
+      <div class="pay-sum-item next">
+        <div class="pay-sum-label">&#9654; Next Payment Due</div>
+        <div class="pay-sum-amount">{fmt(nextPayGross)}</div>
+        <div class="pay-sum-sub">ex. VAT {fmt(nextPayNet)} + VAT {fmt(nextPayVat)}</div>
+        <div class="pay-sum-trigger">Triggers when works reach {nextTriggerPct}% &nbsp;&mdash;&nbsp; {progressNeeded.toFixed(1)}% still to complete</div>
+      </div>
+      <div class="pay-sum-arrow">&#8594;</div>
+      <div class="pay-sum-item pending">
+        <div class="pay-sum-label">Remaining After</div>
+        <div class="pay-sum-amount">{fmt(remainingPend * 1.10)}</div>
+        <div class="pay-sum-sub">ex. VAT {fmt(remainingPend)}</div>
+        <div class="pay-sum-sub" style="margin-top:.3rem">Final balance — due on practical completion</div>
+      </div>
+    </div>
+
+    <!-- Visual timeline -->
+    <div class="pay-timeline-wrap">
+      <div class="pay-track-spacer"></div>
+      <div class="pay-track">
+        <div class="pay-track-fill" style={`width: ${Math.min(totalPerc, 100).toFixed(1)}%`}></div>
+        {payMilestones.map(m => (
+          <div class={`pay-tick ${m.status}`} style={`left: ${m.trigger === 0 ? 0 : m.trigger}%`}>
+            <div class="pay-tick-id">{m.id}</div>
+            <div class="pay-tick-dot"></div>
+            <div class="pay-tick-lbl">{m.trigger === 0 ? 'Signing' : m.trigger + '%'}</div>
+          </div>
+        ))}
+        <div class="pay-now" style={`left: ${totalPerc.toFixed(1)}%`}>
+          <div class="pay-now-lbl">{totalPerc.toFixed(1)}% today</div>
+          <div class="pay-now-line"></div>
+          <div class="pay-now-dot"></div>
+        </div>
+      </div>
+      <div class="pay-track-labels">
+        <span class="pay-track-edge">0% — Contract signed</span>
+        <span class="pay-track-edge">100% — Practical completion</span>
+      </div>
+    </div>
+
+    <!-- Milestones table -->
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead>
+          <tr>
+            <th style="width:55px">Ref.</th>
+            <th>Milestone</th>
+            <th>Trigger</th>
+            <th class="right">Net (ex. VAT)</th>
+            <th class="right">VAT 10%</th>
+            <th class="right">Total inc. VAT</th>
+            <th style="width:100px">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {payMilestones.map(m => (
+            <tr class={`pay-row-${m.status}`}>
+              <td class="pay-col-id">{m.id}</td>
+              <td class="pay-col-label">{m.label}</td>
+              <td class="pay-col-trigger">{m.note}</td>
+              <td class="pay-col-money">{fmt(m.amount)}</td>
+              <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * 0.10)}</td>
+              <td class="pay-col-gross">{fmt(m.amount * 1.10)}</td>
+              <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? 'Next Due' : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
+            </tr>
+          ))}
+          <tr style="background:var(--grey-1)">
+            <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">CONTRACT TOTAL</td>
+            <td class="pay-col-money" style="font-weight:700; color:var(--navy)">{fmt(totalBudget)}</td>
+            <td class="pay-col-money" style="font-weight:700; color:var(--slate)">{fmt(totalBudget * 0.10)}</td>
+            <td class="pay-col-gross">{fmt(totalBudget * 1.10)}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 
   <!-- Overview: donut + category bars -->
