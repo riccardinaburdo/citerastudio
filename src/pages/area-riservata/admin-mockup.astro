@@ -50,24 +50,24 @@ const contractors = [
 ];
 
 const categories = [
-  { id: 'A', label: 'Site Preparation & Demolition', contractor: 'C1', items: [
-    { id: 'A.01', desc: 'Demolition of existing masonry structures',     unit: 'm³',   qty: 48,   price: 73.50,  done: 52,  extra: false },
-    { id: 'A.02', desc: 'Removal of old roof covering and flashings',    unit: 'm²',   qty: 320,  price: 9.63,   done: 320, extra: false },
-    { id: 'A.03', desc: 'Removal of existing floor finishes and screed', unit: 'm²',   qty: 415,  price: 7.00,   done: 370, extra: false },
+  { id: 'A', label: 'Site Preparation & Demolition', subcats: ['Demolition Works', 'Site Clearance'], items: [
+    { id: 'A.01', desc: 'Demolition of existing masonry structures',     unit: 'm³',   qty: 48,   price: 73.50,  done: 52,  extra: false, subcat: 'Demolition Works', contractor: 'C1' },
+    { id: 'A.02', desc: 'Removal of old roof covering and flashings',    unit: 'm²',   qty: 320,  price: 9.63,   done: 320, extra: false, subcat: 'Demolition Works', contractor: 'C1' },
+    { id: 'A.03', desc: 'Removal of existing floor finishes and screed', unit: 'm²',   qty: 415,  price: 7.00,   done: 370, extra: false, subcat: 'Site Clearance',   contractor: 'C1' },
   ]},
-  { id: 'C', label: 'Internal Finishes', contractor: 'C1', items: [
-    { id: 'C.01', desc: 'Three-coat internal plaster with skim finish',  unit: 'm²',   qty: 1250, price: 18.40,  done: 950, extra: false },
-    { id: 'C.02', desc: 'Screed flooring base, 60 mm thick',             unit: 'm²',   qty: 850,  price: 12.25,  done: 780, extra: false },
-    { id: 'C.EX1',desc: 'Feature stone cladding — entrance hall',        unit: 'm²',   qty: 0,    price: 185.00, done: 45,  extra: true  },
+  { id: 'C', label: 'Internal Finishes', subcats: ['Plaster & Screed', 'Tiling'], items: [
+    { id: 'C.01', desc: 'Three-coat internal plaster with skim finish',  unit: 'm²',   qty: 1250, price: 18.40,  done: 950, extra: false, subcat: 'Plaster & Screed', contractor: 'C1' },
+    { id: 'C.02', desc: 'Screed flooring base, 60 mm thick',             unit: 'm²',   qty: 850,  price: 12.25,  done: 780, extra: false, subcat: 'Plaster & Screed', contractor: 'C1' },
+    { id: 'C.EX1',desc: 'Feature stone cladding — entrance hall',        unit: 'm²',   qty: 0,    price: 185.00, done: 45,  extra: true,  subcat: 'Tiling',          contractor: 'C1' },
   ]},
-  { id: 'E', label: 'Doors & Windows', contractor: 'C3', items: [
-    { id: 'E.01', desc: 'PVC triple-glazed windows (Uw ≤ 1.2 W/m²K)',   unit: 'unit', qty: 28,   price: 485.00, done: 24,  extra: false },
-    { id: 'E.02', desc: 'Internal timber doors, frame & ironmongery',    unit: 'unit', qty: 45,   price: 320.00, done: 37,  extra: false },
+  { id: 'E', label: 'Doors & Windows', subcats: ['Frames & Glazing', 'Ironmongery & Shutters'], items: [
+    { id: 'E.01', desc: 'PVC triple-glazed windows (Uw ≤ 1.2 W/m²K)',   unit: 'unit', qty: 28,   price: 485.00, done: 24,  extra: false, subcat: 'Frames & Glazing',         contractor: 'C3' },
+    { id: 'E.02', desc: 'Internal timber doors, frame & ironmongery',    unit: 'unit', qty: 45,   price: 320.00, done: 37,  extra: false, subcat: 'Ironmongery & Shutters',   contractor: 'C3' },
   ]},
-  { id: 'F', label: 'Plumbing & Drainage', contractor: 'C2', items: [
-    { id: 'F.01', desc: 'Hot & cold water supply pipework (multi-layer)',unit: 'lump', qty: 1,    price: 18500,  done: 1,   extra: false },
-    { id: 'F.02', desc: 'Internal drainage & soil pipework, PVC',        unit: 'lump', qty: 1,    price: 8750,   done: 1,   extra: false },
-    { id: 'F.EX1',desc: 'Additional external rainwater harvesting tank', unit: 'lump', qty: 0,    price: 4800,   done: 1,   extra: true  },
+  { id: 'F', label: 'Plumbing & Drainage', subcats: ['Water Supply', 'Drainage', 'Extra Works'], items: [
+    { id: 'F.01', desc: 'Hot & cold water supply pipework (multi-layer)',unit: 'lump', qty: 1,    price: 18500,  done: 1,   extra: false, subcat: 'Water Supply', contractor: 'C2' },
+    { id: 'F.02', desc: 'Internal drainage & soil pipework, PVC',        unit: 'lump', qty: 1,    price: 8750,   done: 1,   extra: false, subcat: 'Drainage',     contractor: 'C2' },
+    { id: 'F.EX1',desc: 'Additional external rainwater harvesting tank', unit: 'lump', qty: 0,    price: 4800,   done: 1,   extra: true,  subcat: 'Extra Works',  contractor: 'C2' },
   ]},
 ];
 
@@ -191,6 +191,9 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
     table.works thead th.right { text-align:right; }
     tr.cat-row td { background:#f0f6ff; color:var(--navy); padding:.4rem .65rem;
       font-weight:700; font-size:.72rem; border-top:2px solid var(--g2); border-bottom:1px solid #c7d9f0; }
+    tr.subcat-row td { background:#f7f9fc; color:var(--slate); padding:.3rem .65rem .3rem 1.8rem;
+      font-weight:600; font-size:.68rem; border-bottom:1px solid var(--g2);
+      border-left:3px solid #c7d9f0; }
     .cat-badge { display:inline-flex; align-items:center; justify-content:center;
       width:20px; height:20px; border-radius:50%; background:var(--navy); color:#fff;
       font-size:.6rem; font-weight:700; margin-right:.4rem; }
@@ -415,97 +418,118 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
               <th class="right" style="width:105px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
               <th style="width:105px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
               <th style="width:72px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th style="width:130px">Contractor</th>
               <th style="width:52px;text-align:center">Extra</th>
               <th style="width:62px"></th>
             </tr>
           </thead>
           <tbody>
             {enrichedCats.map(cat => {
-              const ctrName = contractors.find(c => c.id === cat.contractor)?.name ?? '';
               const catBudget = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
               const catDone   = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);
               const catPerc   = catBudget > 0 ? catDone/catBudget*100 : 0;
+              const subcatList: string[] = (cat as any).subcats ?? [];
+              const renderItem = (item: any) => {
+                const overrun = !item.extra && item.done > item.qty;
+                const pColor  = overrun ? '#dc2626' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
+                const barW    = item.perc !== null ? Math.min(item.perc,100) : 0;
+                return (
+                  <tr class={`item${item.extra ? ' extra-row' : ''}`}>
+                    <td class="item-id">{item.id}</td>
+                    <td style="max-width:220px;line-height:1.4">
+                      {item.extra && <span class="extra-badge">Extra</span>}
+                      {item.desc}
+                    </td>
+                    <td>
+                      <select style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">
+                        {['m²','m³','lm','unit','lump','kg'].map((u:string) => <option selected={item.unit===u}>{u}</option>)}
+                      </select>
+                    </td>
+                    <td class="editable-cell">
+                      <input type="number" value={item.extra ? '' : item.qty} placeholder={item.extra ? '–' : ''} disabled={item.extra} style={item.extra ? 'color:var(--g3)' : ''} />
+                    </td>
+                    <td class="editable-cell">
+                      <input type="number" value={item.price} step="0.01" />
+                    </td>
+                    <td class="auto-cell">{item.extra ? '–' : fmt(item.budget)}</td>
+                    <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
+                      <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} />
+                      {overrun && <span class="overrun-badge">↑</span>}
+                    </td>
+                    <td class="auto-cell">{fmt(item.valueDone)}</td>
+                    <td style="min-width:90px">
+                      {item.extra ? (
+                        <span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>
+                      ) : item.perc !== null ? (
+                        <div class="perc-wrap">
+                          <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
+                          <span class="perc-num" style={`color:${pColor}`}>{item.perc.toFixed(0)}%</span>
+                        </div>
+                      ) : '–'}
+                    </td>
+                    <td>
+                      {item.extra ? <span class="status-badge status-extra">Extra</span>
+                        : overrun ? <span class="status-badge status-overrun">Overrun</span>
+                        : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
+                        : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
+                        : <span class="status-badge status-pending">Not Started</span>}
+                    </td>
+                    <td>
+                      <select style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%">
+                        <option value="">— none —</option>
+                        {contractors.map(c => <option value={c.id} selected={item.contractor===c.id}>{c.name}</option>)}
+                      </select>
+                    </td>
+                    <td class="toggle-wrapper">
+                      <input type="checkbox" class="extra-toggle" checked={item.extra} title="Mark as extra works" />
+                    </td>
+                    <td style="white-space:nowrap">
+                      <button class="btn-icon" title="Edit row">✎</button>
+                      <button class="btn-icon" title="Delete" style="margin-left:.2rem">🗑</button>
+                    </td>
+                  </tr>
+                );
+              };
               return (<>
                 <tr class="cat-row">
-                  <td colspan="12">
+                  <td colspan="13">
                     <span class="cat-badge">{cat.id}</span>
                     {cat.label}
-                    <span class="ctr-pill">{ctrName}</span>
                     <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">
                       Budget: {fmt(catBudget)} &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
                     </span>
                     <span style="float:right;display:flex;gap:.3rem;margin-top:-.1rem">
+                      <button class="btn btn-add" style="font-size:.62rem;padding:.2rem .55rem">+ Add Subcategory</button>
                       <button class="btn btn-add" style="font-size:.62rem;padding:.2rem .55rem">+ Add item</button>
                       <button class="btn-icon" title="Edit category" style="font-size:.72rem;padding:.2rem .45rem">✎ Edit</button>
                       <button class="btn-icon" title="Delete category" style="font-size:.72rem;padding:.2rem .45rem;color:var(--red);border-color:#fca5a5">🗑 Delete</button>
                     </span>
                   </td>
                 </tr>
-                {cat.items.map((item:any) => {
-                  const overrun = !item.extra && item.done > item.qty;
-                  const pColor  = overrun ? '#dc2626' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
-                  const barW    = item.perc !== null ? Math.min(item.perc,100) : 0;
-                  return (
-                    <tr class={`item${item.extra ? ' extra-row' : ''}`}>
-                      <td class="item-id">{item.id}</td>
-                      <td style="max-width:260px;line-height:1.4">
-                        {item.extra && <span class="extra-badge">Extra</span>}
-                        {item.desc}
-                      </td>
-                      <td>
-                        <select style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">
-                          {['m²','m³','lm','unit','lump','kg'].map(u => <option selected={item.unit===u}>{u}</option>)}
-                        </select>
-                      </td>
-                      <td class="editable-cell">
-                        <input type="number" value={item.extra ? '' : item.qty} placeholder={item.extra ? '–' : ''} disabled={item.extra} style={item.extra ? 'color:var(--g3)' : ''} />
-                      </td>
-                      <td class="editable-cell">
-                        <input type="number" value={item.price} step="0.01" />
-                      </td>
-                      <td class="auto-cell">
-                        {item.extra ? '–' : fmt(item.budget)}
-                      </td>
-                      <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
-                        <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} />
-                        {overrun && <span class="overrun-badge">↑</span>}
-                      </td>
-                      <td class="auto-cell">
-                        {fmt(item.valueDone)}
-                      </td>
-                      <td style="min-width:95px">
-                        {item.extra ? (
-                          <span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>
-                        ) : item.perc !== null ? (
-                          <div class="perc-wrap">
-                            <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
-                            <span class="perc-num" style={`color:${pColor}`}>{item.perc.toFixed(0)}%</span>
-                          </div>
-                        ) : '–'}
-                      </td>
-                      <td>
-                        {item.extra ? <span class="status-badge status-extra">Extra</span>
-                          : overrun ? <span class="status-badge status-overrun">Overrun</span>
-                          : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
-                          : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
-                          : <span class="status-badge status-pending">Not Started</span>}
-                      </td>
-                      <td class="toggle-wrapper">
-                        <input type="checkbox" class="extra-toggle" checked={item.extra} title="Mark as extra works" />
-                      </td>
-                      <td style="white-space:nowrap">
-                        <button class="btn-icon" title="Edit row">✎</button>
-                        <button class="btn-icon" title="Delete" style="margin-left:.2rem">🗑</button>
+                {subcatList.length > 0 ? subcatList.map((sc:string) => {
+                  const scItems = cat.items.filter((i:any) => i.subcat === sc);
+                  if (scItems.length === 0) return null;
+                  return (<>
+                    <tr class="subcat-row">
+                      <td colspan="13">
+                        <span style="margin-right:.4rem;opacity:.5">⊢</span>
+                        {sc}
+                        <span style="float:right;display:flex;gap:.25rem">
+                          <button class="btn btn-add" style="font-size:.58rem;padding:.15rem .45rem">+ Add item</button>
+                          <button class="btn-icon" style="font-size:.65rem;padding:.15rem .4rem">✎ Edit</button>
+                          <button class="btn-icon" style="font-size:.65rem;padding:.15rem .4rem;color:var(--red);border-color:#fca5a5">🗑 Delete</button>
+                        </span>
                       </td>
                     </tr>
-                  );
-                })}
+                    {scItems.map(renderItem)}
+                  </>);
+                }) : cat.items.map(renderItem)}
                 <tr class="subtotal">
                   <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
                   <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
                   <td></td>
                   <td style="text-align:right;font-family:monospace;color:var(--navy)">{fmt(catDone)}</td>
-                  <td colspan="4"></td>
+                  <td colspan="5"></td>
                 </tr>
               </>);
             })}
@@ -520,7 +544,7 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
               <td style="text-align:right;font-family:monospace">
                 {fmt(enrichedCats.flatMap((c:any)=>c.items).reduce((s:number,i:any)=>s+i.valueDone,0))}
               </td>
-              <td colspan="4"></td>
+              <td colspan="5"></td>
             </tr>
           </tbody>
         </table>
