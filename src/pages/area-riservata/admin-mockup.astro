@@ -347,7 +347,7 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
                   <th class="right" style="width:70px">Trigger</th>
                   <th class="right" style="width:55px">%</th>
                   <th class="right" style="width:105px">Amount (net)</th>
-                  <th style="width:30px"></th>
+                  <th style="width:60px"></th>
                 </tr>
               </thead>
               <tbody>
@@ -362,7 +362,10 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
                       <input type="number" value={m.pct} min="0" max="100" style="width:48px; border:1px solid var(--g2); border-radius:4px; padding:.2rem .4rem; font-size:.75rem; text-align:right" />
                     </td>
                     <td class="sal-amt">{fmt(c.budget * m.pct / 100)}</td>
-                    <td><button class="btn-icon" style="padding:.15rem .35rem;font-size:.7rem">✕</button></td>
+                    <td style="white-space:nowrap">
+                      <button class="btn-icon" title="Edit milestone" style="padding:.15rem .4rem;font-size:.7rem">✎</button>
+                      <button class="btn-icon" title="Delete milestone" style="padding:.15rem .4rem;font-size:.7rem;color:var(--red);border-color:#fca5a5;margin-left:.2rem">🗑</button>
+                    </td>
                   </tr>
                 ))}
                 <tr class="sal-total">
@@ -431,7 +434,11 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
                     <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">
                       Budget: {fmt(catBudget)} &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
                     </span>
-                    <button class="btn btn-add" style="float:right;font-size:.62rem;padding:.2rem .55rem;margin-top:-.1rem">+ Add item</button>
+                    <span style="float:right;display:flex;gap:.3rem;margin-top:-.1rem">
+                      <button class="btn btn-add" style="font-size:.62rem;padding:.2rem .55rem">+ Add item</button>
+                      <button class="btn-icon" title="Edit category" style="font-size:.72rem;padding:.2rem .45rem">✎ Edit</button>
+                      <button class="btn-icon" title="Delete category" style="font-size:.72rem;padding:.2rem .45rem;color:var(--red);border-color:#fca5a5">🗑 Delete</button>
+                    </span>
                   </td>
                 </tr>
                 {cat.items.map((item:any) => {
