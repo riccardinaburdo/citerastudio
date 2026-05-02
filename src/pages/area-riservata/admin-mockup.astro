@@ -1,0 +1,540 @@
+---
+// MOCKUP ONLY — not yet functional, no auth required
+export const prerender = true;
+
+const project = {
+  name:       'Villa delle Azalee — Full Renovation',
+  location:   'Contrada Monti Ausoni, Alberobello (BA) — Puglia, Italy',
+  clientName: 'Mr. & Mrs. James Thompson',
+  clientEmail:'j.thompson@example.com',
+  architect:  'Arch. Vito Depalo — CiteraStudio',
+  start:      '2024-04-15',
+  end:        '2025-01-31',
+  updated:    '2024-11-01',
+  updateNum:  3,
+};
+
+const contractors = [
+  {
+    id: 'C1', name: 'Costruzioni Generali S.r.l.', trade: 'Structural & Civil Works',
+    contact: 'ing. Marco Russo — +39 080 555 0123',
+    budget: 287_420.50,
+    sal: [
+      { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   pct: 20 },
+      { id: 'SAL1', label: 'Progress Payment 1', trigger: 30,  pct: 10 },
+      { id: 'SAL2', label: 'Progress Payment 2', trigger: 60,  pct: 30 },
+      { id: 'SAL3', label: 'Progress Payment 3', trigger: 90,  pct: 30 },
+      { id: 'FIN',  label: 'Final Balance',       trigger: 100, pct: 10 },
+    ],
+  },
+  {
+    id: 'C2', name: 'Tekne Impianti S.r.l.', trade: 'MEP — Plumbing & Electrical',
+    contact: 'geom. Laura Vitale — +39 080 555 0456',
+    budget: 82_950.00,
+    sal: [
+      { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   pct: 30 },
+      { id: 'SAL1', label: 'Progress Payment 1', trigger: 50,  pct: 40 },
+      { id: 'FIN',  label: 'Final Balance',       trigger: 100, pct: 30 },
+    ],
+  },
+  {
+    id: 'C3', name: 'Infissi Puglia S.r.l.', trade: 'Doors, Windows & Shutters',
+    contact: 'sig. Antonio Greco — +39 080 555 0789',
+    budget: 41_900.00,
+    sal: [
+      { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   pct: 25 },
+      { id: 'SAL1', label: 'Progress Payment 1', trigger: 50,  pct: 50 },
+      { id: 'FIN',  label: 'Final Balance',       trigger: 100, pct: 25 },
+    ],
+  },
+];
+
+const categories = [
+  { id: 'A', label: 'Site Preparation & Demolition', contractor: 'C1', items: [
+    { id: 'A.01', desc: 'Demolition of existing masonry structures',     unit: 'm³',   qty: 48,   price: 73.50,  done: 52,  extra: false },
+    { id: 'A.02', desc: 'Removal of old roof covering and flashings',    unit: 'm²',   qty: 320,  price: 9.63,   done: 320, extra: false },
+    { id: 'A.03', desc: 'Removal of existing floor finishes and screed', unit: 'm²',   qty: 415,  price: 7.00,   done: 370, extra: false },
+  ]},
+  { id: 'C', label: 'Internal Finishes', contractor: 'C1', items: [
+    { id: 'C.01', desc: 'Three-coat internal plaster with skim finish',  unit: 'm²',   qty: 1250, price: 18.40,  done: 950, extra: false },
+    { id: 'C.02', desc: 'Screed flooring base, 60 mm thick',             unit: 'm²',   qty: 850,  price: 12.25,  done: 780, extra: false },
+    { id: 'C.EX1',desc: 'Feature stone cladding — entrance hall',        unit: 'm²',   qty: 0,    price: 185.00, done: 45,  extra: true  },
+  ]},
+  { id: 'E', label: 'Doors & Windows', contractor: 'C3', items: [
+    { id: 'E.01', desc: 'PVC triple-glazed windows (Uw ≤ 1.2 W/m²K)',   unit: 'unit', qty: 28,   price: 485.00, done: 24,  extra: false },
+    { id: 'E.02', desc: 'Internal timber doors, frame & ironmongery',    unit: 'unit', qty: 45,   price: 320.00, done: 37,  extra: false },
+  ]},
+  { id: 'F', label: 'Plumbing & Drainage', contractor: 'C2', items: [
+    { id: 'F.01', desc: 'Hot & cold water supply pipework (multi-layer)',unit: 'lump', qty: 1,    price: 18500,  done: 1,   extra: false },
+    { id: 'F.02', desc: 'Internal drainage & soil pipework, PVC',        unit: 'lump', qty: 1,    price: 8750,   done: 1,   extra: false },
+    { id: 'F.EX1',desc: 'Additional external rainwater harvesting tank', unit: 'lump', qty: 0,    price: 4800,   done: 1,   extra: true  },
+  ]},
+];
+
+const enrich = (item: any) => {
+  const budget = item.extra ? 0 : item.qty * item.price;
+  const done   = item.done * item.price;
+  const perc   = (!item.extra && budget > 0) ? (done / budget) * 100 : null;
+  return { ...item, budget, valueDone: done, perc };
+};
+const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
+const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — MOCKUP | CiteraStudio</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:#1a3a5c; --orange:#FB8503; --green:#22c55e; --red:#dc2626;
+      --amber:#f59e0b; --slate:#64748b;
+      --g1:#f8fafc; --g2:#e2e8f0; --g3:#94a3b8; --g4:#cbd5e1;
+      --text:#1e293b; --sans:'Inter',sans-serif; --brand:'Quicksand',sans-serif;
+      --r:8px;
+    }
+    body { font-family:var(--sans); color:var(--text); background:var(--g1); font-size:14px; }
+
+    /* TOPBAR */
+    .topbar { position:sticky; top:0; z-index:100; background:var(--navy); color:#fff;
+      display:flex; align-items:center; gap:1rem; padding:.6rem 1.5rem;
+      box-shadow:0 2px 12px rgba(0,0,0,.25); }
+    .topbar-brand { font-family:var(--brand); font-weight:700; font-size:1rem; color:var(--orange); text-decoration:none; flex-shrink:0; }
+    .topbar-sep   { color:rgba(255,255,255,.25); }
+    .topbar-title { font-size:.82rem; color:rgba(255,255,255,.75); flex:1; }
+    .mock-pill { background:rgba(251,133,3,.25); border:1px solid var(--orange); color:var(--orange);
+      font-size:.65rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+      padding:.2rem .7rem; border-radius:20px; flex-shrink:0; }
+    .btn-top { padding:.3rem .9rem; border:1px solid rgba(255,255,255,.3); background:transparent;
+      color:#fff; border-radius:5px; font-size:.75rem; cursor:pointer; }
+    .btn-top:hover { background:rgba(255,255,255,.1); }
+
+    /* TABS */
+    .tabs { background:#fff; border-bottom:2px solid var(--g2); padding:0 2rem; display:flex; gap:0; }
+    .tab-btn { padding:.75rem 1.4rem; font-size:.8rem; font-weight:600; color:var(--g3);
+      border:none; background:none; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color .15s; }
+    .tab-btn:hover { color:var(--slate); }
+    .tab-btn.active { color:var(--navy); border-bottom-color:var(--orange); }
+
+    /* MAIN */
+    .admin-main { max-width:1400px; margin:0 auto; padding:2rem; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.2rem; }
+    .section-title { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--g3); font-weight:600; }
+
+    /* CARDS */
+    .card { background:#fff; border-radius:var(--r); border:1px solid var(--g2); box-shadow:0 1px 4px rgba(0,0,0,.06); }
+
+    /* BUTTONS */
+    .btn { display:inline-flex; align-items:center; gap:.35rem; padding:.4rem .9rem;
+      border-radius:6px; font-size:.78rem; font-weight:500; cursor:pointer; border:none; transition:opacity .15s; }
+    .btn:hover { opacity:.85; }
+    .btn-primary   { background:var(--navy); color:#fff; }
+    .btn-secondary { background:var(--g1); color:var(--slate); border:1px solid var(--g2); }
+    .btn-add       { background:rgba(34,197,94,.1); color:#15803d; border:1px solid #bbf7d0; }
+    .btn-danger    { background:rgba(220,38,38,.08); color:var(--red); border:1px solid #fca5a5; }
+    .btn-icon      { padding:.3rem .5rem; font-size:.85rem; background:none; border:1px solid var(--g2);
+      border-radius:5px; cursor:pointer; color:var(--g3); transition:background .15s; }
+    .btn-icon:hover { background:var(--g1); color:var(--text); }
+
+    /* FORM */
+    .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem 2rem; }
+    .form-grid.cols3 { grid-template-columns:repeat(3,1fr); }
+    .form-full { grid-column:1/-1; }
+    .field { display:flex; flex-direction:column; gap:.3rem; }
+    .field label { font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--g3); }
+    .field input, .field select, .field textarea {
+      padding:.5rem .75rem; border:1px solid var(--g2); border-radius:6px;
+      font-size:.85rem; font-family:var(--sans); color:var(--text); background:#fff;
+      transition:border-color .15s;
+    }
+    .field input:focus, .field select:focus { outline:none; border-color:var(--navy); }
+    .field input[readonly] { background:var(--g1); color:var(--slate); cursor:default; }
+    .auto-field { background:#f0f6ff !important; color:var(--navy) !important; font-family:monospace; font-size:.82rem; }
+
+    /* PROJECT TAB */
+    .project-card { padding:1.5rem; }
+    .project-save-row { display:flex; gap:.5rem; margin-top:1.5rem; }
+
+    /* CONTRACTOR CARDS */
+    .contractor-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:1.2rem; margin-bottom:1.2rem; }
+    .ctr-card { padding:1.2rem 1.4rem; }
+    .ctr-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+    .ctr-name  { font-size:.9rem; font-weight:700; color:var(--navy); }
+    .ctr-trade { font-size:.72rem; color:var(--slate); margin-top:.15rem; }
+    .ctr-contact { font-size:.7rem; color:var(--g3); margin-top:.1rem; }
+    .ctr-budget { font-size:.72rem; color:var(--slate); margin-top:.2rem; }
+    .ctr-budget strong { color:var(--navy); }
+    .ctr-actions { display:flex; gap:.4rem; flex-shrink:0; }
+    .sal-table { width:100%; border-collapse:collapse; font-size:.75rem; margin-top:.3rem; }
+    .sal-table th { font-size:.6rem; text-transform:uppercase; letter-spacing:.05em; color:var(--g3);
+      font-weight:600; padding:.3rem .6rem; border-bottom:1px solid var(--g2); text-align:left; }
+    .sal-table th.right { text-align:right; }
+    .sal-table td { padding:.35rem .6rem; border-bottom:1px solid var(--g2); vertical-align:middle; }
+    .sal-table tr:last-child td { border-bottom:none; }
+    .sal-id   { font-size:.68rem; font-weight:700; font-family:monospace; color:var(--navy); }
+    .sal-pct  { text-align:right; font-family:monospace; font-weight:600; }
+    .sal-amt  { text-align:right; font-family:monospace; color:var(--slate); font-size:.7rem; }
+    .sal-total{ background:var(--g1); }
+    .sal-total td { font-weight:700; font-size:.72rem; padding:.4rem .6rem; }
+    .sal-ok   { color:#15803d; }
+    .sal-add-row { margin-top:.5rem; }
+
+    /* WORKS TABLE */
+    .works-wrap { overflow-x:auto; }
+    table.works { width:100%; border-collapse:collapse; font-size:.75rem; }
+    table.works thead th { background:var(--navy); color:rgba(255,255,255,.85); padding:.5rem .65rem;
+      text-align:left; font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; white-space:nowrap; }
+    table.works thead th.right { text-align:right; }
+    tr.cat-row td { background:#f0f6ff; color:var(--navy); padding:.4rem .65rem;
+      font-weight:700; font-size:.72rem; border-top:2px solid var(--g2); border-bottom:1px solid #c7d9f0; }
+    .cat-badge { display:inline-flex; align-items:center; justify-content:center;
+      width:20px; height:20px; border-radius:50%; background:var(--navy); color:#fff;
+      font-size:.6rem; font-weight:700; margin-right:.4rem; }
+    .ctr-pill { display:inline-block; font-size:.6rem; font-weight:700; padding:.1rem .5rem;
+      border-radius:10px; background:rgba(251,133,3,.12); color:#c2410c; margin-left:.5rem; }
+    table.works tbody tr.item td { padding:.4rem .65rem; border-bottom:1px solid var(--g2); vertical-align:middle; }
+    table.works tbody tr.item:hover td { background:#f8fafc; }
+    table.works tbody tr.item.extra-row td { background:#fffdf5; }
+    .item-id  { font-size:.65rem; font-family:monospace; color:var(--g3); white-space:nowrap; }
+    .auto-cell { background:#f0f6ff; font-family:monospace; font-size:.72rem; text-align:right;
+      color:var(--navy); white-space:nowrap; position:relative; }
+    .auto-cell::after { content:'auto'; position:absolute; bottom:2px; right:4px;
+      font-size:.45rem; color:var(--g4); font-family:var(--sans); text-transform:uppercase; letter-spacing:.04em; }
+    .editable-cell input { width:100%; border:none; background:transparent; font-size:.75rem;
+      font-family:var(--sans); color:var(--text); padding:0; text-align:right; }
+    .editable-cell input:focus { outline:1px solid var(--navy); border-radius:3px; background:#fff; padding:0 3px; }
+    .extra-badge { display:inline-block; font-size:.55rem; font-weight:800; text-transform:uppercase;
+      padding:.1rem .35rem; border-radius:3px; background:var(--amber); color:#fff; margin-right:.3rem; }
+    .overrun-badge { font-size:.62rem; font-weight:700; color:var(--red); }
+    .perc-wrap { display:flex; align-items:center; gap:.35rem; }
+    .perc-mini { flex:1; min-width:40px; height:5px; background:var(--g2); border-radius:3px; overflow:hidden; }
+    .perc-fill { height:100%; border-radius:3px; }
+    .perc-num  { font-size:.68rem; font-weight:600; width:32px; text-align:right; white-space:nowrap; }
+    .status-badge { display:inline-block; font-size:.58rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.04em; padding:.15rem .5rem; border-radius:20px; white-space:nowrap; }
+    .status-complete { background:#dcfce7; color:#15803d; }
+    .status-progress { background:#fff7ed; color:#c2410c; }
+    .status-pending  { background:#f1f5f9; color:var(--g3); }
+    .status-overrun  { background:#fee2e2; color:var(--red); border:1px solid #fca5a5; }
+    .status-extra    { background:#fef3c7; color:#92400e; }
+    tr.subtotal td { background:var(--g1); padding:.35rem .65rem; font-size:.7rem; font-weight:600;
+      color:var(--navy); border-top:1px dashed #c7d9f0; border-bottom:2px solid var(--g2); }
+    tr.item.extra-row .extra-toggle { accent-color:var(--amber); }
+    .toggle-wrapper { display:flex; align-items:center; justify-content:center; }
+    input[type=checkbox].extra-toggle { width:14px; height:14px; cursor:pointer; }
+    tr.grand-total td { background:var(--navy); color:#fff; padding:.5rem .65rem; font-weight:700; font-size:.78rem; }
+
+    /* LEGEND */
+    .legend { display:flex; gap:1.2rem; align-items:center; flex-wrap:wrap; font-size:.7rem; color:var(--slate); }
+    .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .legend-item { display:flex; align-items:center; gap:.4rem; }
+    .auto-legend { display:inline-block; width:28px; height:12px; background:#f0f6ff;
+      border:1px solid #c7d9f0; border-radius:3px; vertical-align:middle; }
+
+    /* PREVIEW TAB */
+    .preview-link-card { padding:2.5rem; text-align:center; }
+    .preview-link-card p { color:var(--slate); margin-bottom:1.5rem; }
+
+    /* RESPONSIVE */
+    @media(max-width:900px) { .form-grid { grid-template-columns:1fr; } .contractor-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="topbar-brand">citerastudio</a>
+  <span class="topbar-sep">|</span>
+  <span class="topbar-title">Admin Dashboard</span>
+  <span class="mock-pill">Mockup</span>
+  <a href="/area-riservata/portal" class="btn-top">View Client Portal</a>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="project">Project Info</button>
+  <button class="tab-btn" data-tab="contractors">Contractors &amp; Payments</button>
+  <button class="tab-btn" data-tab="works">Bill of Works</button>
+</div>
+
+<div class="admin-main">
+
+  <!-- ══════════════════════════════════════════════ TAB: PROJECT INFO -->
+  <div id="tab-project">
+    <div class="section-head">
+      <span class="section-title">Project Information</span>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-primary">Save Changes</button>
+      </div>
+    </div>
+    <div class="card project-card">
+      <div class="form-grid">
+        <div class="field form-full">
+          <label>Project Title</label>
+          <input type="text" value={project.name} />
+        </div>
+        <div class="field form-full">
+          <label>Location</label>
+          <input type="text" value={project.location} />
+        </div>
+        <div class="field">
+          <label>Client Name</label>
+          <input type="text" value={project.clientName} />
+        </div>
+        <div class="field">
+          <label>Client Email</label>
+          <input type="email" value={project.clientEmail} />
+        </div>
+        <div class="field">
+          <label>Architect / D.L.</label>
+          <input type="text" value={project.architect} />
+        </div>
+        <div class="field">
+          <label>Overall Contract Budget (net ex. VAT)</label>
+          <input type="text" value="€ 412,270.50" />
+        </div>
+        <div class="field">
+          <label>Contract Start</label>
+          <input type="date" value={project.start} />
+        </div>
+        <div class="field">
+          <label>Contract End</label>
+          <input type="date" value={project.end} />
+        </div>
+        <div class="field">
+          <label>Last Updated</label>
+          <input type="date" value={project.updated} />
+        </div>
+        <div class="field">
+          <label>Update Number</label>
+          <input type="number" value={project.updateNum} style="width:80px" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ TAB: CONTRACTORS -->
+  <div id="tab-contractors" hidden>
+    <div class="section-head">
+      <span class="section-title">Contractors &amp; Payment Schedules</span>
+      <button class="btn btn-add">+ Add Contractor</button>
+    </div>
+    <div class="contractor-grid">
+      {contractors.map(c => {
+        const total = c.sal.reduce((s, m) => s + m.pct, 0);
+        return (
+          <div class="card ctr-card">
+            <div class="ctr-header">
+              <div>
+                <div class="ctr-name">{c.name}</div>
+                <div class="ctr-trade">{c.trade}</div>
+                <div class="ctr-contact">{c.contact}</div>
+                <div class="ctr-budget">Budget: <strong>{fmt(c.budget)}</strong> <span style="font-size:.65rem;color:var(--g3)">(net ex. VAT)</span></div>
+              </div>
+              <div class="ctr-actions">
+                <button class="btn-icon" title="Edit">✎</button>
+                <button class="btn-icon" title="Delete">🗑</button>
+              </div>
+            </div>
+            <table class="sal-table">
+              <thead>
+                <tr>
+                  <th style="width:50px">Ref.</th>
+                  <th>Milestone</th>
+                  <th class="right" style="width:70px">Trigger</th>
+                  <th class="right" style="width:55px">%</th>
+                  <th class="right" style="width:105px">Amount (net)</th>
+                  <th style="width:30px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {c.sal.map(m => (
+                  <tr>
+                    <td class="sal-id">{m.id}</td>
+                    <td>{m.label}</td>
+                    <td style="text-align:right;color:var(--slate);font-size:.7rem">
+                      {m.trigger === 0 ? 'On signing' : `at ${m.trigger}%`}
+                    </td>
+                    <td class="sal-pct">
+                      <input type="number" value={m.pct} min="0" max="100" style="width:48px; border:1px solid var(--g2); border-radius:4px; padding:.2rem .4rem; font-size:.75rem; text-align:right" />
+                    </td>
+                    <td class="sal-amt">{fmt(c.budget * m.pct / 100)}</td>
+                    <td><button class="btn-icon" style="padding:.15rem .35rem;font-size:.7rem">✕</button></td>
+                  </tr>
+                ))}
+                <tr class="sal-total">
+                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
+                  <td class="sal-pct" style={total === 100 ? 'color:var(--green)' : 'color:var(--red)'}>
+                    {total}% {total === 100 ? '✓' : '⚠'}
+                  </td>
+                  <td class="sal-amt" style="color:var(--navy);font-weight:700">{fmt(c.budget)}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="sal-add-row">
+              <button class="btn btn-add" style="font-size:.7rem;padding:.3rem .7rem">+ Add milestone</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ TAB: BILL OF WORKS -->
+  <div id="tab-works" hidden>
+    <div class="section-head">
+      <span class="section-title">Bill of Works</span>
+      <div style="display:flex;gap:.75rem;align-items:center">
+        <div class="legend">
+          <span class="legend-item"><span class="auto-legend"></span> auto-calculated</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span> Extra works</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--red)"></span> Overrun</span>
+        </div>
+        <button class="btn btn-add">+ Add Category</button>
+      </div>
+    </div>
+    <div class="card" style="overflow:hidden">
+      <div class="works-wrap">
+        <table class="works">
+          <thead>
+            <tr>
+              <th style="width:60px">#</th>
+              <th>Description</th>
+              <th style="width:55px">Unit</th>
+              <th class="right" style="width:90px">Contracted Qty</th>
+              <th class="right" style="width:100px">Unit Price<br/><span style="font-size:.5rem;opacity:.65">net ex. VAT</span></th>
+              <th class="right" style="width:105px">Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th class="right" style="width:80px">Done Qty</th>
+              <th class="right" style="width:105px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th style="width:105px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th style="width:72px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th style="width:52px;text-align:center">Extra</th>
+              <th style="width:62px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {enrichedCats.map(cat => {
+              const ctrName = contractors.find(c => c.id === cat.contractor)?.name ?? '';
+              const catBudget = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
+              const catDone   = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);
+              const catPerc   = catBudget > 0 ? catDone/catBudget*100 : 0;
+              return (<>
+                <tr class="cat-row">
+                  <td colspan="12">
+                    <span class="cat-badge">{cat.id}</span>
+                    {cat.label}
+                    <span class="ctr-pill">{ctrName}</span>
+                    <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">
+                      Budget: {fmt(catBudget)} &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
+                    </span>
+                    <button class="btn btn-add" style="float:right;font-size:.62rem;padding:.2rem .55rem;margin-top:-.1rem">+ Add item</button>
+                  </td>
+                </tr>
+                {cat.items.map((item:any) => {
+                  const overrun = !item.extra && item.done > item.qty;
+                  const pColor  = overrun ? '#dc2626' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
+                  const barW    = item.perc !== null ? Math.min(item.perc,100) : 0;
+                  return (
+                    <tr class={`item${item.extra ? ' extra-row' : ''}`}>
+                      <td class="item-id">{item.id}</td>
+                      <td style="max-width:260px;line-height:1.4">
+                        {item.extra && <span class="extra-badge">Extra</span>}
+                        {item.desc}
+                      </td>
+                      <td>
+                        <select style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">
+                          {['m²','m³','lm','unit','lump','kg'].map(u => <option selected={item.unit===u}>{u}</option>)}
+                        </select>
+                      </td>
+                      <td class="editable-cell">
+                        <input type="number" value={item.extra ? '' : item.qty} placeholder={item.extra ? '–' : ''} disabled={item.extra} style={item.extra ? 'color:var(--g3)' : ''} />
+                      </td>
+                      <td class="editable-cell">
+                        <input type="number" value={item.price} step="0.01" />
+                      </td>
+                      <td class="auto-cell">
+                        {item.extra ? '–' : fmt(item.budget)}
+                      </td>
+                      <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
+                        <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} />
+                        {overrun && <span class="overrun-badge">↑</span>}
+                      </td>
+                      <td class="auto-cell">
+                        {fmt(item.valueDone)}
+                      </td>
+                      <td style="min-width:95px">
+                        {item.extra ? (
+                          <span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>
+                        ) : item.perc !== null ? (
+                          <div class="perc-wrap">
+                            <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
+                            <span class="perc-num" style={`color:${pColor}`}>{item.perc.toFixed(0)}%</span>
+                          </div>
+                        ) : '–'}
+                      </td>
+                      <td>
+                        {item.extra ? <span class="status-badge status-extra">Extra</span>
+                          : overrun ? <span class="status-badge status-overrun">Overrun</span>
+                          : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
+                          : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
+                          : <span class="status-badge status-pending">Not Started</span>}
+                      </td>
+                      <td class="toggle-wrapper">
+                        <input type="checkbox" class="extra-toggle" checked={item.extra} title="Mark as extra works" />
+                      </td>
+                      <td style="white-space:nowrap">
+                        <button class="btn-icon" title="Edit row">✎</button>
+                        <button class="btn-icon" title="Delete" style="margin-left:.2rem">🗑</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr class="subtotal">
+                  <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
+                  <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
+                  <td></td>
+                  <td style="text-align:right;font-family:monospace;color:var(--navy)">{fmt(catDone)}</td>
+                  <td colspan="4"></td>
+                </tr>
+              </>);
+            })}
+            <tr class="grand-total">
+              <td colspan="5" style="text-align:right;padding-right:.75rem;letter-spacing:.04em;font-size:.72rem">
+                TOTAL <span style="opacity:.55;font-weight:400">(net ex. VAT — contracted only)</span>
+              </td>
+              <td style="text-align:right;font-family:monospace">
+                {fmt(enrichedCats.flatMap((c:any)=>c.items).filter((i:any)=>!i.extra).reduce((s:number,i:any)=>s+i.budget,0))}
+              </td>
+              <td></td>
+              <td style="text-align:right;font-family:monospace">
+                {fmt(enrichedCats.flatMap((c:any)=>c.items).reduce((s:number,i:any)=>s+i.valueDone,0))}
+              </td>
+              <td colspan="4"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /admin-main -->
+
+<script>
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = { project: document.getElementById('tab-project'), contractors: document.getElementById('tab-contractors'), works: document.getElementById('tab-works') };
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      Object.entries(panels).forEach(([k, el]) => {
+        if (el) el.hidden = (k !== (btn as HTMLElement).dataset.tab);
+      });
+    });
+  });
+</script>
+</body>
+</html>
