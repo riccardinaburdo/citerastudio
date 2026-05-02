@@ -90,7 +90,6 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    [hidden] { display: none !important; }
     :root {
       --navy:#1a3a5c; --orange:#FB8503; --green:#22c55e; --red:#dc2626;
       --amber:#f59e0b; --slate:#64748b;
@@ -199,8 +198,9 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
     .brief-link:hover { color:var(--navy); }
     .brief-empty { font-size:.68rem; color:var(--g4); font-style:italic; cursor:pointer; }
     .brief-empty:hover { color:var(--g3); }
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000;
-      display:flex; align-items:center; justify-content:center; padding:1rem; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000;
+      align-items:center; justify-content:center; padding:1rem; }
+    .modal-overlay.is-open { display:flex; }
     .modal-box { background:#fff; border-radius:var(--r); box-shadow:0 20px 60px rgba(0,0,0,.25);
       width:100%; max-width:580px; display:flex; flex-direction:column; overflow:hidden; }
     .modal-header { display:flex; align-items:center; gap:.75rem; padding:1rem 1.2rem;
@@ -567,7 +567,7 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
 </div><!-- /admin-main -->
 
 <!-- DESCRIPTION MODAL -->
-<div id="desc-modal" class="modal-overlay" hidden>
+<div id="desc-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">
       <span id="modal-item-id" class="modal-item-id"></span>
@@ -609,10 +609,10 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
     modalId.textContent    = id;
     modalBrief.textContent = brief;
     modalText.value        = fullDesc;
-    modal.hidden = false;
+    modal.classList.add('is-open');
     modalText.focus();
   }
-  function closeModal() { modal.hidden = true; }
+  function closeModal() { modal.classList.remove('is-open'); }
 
   document.getElementById('modal-close-btn')!.addEventListener('click', closeModal);
   document.getElementById('modal-cancel-btn')!.addEventListener('click', closeModal);
