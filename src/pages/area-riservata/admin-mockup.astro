@@ -18,33 +18,30 @@ const contractors = [
   {
     id: 'C1', name: 'Costruzioni Generali S.r.l.', trade: 'Structural & Civil Works',
     contact: 'ing. Marco Russo — +39 080 555 0123',
-    budget: 287_420.50,
     sal: [
-      { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   pct: 20 },
-      { id: 'SAL1', label: 'Progress Payment 1', trigger: 30,  pct: 10 },
-      { id: 'SAL2', label: 'Progress Payment 2', trigger: 60,  pct: 30 },
-      { id: 'SAL3', label: 'Progress Payment 3', trigger: 90,  pct: 30 },
-      { id: 'FIN',  label: 'Final Balance',       trigger: 100, pct: 10 },
+      { id: 'DEP',  label: 'Initial Deposit',    triggerType: 'signing',  triggerPct: null, pct: 20 },
+      { id: 'SAL1', label: 'Progress Payment 1', triggerType: 'percent',  triggerPct: 30,   pct: 10 },
+      { id: 'SAL2', label: 'Progress Payment 2', triggerType: 'percent',  triggerPct: 60,   pct: 30 },
+      { id: 'SAL3', label: 'Progress Payment 3', triggerType: 'percent',  triggerPct: 90,   pct: 30 },
+      { id: 'FIN',  label: 'Final Balance',       triggerType: 'final',    triggerPct: null, pct: 10 },
     ],
   },
   {
     id: 'C2', name: 'Tekne Impianti S.r.l.', trade: 'MEP — Plumbing & Electrical',
     contact: 'geom. Laura Vitale — +39 080 555 0456',
-    budget: 82_950.00,
     sal: [
-      { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   pct: 30 },
-      { id: 'SAL1', label: 'Progress Payment 1', trigger: 50,  pct: 40 },
-      { id: 'FIN',  label: 'Final Balance',       trigger: 100, pct: 30 },
+      { id: 'DEP',  label: 'Initial Deposit',    triggerType: 'signing',  triggerPct: null, pct: 30 },
+      { id: 'SAL1', label: 'Progress Payment 1', triggerType: 'percent',  triggerPct: 50,   pct: 40 },
+      { id: 'FIN',  label: 'Final Balance',       triggerType: 'final',    triggerPct: null, pct: 30 },
     ],
   },
   {
     id: 'C3', name: 'Infissi Puglia S.r.l.', trade: 'Doors, Windows & Shutters',
     contact: 'sig. Antonio Greco — +39 080 555 0789',
-    budget: 41_900.00,
     sal: [
-      { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   pct: 25 },
-      { id: 'SAL1', label: 'Progress Payment 1', trigger: 50,  pct: 50 },
-      { id: 'FIN',  label: 'Final Balance',       trigger: 100, pct: 25 },
+      { id: 'DEP',  label: 'Initial Deposit',    triggerType: 'signing',  triggerPct: null, pct: 25 },
+      { id: 'SAL1', label: 'Progress Payment 1', triggerType: 'percent',  triggerPct: 50,   pct: 50 },
+      { id: 'FIN',  label: 'Final Balance',       triggerType: 'final',    triggerPct: null, pct: 25 },
     ],
   },
 ];
@@ -79,6 +76,21 @@ const enrich = (item: any) => {
 };
 const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
 const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Compute contractor budgets from bill of works (non-extra items only)
+const ctrBudgets = new Map<string, { budget: number; itemCount: number }>();
+for (const cat of categories) {
+  for (const item of cat.items) {
+    if (!item.extra) {
+      const cur = ctrBudgets.get(item.contractor) ?? { budget: 0, itemCount: 0 };
+      ctrBudgets.set(item.contractor, { budget: cur.budget + item.qty * item.price, itemCount: cur.itemCount + 1 });
+    }
+  }
+}
+const triggerLabel = (m: any) =>
+  m.triggerType === 'signing' ? 'On signing' :
+  m.triggerType === 'final'   ? 'Final works' :
+  `at ${m.triggerPct}%`;
 ---
 <!doctype html>
 <html lang="en">
@@ -182,6 +194,10 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
     .sal-total td { font-weight:700; font-size:.72rem; padding:.4rem .6rem; }
     .sal-ok   { color:#15803d; }
     .sal-add-row { margin-top:.5rem; }
+    .sal-trigger { font-size:.7rem; color:var(--slate); }
+    .auto-tag { display:inline-block; font-size:.55rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.05em; background:#f0f6ff; color:var(--navy); border:1px solid #c7d9f0;
+      padding:.05rem .35rem; border-radius:3px; margin-left:.4rem; vertical-align:middle; }
 
     /* WORKS TABLE */
     .works-wrap { overflow-x:auto; }
@@ -353,15 +369,21 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
     </div>
     <div class="contractor-grid">
       {contractors.map(c => {
-        const total = c.sal.reduce((s, m) => s + m.pct, 0);
+        const info   = ctrBudgets.get(c.id) ?? { budget: 0, itemCount: 0 };
+        const budget = info.budget;
+        const total  = c.sal.reduce((s, m) => s + m.pct, 0);
         return (
-          <div class="card ctr-card">
+          <div class="card ctr-card" data-budget={budget.toFixed(2)} data-ctr-id={c.id}>
             <div class="ctr-header">
               <div>
                 <div class="ctr-name">{c.name}</div>
                 <div class="ctr-trade">{c.trade}</div>
                 <div class="ctr-contact">{c.contact}</div>
-                <div class="ctr-budget">Budget: <strong>{fmt(c.budget)}</strong> <span style="font-size:.65rem;color:var(--g3)">(net ex. VAT)</span></div>
+                <div class="ctr-budget">
+                  Budget: <strong class="ctr-budget-val">{fmt(budget)}</strong>
+                  <span class="auto-tag">auto</span>
+                  <span style="font-size:.6rem;color:var(--g3)">· {info.itemCount} items (net ex. VAT)</span>
+                </div>
               </div>
               <div class="ctr-actions">
                 <button class="btn-icon" title="Edit">✎</button>
@@ -373,9 +395,9 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
                 <tr>
                   <th style="width:50px">Ref.</th>
                   <th>Milestone</th>
-                  <th class="right" style="width:70px">Trigger</th>
+                  <th style="width:90px">Trigger</th>
                   <th class="right" style="width:55px">%</th>
-                  <th class="right" style="width:105px">Amount (net)</th>
+                  <th class="right" style="width:115px">Amount (net) <span class="auto-tag">auto</span></th>
                   <th style="width:60px"></th>
                 </tr>
               </thead>
@@ -384,31 +406,31 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
                   <tr>
                     <td class="sal-id">{m.id}</td>
                     <td>{m.label}</td>
-                    <td style="text-align:right;color:var(--slate);font-size:.7rem">
-                      {m.trigger === 0 ? 'On signing' : `at ${m.trigger}%`}
-                    </td>
+                    <td class="sal-trigger">{triggerLabel(m)}</td>
                     <td class="sal-pct">
-                      <input type="number" value={m.pct} min="0" max="100" style="width:48px; border:1px solid var(--g2); border-radius:4px; padding:.2rem .4rem; font-size:.75rem; text-align:right" />
+                      <input type="number" value={m.pct} min="0" max="100"
+                        class="pct-input"
+                        style="width:48px; border:1px solid var(--g2); border-radius:4px; padding:.2rem .4rem; font-size:.75rem; text-align:right" />
                     </td>
-                    <td class="sal-amt">{fmt(c.budget * m.pct / 100)}</td>
+                    <td class="sal-amt">{fmt(budget * m.pct / 100)}</td>
                     <td style="white-space:nowrap">
                       <button class="btn-icon" title="Edit milestone" style="padding:.15rem .4rem;font-size:.7rem">✎</button>
-                      <button class="btn-icon" title="Delete milestone" style="padding:.15rem .4rem;font-size:.7rem;color:var(--red);border-color:#fca5a5;margin-left:.2rem">🗑</button>
+                      <button class="btn-icon btn-del-milestone" title="Delete milestone" style="padding:.15rem .4rem;font-size:.7rem;color:var(--red);border-color:#fca5a5;margin-left:.2rem">🗑</button>
                     </td>
                   </tr>
                 ))}
                 <tr class="sal-total">
                   <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
-                  <td class="sal-pct" style={total === 100 ? 'color:var(--green)' : 'color:var(--red)'}>
+                  <td class="sal-pct sal-total-pct" style={total === 100 ? 'color:var(--green)' : 'color:var(--red)'}>
                     {total}% {total === 100 ? '✓' : '⚠'}
                   </td>
-                  <td class="sal-amt" style="color:var(--navy);font-weight:700">{fmt(c.budget)}</td>
+                  <td class="sal-amt sal-total-amt" style="color:var(--navy);font-weight:700">{fmt(budget)}</td>
                   <td></td>
                 </tr>
               </tbody>
             </table>
             <div class="sal-add-row">
-              <button class="btn btn-add" style="font-size:.7rem;padding:.3rem .7rem">+ Add milestone</button>
+              <button class="btn btn-add btn-add-milestone" style="font-size:.7rem;padding:.3rem .7rem">+ Add milestone</button>
             </div>
           </div>
         );
@@ -566,6 +588,54 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
 
 </div><!-- /admin-main -->
 
+<!-- ADD MILESTONE MODAL -->
+<div id="milestone-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <span style="font-size:.8rem;font-weight:700">Add Milestone</span>
+      <span id="ms-ctr-name" style="font-size:.72rem;opacity:.75;flex:1;margin-left:.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button class="modal-close" id="ms-close-btn">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:.9rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div>
+          <label>Ref.</label>
+          <input id="ms-ref" type="text" placeholder="e.g. SAL2"
+            style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+        </div>
+        <div>
+          <label>Milestone name</label>
+          <input id="ms-label" type="text" placeholder="e.g. Progress Payment 2"
+            style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+        </div>
+      </div>
+      <div>
+        <label>Trigger</label>
+        <select id="ms-trigger-type"
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff">
+          <option value="signing">On signing (contract signature)</option>
+          <option value="percent">At % completion</option>
+          <option value="final">Final works / testing</option>
+        </select>
+      </div>
+      <div id="ms-pct-row">
+        <label>Completion % trigger</label>
+        <input id="ms-trigger-pct" type="number" min="1" max="99" placeholder="e.g. 30"
+          style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Payment % (of contractor budget)</label>
+        <input id="ms-pct" type="number" min="0" max="100" placeholder="e.g. 20"
+          style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="ms-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="ms-save-btn">Add Milestone</button>
+    </div>
+  </div>
+</div>
+
 <!-- DESCRIPTION MODAL -->
 <div id="desc-modal" class="modal-overlay">
   <div class="modal-box">
@@ -586,7 +656,7 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
 </div>
 
 <script>
-  // Tabs
+  // ── Tabs ──────────────────────────────────────────────────────────────────
   const tabs = document.querySelectorAll('.tab-btn');
   const panels = { project: document.getElementById('tab-project'), contractors: document.getElementById('tab-contractors'), works: document.getElementById('tab-works') };
   tabs.forEach(btn => {
@@ -599,30 +669,144 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
     });
   });
 
-  // Description modal
-  const modal     = document.getElementById('desc-modal') as HTMLElement;
-  const modalId   = document.getElementById('modal-item-id') as HTMLElement;
-  const modalBrief= document.getElementById('modal-item-brief') as HTMLElement;
-  const modalText = document.getElementById('modal-fulldesc') as HTMLTextAreaElement;
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const fmtAmt = (n: number) =>
+    '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  function openModal(id: string, brief: string, fullDesc: string) {
+  function recalcCard(card: HTMLElement) {
+    const budget = parseFloat(card.dataset.budget ?? '0');
+    let totalPct = 0;
+    card.querySelectorAll<HTMLTableRowElement>('tbody tr:not(.sal-total)').forEach(row => {
+      const inp = row.querySelector<HTMLInputElement>('.pct-input');
+      const amtCell = row.querySelector('.sal-amt');
+      if (!inp || !amtCell) return;
+      const pct = parseFloat(inp.value) || 0;
+      totalPct += pct;
+      amtCell.textContent = fmtAmt(budget * pct / 100);
+    });
+    const totalPctCell = card.querySelector<HTMLElement>('.sal-total-pct');
+    const totalAmtCell = card.querySelector<HTMLElement>('.sal-total-amt');
+    if (totalPctCell) {
+      totalPctCell.textContent = totalPct + '% ' + (totalPct === 100 ? '✓' : '⚠');
+      totalPctCell.style.color = totalPct === 100 ? 'var(--green)' : 'var(--red)';
+    }
+    if (totalAmtCell) totalAmtCell.textContent = fmtAmt(budget);
+  }
+
+  // Live recalc on % input change
+  document.addEventListener('input', (e) => {
+    const inp = (e.target as HTMLElement);
+    if (!inp.classList.contains('pct-input')) return;
+    const card = inp.closest('.ctr-card') as HTMLElement | null;
+    if (card) recalcCard(card);
+  });
+
+  // Delete milestone row
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.btn-del-milestone');
+    if (!btn) return;
+    const row = btn.closest('tr');
+    const card = btn.closest('.ctr-card') as HTMLElement | null;
+    if (row) row.remove();
+    if (card) recalcCard(card);
+  });
+
+  // ── Add Milestone Modal ───────────────────────────────────────────────────
+  const msModal       = document.getElementById('milestone-modal') as HTMLElement;
+  const msCtrName     = document.getElementById('ms-ctr-name') as HTMLElement;
+  const msRef         = document.getElementById('ms-ref') as HTMLInputElement;
+  const msLabel       = document.getElementById('ms-label') as HTMLInputElement;
+  const msTriggerType = document.getElementById('ms-trigger-type') as HTMLSelectElement;
+  const msTriggerPct  = document.getElementById('ms-trigger-pct') as HTMLInputElement;
+  const msPct         = document.getElementById('ms-pct') as HTMLInputElement;
+  const msPctRow      = document.getElementById('ms-pct-row') as HTMLElement;
+  let   msTargetCard: HTMLElement | null = null;
+
+  msTriggerType.addEventListener('change', () => {
+    msPctRow.style.display = msTriggerType.value === 'percent' ? '' : 'none';
+  });
+  msPctRow.style.display = 'none'; // hide trigger-pct row by default (default = signing)
+
+  function openMsModal(card: HTMLElement) {
+    msTargetCard = card;
+    msCtrName.textContent = card.querySelector('.ctr-name')?.textContent ?? '';
+    msRef.value = ''; msLabel.value = ''; msPct.value = ''; msTriggerPct.value = '';
+    msTriggerType.value = 'signing';
+    msPctRow.style.display = 'none';
+    msModal.classList.add('is-open');
+    msRef.focus();
+  }
+  function closeMsModal() { msModal.classList.remove('is-open'); msTargetCard = null; }
+
+  document.getElementById('ms-close-btn')!.addEventListener('click', closeMsModal);
+  document.getElementById('ms-cancel-btn')!.addEventListener('click', closeMsModal);
+  msModal.addEventListener('click', (e) => { if (e.target === msModal) closeMsModal(); });
+
+  document.getElementById('ms-save-btn')!.addEventListener('click', () => {
+    if (!msTargetCard) return;
+    const ref   = msRef.value.trim() || '—';
+    const label = msLabel.value.trim() || 'New Milestone';
+    const pct   = parseFloat(msPct.value) || 0;
+    const ttype = msTriggerType.value;
+    const tpct  = parseFloat(msTriggerPct.value) || 0;
+    const triggerText = ttype === 'signing' ? 'On signing' : ttype === 'final' ? 'Final works' : `at ${tpct}%`;
+    const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
+
+    const tbody = msTargetCard.querySelector<HTMLElement>('tbody')!;
+    const totalRow = tbody.querySelector('.sal-total')!;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="sal-id">${ref}</td>
+      <td>${label}</td>
+      <td class="sal-trigger">${triggerText}</td>
+      <td class="sal-pct"><input type="number" value="${pct}" min="0" max="100" class="pct-input"
+        style="width:48px;border:1px solid var(--g2);border-radius:4px;padding:.2rem .4rem;font-size:.75rem;text-align:right"/></td>
+      <td class="sal-amt">${fmtAmt(budget * pct / 100)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-icon" title="Edit milestone" style="padding:.15rem .4rem;font-size:.7rem">✎</button>
+        <button class="btn-icon btn-del-milestone" title="Delete milestone" style="padding:.15rem .4rem;font-size:.7rem;color:var(--red);border-color:#fca5a5;margin-left:.2rem">🗑</button>
+      </td>`;
+    tbody.insertBefore(tr, totalRow);
+    recalcCard(msTargetCard);
+    closeMsModal();
+  });
+
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.btn-add-milestone');
+    if (!btn) return;
+    const card = btn.closest('.ctr-card') as HTMLElement | null;
+    if (card) openMsModal(card);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (msModal.classList.contains('is-open')) { closeMsModal(); return; }
+    if (descModal.classList.contains('is-open')) closeDescModal();
+  });
+
+  // ── Full Description Modal ────────────────────────────────────────────────
+  const descModal  = document.getElementById('desc-modal') as HTMLElement;
+  const modalId    = document.getElementById('modal-item-id') as HTMLElement;
+  const modalBrief = document.getElementById('modal-item-brief') as HTMLElement;
+  const modalText  = document.getElementById('modal-fulldesc') as HTMLTextAreaElement;
+
+  function openDescModal(id: string, brief: string, fullDesc: string) {
     modalId.textContent    = id;
     modalBrief.textContent = brief;
     modalText.value        = fullDesc;
-    modal.classList.add('is-open');
+    descModal.classList.add('is-open');
     modalText.focus();
   }
-  function closeModal() { modal.classList.remove('is-open'); }
+  function closeDescModal() { descModal.classList.remove('is-open'); }
 
-  document.getElementById('modal-close-btn')!.addEventListener('click', closeModal);
-  document.getElementById('modal-cancel-btn')!.addEventListener('click', closeModal);
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+  document.getElementById('modal-close-btn')!.addEventListener('click', closeDescModal);
+  document.getElementById('modal-cancel-btn')!.addEventListener('click', closeDescModal);
+  descModal.addEventListener('click', (e) => { if (e.target === descModal) closeDescModal(); });
 
   document.addEventListener('click', (e) => {
     const el = (e.target as HTMLElement).closest('.brief-link') as HTMLElement | null;
     if (!el) return;
-    openModal(el.dataset.id ?? '', el.dataset.brief ?? '', el.dataset.fulldesc ?? '');
+    openDescModal(el.dataset.id ?? '', el.dataset.brief ?? '', el.dataset.fulldesc ?? '');
   });
 </script>
 </body>
