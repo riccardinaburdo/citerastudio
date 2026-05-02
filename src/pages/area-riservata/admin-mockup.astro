@@ -50,24 +50,24 @@ const contractors = [
 ];
 
 const categories = [
-  { id: 'A', label: 'Site Preparation & Demolition', subcats: ['Demolition Works', 'Site Clearance'], items: [
-    { id: 'A.01', desc: 'Demolition of existing masonry structures',     unit: 'm³',   qty: 48,   price: 73.50,  done: 52,  extra: false, subcat: 'Demolition Works', contractor: 'C1' },
-    { id: 'A.02', desc: 'Removal of old roof covering and flashings',    unit: 'm²',   qty: 320,  price: 9.63,   done: 320, extra: false, subcat: 'Demolition Works', contractor: 'C1' },
-    { id: 'A.03', desc: 'Removal of existing floor finishes and screed', unit: 'm²',   qty: 415,  price: 7.00,   done: 370, extra: false, subcat: 'Site Clearance',   contractor: 'C1' },
+  { id: 'A', label: 'Site Preparation & Demolition', items: [
+    { id: 'A.01', brief: 'Demolition of existing masonry structures',     fullDesc: 'Demolition of existing load-bearing masonry walls and non-structural partitions using mechanical equipment and hand tools where required. Includes removal of debris, sorting for recycling, and loading into skips for disposal off-site. Works to be carried out in accordance with the approved demolition method statement and Health & Safety plan.', unit: 'm³',   qty: 48,   price: 73.50,  done: 52,  extra: false, contractor: 'C1' },
+    { id: 'A.02', brief: 'Removal of old roof covering and flashings',    fullDesc: 'Complete removal of existing clay roof tiles, timber battens, and underlay. Includes removal of all lead and mortar flashings at abutments, ridges, and valleys. Material to be sorted on-site; salvageable tiles to be stacked and made available to Client; remainder to be disposed of off-site.', unit: 'm²',   qty: 320,  price: 9.63,   done: 320, extra: false, contractor: 'C1' },
+    { id: 'A.03', brief: 'Removal of existing floor finishes and screed', fullDesc: 'Mechanical removal of existing ceramic floor tiles, adhesive bed, and sand-cement screed throughout ground floor. Includes cutting at perimeter walls and around service penetrations. Debris to be removed off-site. Sub-base to be left clean and level, ready to receive new insulation and screed.', unit: 'm²',   qty: 415,  price: 7.00,   done: 370, extra: false, contractor: 'C1' },
   ]},
-  { id: 'C', label: 'Internal Finishes', subcats: ['Plaster & Screed', 'Tiling'], items: [
-    { id: 'C.01', desc: 'Three-coat internal plaster with skim finish',  unit: 'm²',   qty: 1250, price: 18.40,  done: 950, extra: false, subcat: 'Plaster & Screed', contractor: 'C1' },
-    { id: 'C.02', desc: 'Screed flooring base, 60 mm thick',             unit: 'm²',   qty: 850,  price: 12.25,  done: 780, extra: false, subcat: 'Plaster & Screed', contractor: 'C1' },
-    { id: 'C.EX1',desc: 'Feature stone cladding — entrance hall',        unit: 'm²',   qty: 0,    price: 185.00, done: 45,  extra: true,  subcat: 'Tiling',          contractor: 'C1' },
+  { id: 'C', label: 'Internal Finishes', items: [
+    { id: 'C.01', brief: 'Three-coat internal plaster with skim finish',  fullDesc: 'Application of three-coat plaster system to all internal masonry walls and soffits: scratch coat (12 mm), floating coat (8 mm), and finishing skim coat (3 mm). All coats to be applied in accordance with manufacturer\'s instructions. Surfaces to be prepared and left ready for decoration. Beads and stops to be provided at all junctions and openings.', unit: 'm²',   qty: 1250, price: 18.40,  done: 950, extra: false, contractor: 'C1' },
+    { id: 'C.02', brief: 'Screed flooring base, 60 mm thick',             fullDesc: 'Supply and lay 60 mm sand-cement screed (mix 1:4) over insulation boards. Includes primer to receive screed, polythene separator layer, and expansion joints at perimeter and intermediate positions as required. Surface to be finished to receive floor tiles; tolerance ±3 mm under 2 m straight-edge.', unit: 'm²',   qty: 850,  price: 12.25,  done: 780, extra: false, contractor: 'C1' },
+    { id: 'C.EX1',brief: 'Feature stone cladding — entrance hall',        fullDesc: 'EXTRA WORK — variation agreed 12/09/2024. Supply and fix natural travertine stone cladding panels (600×300 mm, 20 mm thick) to entrance hall walls as per revised design drawings Rev.C. Includes adhesive, stainless-steel fixings, grout, and sealant. All stone to be from single batch to ensure colour consistency. Price includes wastage allowance of 15%.', unit: 'm²',   qty: 0,    price: 185.00, done: 45,  extra: true,  contractor: 'C1' },
   ]},
-  { id: 'E', label: 'Doors & Windows', subcats: ['Frames & Glazing', 'Ironmongery & Shutters'], items: [
-    { id: 'E.01', desc: 'PVC triple-glazed windows (Uw ≤ 1.2 W/m²K)',   unit: 'unit', qty: 28,   price: 485.00, done: 24,  extra: false, subcat: 'Frames & Glazing',         contractor: 'C3' },
-    { id: 'E.02', desc: 'Internal timber doors, frame & ironmongery',    unit: 'unit', qty: 45,   price: 320.00, done: 37,  extra: false, subcat: 'Ironmongery & Shutters',   contractor: 'C3' },
+  { id: 'E', label: 'Doors & Windows', items: [
+    { id: 'E.01', brief: 'PVC triple-glazed windows (Uw ≤ 1.2 W/m²K)',   fullDesc: 'Supply and install PVC-U triple-glazed window units with thermally-broken frames to all openings as scheduled. Uw value not to exceed 1.2 W/m²K. Glazing units to be argon-filled with low-E coating. Includes internal and external cills, reveals, and mastic sealant. Hardware to be Grade 304 stainless steel. Colour: RAL 9010 Pure White both sides.', unit: 'unit', qty: 28,   price: 485.00, done: 24,  extra: false, contractor: 'C3' },
+    { id: 'E.02', brief: 'Internal timber doors, frame & ironmongery',    fullDesc: 'Supply and hang solid-core internal timber doors (44 mm thick) complete with timber frames, stops, and ironmongery as per hardware schedule. Doors to be pre-hung and supplied in sets. Ironmongery to include: lever handle on rose, ball-catch or latch, hinges (3 per leaf), and door stop. All items to be brushed satin stainless steel (Grade 316).', unit: 'unit', qty: 45,   price: 320.00, done: 37,  extra: false, contractor: 'C3' },
   ]},
-  { id: 'F', label: 'Plumbing & Drainage', subcats: ['Water Supply', 'Drainage', 'Extra Works'], items: [
-    { id: 'F.01', desc: 'Hot & cold water supply pipework (multi-layer)',unit: 'lump', qty: 1,    price: 18500,  done: 1,   extra: false, subcat: 'Water Supply', contractor: 'C2' },
-    { id: 'F.02', desc: 'Internal drainage & soil pipework, PVC',        unit: 'lump', qty: 1,    price: 8750,   done: 1,   extra: false, subcat: 'Drainage',     contractor: 'C2' },
-    { id: 'F.EX1',desc: 'Additional external rainwater harvesting tank', unit: 'lump', qty: 0,    price: 4800,   done: 1,   extra: true,  subcat: 'Extra Works',  contractor: 'C2' },
+  { id: 'F', label: 'Plumbing & Drainage', items: [
+    { id: 'F.01', brief: 'Hot & cold water supply pipework (multi-layer)',fullDesc: 'Supply and install hot and cold water distribution pipework throughout all units using multi-layer composite pipe (AL-PE-X) with push-fit fittings. Includes manifold distribution system with isolation valves per circuit, pressure testing to 10 bar, flushing, and commissioning. All pipework to be insulated to current Part L requirements. As-fitted drawings to be provided on completion.', unit: 'lump', qty: 1,    price: 18500,  done: 1,   extra: false, contractor: 'C2' },
+    { id: 'F.02', brief: 'Internal drainage & soil pipework, PVC',        fullDesc: 'Supply and install above-ground soil, waste, and vent pipework in uPVC (BS EN 1329) for all 8 bathrooms, kitchen, and utility areas. Includes all fittings, access covers, and connections to existing below-ground drainage. Pipework to be clipped at centres specified in BS EN 12056. Acoustic insulation wrap to all soil stacks passing through habitable rooms.', unit: 'lump', qty: 1,    price: 8750,   done: 1,   extra: false, contractor: 'C2' },
+    { id: 'F.EX1',brief: 'External rainwater harvesting tank',            fullDesc: 'EXTRA WORK — client instruction ref. CI-007 dated 03/10/2024. Supply and install 10,000-litre underground polyethylene rainwater harvesting tank, complete with: inlet filter, overflow to soakaway, submersible pump, control panel, and distribution pipework to garden irrigation taps (4 no.). Excavation, backfill, and reinstatement of paved surface included.', unit: 'lump', qty: 0,    price: 4800,   done: 1,   extra: true,  contractor: 'C2' },
   ]},
 ];
 
@@ -191,9 +191,34 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
     table.works thead th.right { text-align:right; }
     tr.cat-row td { background:#f0f6ff; color:var(--navy); padding:.4rem .65rem;
       font-weight:700; font-size:.72rem; border-top:2px solid var(--g2); border-bottom:1px solid #c7d9f0; }
-    tr.subcat-row td { background:#f7f9fc; color:var(--slate); padding:.3rem .65rem .3rem 1.8rem;
-      font-weight:600; font-size:.68rem; border-bottom:1px solid var(--g2);
-      border-left:3px solid #c7d9f0; }
+    /* DESCRIPTION POPUP */
+    .brief-link { font-size:.72rem; color:var(--slate); cursor:pointer; display:block;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;
+      text-decoration:underline dotted; text-underline-offset:2px; }
+    .brief-link:hover { color:var(--navy); }
+    .brief-empty { font-size:.68rem; color:var(--g4); font-style:italic; cursor:pointer; }
+    .brief-empty:hover { color:var(--g3); }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000;
+      display:flex; align-items:center; justify-content:center; padding:1rem; }
+    .modal-box { background:#fff; border-radius:var(--r); box-shadow:0 20px 60px rgba(0,0,0,.25);
+      width:100%; max-width:580px; display:flex; flex-direction:column; overflow:hidden; }
+    .modal-header { display:flex; align-items:center; gap:.75rem; padding:1rem 1.2rem;
+      background:var(--navy); color:#fff; }
+    .modal-item-id { font-family:monospace; font-size:.75rem; font-weight:700;
+      background:rgba(255,255,255,.15); padding:.2rem .55rem; border-radius:4px; flex-shrink:0; }
+    .modal-item-brief { font-size:.82rem; font-weight:500; flex:1; opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .modal-close { margin-left:auto; background:none; border:none; color:rgba(255,255,255,.7);
+      font-size:1.1rem; cursor:pointer; flex-shrink:0; line-height:1; }
+    .modal-close:hover { color:#fff; }
+    .modal-body { padding:1.2rem; }
+    .modal-body label { display:block; font-size:.65rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.07em; color:var(--g3); margin-bottom:.5rem; }
+    .modal-body textarea { width:100%; border:1px solid var(--g2); border-radius:6px;
+      padding:.65rem .75rem; font-size:.82rem; font-family:var(--sans); color:var(--text);
+      resize:vertical; line-height:1.6; min-height:160px; }
+    .modal-body textarea:focus { outline:none; border-color:var(--navy); }
+    .modal-footer { display:flex; justify-content:flex-end; gap:.5rem;
+      padding:.85rem 1.2rem; border-top:1px solid var(--g2); background:var(--g1); }
     .cat-badge { display:inline-flex; align-items:center; justify-content:center;
       width:20px; height:20px; border-radius:50%; background:var(--navy); color:#fff;
       font-size:.6rem; font-weight:700; margin-right:.4rem; }
@@ -409,7 +434,7 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
           <thead>
             <tr>
               <th style="width:60px">#</th>
-              <th>Description</th>
+              <th style="width:220px">Brief description<br/><span style="font-size:.5rem;opacity:.65;font-weight:400">click to expand full text</span></th>
               <th style="width:55px">Unit</th>
               <th class="right" style="width:90px">Contracted Qty</th>
               <th class="right" style="width:100px">Unit Price<br/><span style="font-size:.5rem;opacity:.65">net ex. VAT</span></th>
@@ -428,68 +453,6 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
               const catBudget = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
               const catDone   = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);
               const catPerc   = catBudget > 0 ? catDone/catBudget*100 : 0;
-              const subcatList: string[] = (cat as any).subcats ?? [];
-              const renderItem = (item: any) => {
-                const overrun = !item.extra && item.done > item.qty;
-                const pColor  = overrun ? '#dc2626' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
-                const barW    = item.perc !== null ? Math.min(item.perc,100) : 0;
-                return (
-                  <tr class={`item${item.extra ? ' extra-row' : ''}`}>
-                    <td class="item-id">{item.id}</td>
-                    <td style="max-width:220px;line-height:1.4">
-                      {item.extra && <span class="extra-badge">Extra</span>}
-                      {item.desc}
-                    </td>
-                    <td>
-                      <select style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">
-                        {['m²','m³','lm','unit','lump','kg'].map((u:string) => <option selected={item.unit===u}>{u}</option>)}
-                      </select>
-                    </td>
-                    <td class="editable-cell">
-                      <input type="number" value={item.extra ? '' : item.qty} placeholder={item.extra ? '–' : ''} disabled={item.extra} style={item.extra ? 'color:var(--g3)' : ''} />
-                    </td>
-                    <td class="editable-cell">
-                      <input type="number" value={item.price} step="0.01" />
-                    </td>
-                    <td class="auto-cell">{item.extra ? '–' : fmt(item.budget)}</td>
-                    <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
-                      <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} />
-                      {overrun && <span class="overrun-badge">↑</span>}
-                    </td>
-                    <td class="auto-cell">{fmt(item.valueDone)}</td>
-                    <td style="min-width:90px">
-                      {item.extra ? (
-                        <span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>
-                      ) : item.perc !== null ? (
-                        <div class="perc-wrap">
-                          <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
-                          <span class="perc-num" style={`color:${pColor}`}>{item.perc.toFixed(0)}%</span>
-                        </div>
-                      ) : '–'}
-                    </td>
-                    <td>
-                      {item.extra ? <span class="status-badge status-extra">Extra</span>
-                        : overrun ? <span class="status-badge status-overrun">Overrun</span>
-                        : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
-                        : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
-                        : <span class="status-badge status-pending">Not Started</span>}
-                    </td>
-                    <td>
-                      <select style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%">
-                        <option value="">— none —</option>
-                        {contractors.map(c => <option value={c.id} selected={item.contractor===c.id}>{c.name}</option>)}
-                      </select>
-                    </td>
-                    <td class="toggle-wrapper">
-                      <input type="checkbox" class="extra-toggle" checked={item.extra} title="Mark as extra works" />
-                    </td>
-                    <td style="white-space:nowrap">
-                      <button class="btn-icon" title="Edit row">✎</button>
-                      <button class="btn-icon" title="Delete" style="margin-left:.2rem">🗑</button>
-                    </td>
-                  </tr>
-                );
-              };
               return (<>
                 <tr class="cat-row">
                   <td colspan="13">
@@ -499,31 +462,79 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
                       Budget: {fmt(catBudget)} &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
                     </span>
                     <span style="float:right;display:flex;gap:.3rem;margin-top:-.1rem">
-                      <button class="btn btn-add" style="font-size:.62rem;padding:.2rem .55rem">+ Add Subcategory</button>
                       <button class="btn btn-add" style="font-size:.62rem;padding:.2rem .55rem">+ Add item</button>
                       <button class="btn-icon" title="Edit category" style="font-size:.72rem;padding:.2rem .45rem">✎ Edit</button>
                       <button class="btn-icon" title="Delete category" style="font-size:.72rem;padding:.2rem .45rem;color:var(--red);border-color:#fca5a5">🗑 Delete</button>
                     </span>
                   </td>
                 </tr>
-                {subcatList.length > 0 ? subcatList.map((sc:string) => {
-                  const scItems = cat.items.filter((i:any) => i.subcat === sc);
-                  if (scItems.length === 0) return null;
-                  return (<>
-                    <tr class="subcat-row">
-                      <td colspan="13">
-                        <span style="margin-right:.4rem;opacity:.5">⊢</span>
-                        {sc}
-                        <span style="float:right;display:flex;gap:.25rem">
-                          <button class="btn btn-add" style="font-size:.58rem;padding:.15rem .45rem">+ Add item</button>
-                          <button class="btn-icon" style="font-size:.65rem;padding:.15rem .4rem">✎ Edit</button>
-                          <button class="btn-icon" style="font-size:.65rem;padding:.15rem .4rem;color:var(--red);border-color:#fca5a5">🗑 Delete</button>
-                        </span>
+                {cat.items.map((item:any) => {
+                  const overrun = !item.extra && item.done > item.qty;
+                  const pColor  = overrun ? '#dc2626' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
+                  const barW    = item.perc !== null ? Math.min(item.perc,100) : 0;
+                  return (
+                    <tr class={`item${item.extra ? ' extra-row' : ''}`}>
+                      <td class="item-id">{item.id}</td>
+                      <td style="max-width:220px">
+                        {item.extra && <span class="extra-badge">Extra</span>}
+                        <span
+                          class="brief-link"
+                          data-id={item.id}
+                          data-brief={item.brief}
+                          data-fulldesc={item.fullDesc ?? ''}
+                          title="Click to view / edit full description"
+                        >{item.brief || <em class="brief-empty">+ add description</em>}</span>
+                      </td>
+                      <td>
+                        <select style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">
+                          {['m²','m³','lm','unit','lump','kg'].map((u:string) => <option selected={item.unit===u}>{u}</option>)}
+                        </select>
+                      </td>
+                      <td class="editable-cell">
+                        <input type="number" value={item.extra ? '' : item.qty} placeholder={item.extra ? '–' : ''} disabled={item.extra} style={item.extra ? 'color:var(--g3)' : ''} />
+                      </td>
+                      <td class="editable-cell">
+                        <input type="number" value={item.price} step="0.01" />
+                      </td>
+                      <td class="auto-cell">{item.extra ? '–' : fmt(item.budget)}</td>
+                      <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
+                        <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} />
+                        {overrun && <span class="overrun-badge">↑</span>}
+                      </td>
+                      <td class="auto-cell">{fmt(item.valueDone)}</td>
+                      <td style="min-width:90px">
+                        {item.extra ? (
+                          <span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>
+                        ) : item.perc !== null ? (
+                          <div class="perc-wrap">
+                            <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
+                            <span class="perc-num" style={`color:${pColor}`}>{item.perc.toFixed(0)}%</span>
+                          </div>
+                        ) : '–'}
+                      </td>
+                      <td>
+                        {item.extra ? <span class="status-badge status-extra">Extra</span>
+                          : overrun ? <span class="status-badge status-overrun">Overrun</span>
+                          : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
+                          : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
+                          : <span class="status-badge status-pending">Not Started</span>}
+                      </td>
+                      <td>
+                        <select style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%">
+                          <option value="">— none —</option>
+                          {contractors.map(c => <option value={c.id} selected={item.contractor===c.id}>{c.name}</option>)}
+                        </select>
+                      </td>
+                      <td class="toggle-wrapper">
+                        <input type="checkbox" class="extra-toggle" checked={item.extra} title="Mark as extra works" />
+                      </td>
+                      <td style="white-space:nowrap">
+                        <button class="btn-icon" title="Edit row">✎</button>
+                        <button class="btn-icon" title="Delete" style="margin-left:.2rem">🗑</button>
                       </td>
                     </tr>
-                    {scItems.map(renderItem)}
-                  </>);
-                }) : cat.items.map(renderItem)}
+                  );
+                })}
                 <tr class="subtotal">
                   <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
                   <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
@@ -554,7 +565,27 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
 
 </div><!-- /admin-main -->
 
+<!-- DESCRIPTION MODAL -->
+<div id="desc-modal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-header">
+      <span id="modal-item-id" class="modal-item-id"></span>
+      <span id="modal-item-brief" class="modal-item-brief"></span>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>Full Description</label>
+      <textarea id="modal-fulldesc" rows="8" placeholder="Enter the full technical description for this work item…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+      <button class="btn btn-primary">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  // Tabs
   const tabs = document.querySelectorAll('.tab-btn');
   const panels = { project: document.getElementById('tab-project'), contractors: document.getElementById('tab-contractors'), works: document.getElementById('tab-works') };
   tabs.forEach(btn => {
@@ -565,6 +596,32 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFraction
         if (el) el.hidden = (k !== (btn as HTMLElement).dataset.tab);
       });
     });
+  });
+
+  // Description modal
+  const modal     = document.getElementById('desc-modal') as HTMLElement;
+  const modalId   = document.getElementById('modal-item-id') as HTMLElement;
+  const modalBrief= document.getElementById('modal-item-brief') as HTMLElement;
+  const modalText = document.getElementById('modal-fulldesc') as HTMLTextAreaElement;
+
+  function openModal(id: string, brief: string, fullDesc: string) {
+    modalId.textContent    = id;
+    modalBrief.textContent = brief;
+    modalText.value        = fullDesc;
+    modal.hidden = false;
+    modalText.focus();
+  }
+  function closeModal() { modal.hidden = true; }
+
+  document.getElementById('modal-close-btn')!.addEventListener('click', closeModal);
+  document.getElementById('modal-cancel-btn')!.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  document.addEventListener('click', (e) => {
+    const el = (e.target as HTMLElement).closest('.brief-link') as HTMLElement | null;
+    if (!el) return;
+    openModal(el.dataset.id ?? '', el.dataset.brief ?? '', el.dataset.fulldesc ?? '');
   });
 </script>
 </body>
