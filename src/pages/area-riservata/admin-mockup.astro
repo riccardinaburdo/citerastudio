@@ -396,22 +396,16 @@ const triggerLabel = (m: any) =>
                   <th style="width:50px">Ref.</th>
                   <th>Milestone</th>
                   <th style="width:90px">Trigger</th>
-                  <th class="right" style="width:55px">%</th>
                   <th class="right" style="width:115px">Amount (net) <span class="auto-tag">auto</span></th>
                   <th style="width:60px"></th>
                 </tr>
               </thead>
               <tbody>
                 {c.sal.map(m => (
-                  <tr>
+                  <tr data-pct={m.pct}>
                     <td class="sal-id">{m.id}</td>
                     <td>{m.label}</td>
                     <td class="sal-trigger">{triggerLabel(m)}</td>
-                    <td class="sal-pct">
-                      <input type="number" value={m.pct} min="0" max="100"
-                        class="pct-input"
-                        style="width:48px; border:1px solid var(--g2); border-radius:4px; padding:.2rem .4rem; font-size:.75rem; text-align:right" />
-                    </td>
                     <td class="sal-amt">{fmt(budget * m.pct / 100)}</td>
                     <td style="white-space:nowrap">
                       <button class="btn-icon" title="Edit milestone" style="padding:.15rem .4rem;font-size:.7rem">✎</button>
@@ -421,10 +415,9 @@ const triggerLabel = (m: any) =>
                 ))}
                 <tr class="sal-total">
                   <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
-                  <td class="sal-pct sal-total-pct" style={total === 100 ? 'color:var(--green)' : 'color:var(--red)'}>
-                    {total}% {total === 100 ? '✓' : '⚠'}
+                  <td class="sal-amt sal-total-amt" style={`color:${total === 100 ? 'var(--green)' : 'var(--red)'};font-weight:700`}>
+                    {fmt(budget)} {total === 100 ? '✓' : `⚠ ${total}%`}
                   </td>
-                  <td class="sal-amt sal-total-amt" style="color:var(--navy);font-weight:700">{fmt(budget)}</td>
                   <td></td>
                 </tr>
               </tbody>
@@ -677,29 +670,17 @@ const triggerLabel = (m: any) =>
     const budget = parseFloat(card.dataset.budget ?? '0');
     let totalPct = 0;
     card.querySelectorAll<HTMLTableRowElement>('tbody tr:not(.sal-total)').forEach(row => {
-      const inp = row.querySelector<HTMLInputElement>('.pct-input');
-      const amtCell = row.querySelector('.sal-amt');
-      if (!inp || !amtCell) return;
-      const pct = parseFloat(inp.value) || 0;
+      const pct = parseFloat(row.dataset.pct ?? '0') || 0;
       totalPct += pct;
-      amtCell.textContent = fmtAmt(budget * pct / 100);
+      const amtCell = row.querySelector('.sal-amt');
+      if (amtCell) amtCell.textContent = fmtAmt(budget * pct / 100);
     });
-    const totalPctCell = card.querySelector<HTMLElement>('.sal-total-pct');
     const totalAmtCell = card.querySelector<HTMLElement>('.sal-total-amt');
-    if (totalPctCell) {
-      totalPctCell.textContent = totalPct + '% ' + (totalPct === 100 ? '✓' : '⚠');
-      totalPctCell.style.color = totalPct === 100 ? 'var(--green)' : 'var(--red)';
+    if (totalAmtCell) {
+      totalAmtCell.textContent = fmtAmt(budget) + ' ' + (totalPct === 100 ? '✓' : `⚠ ${totalPct}%`);
+      totalAmtCell.style.color = totalPct === 100 ? 'var(--green)' : 'var(--red)';
     }
-    if (totalAmtCell) totalAmtCell.textContent = fmtAmt(budget);
   }
-
-  // Live recalc on % input change
-  document.addEventListener('input', (e) => {
-    const inp = (e.target as HTMLElement);
-    if (!inp.classList.contains('pct-input')) return;
-    const card = inp.closest('.ctr-card') as HTMLElement | null;
-    if (card) recalcCard(card);
-  });
 
   // Delete milestone row
   document.addEventListener('click', (e) => {
@@ -755,12 +736,11 @@ const triggerLabel = (m: any) =>
     const tbody = msTargetCard.querySelector<HTMLElement>('tbody')!;
     const totalRow = tbody.querySelector('.sal-total')!;
     const tr = document.createElement('tr');
+    tr.dataset.pct = String(pct);
     tr.innerHTML = `
       <td class="sal-id">${ref}</td>
       <td>${label}</td>
       <td class="sal-trigger">${triggerText}</td>
-      <td class="sal-pct"><input type="number" value="${pct}" min="0" max="100" class="pct-input"
-        style="width:48px;border:1px solid var(--g2);border-radius:4px;padding:.2rem .4rem;font-size:.75rem;text-align:right"/></td>
       <td class="sal-amt">${fmtAmt(budget * pct / 100)}</td>
       <td style="white-space:nowrap">
         <button class="btn-icon" title="Edit milestone" style="padding:.15rem .4rem;font-size:.7rem">✎</button>
