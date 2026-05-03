@@ -294,8 +294,8 @@ const projectJson = JSON.stringify(data);
                 </div>
               </div>
               <div class="ctr-actions">
-                <button class="btn-icon" title="Edit">✎</button>
-                <button class="btn-icon" title="Delete">🗑</button>
+                <button class="btn-icon btn-edit-ctr" title="Edit">✎</button>
+                <button class="btn-icon btn-del-ctr" title="Delete">🗑</button>
               </div>
             </div>
             <table class="sal-table">
@@ -472,6 +472,42 @@ const projectJson = JSON.stringify(data);
     </div>
   </div>
 
+</div>
+
+<!-- ADD / EDIT CONTRACTOR MODAL -->
+<div id="ctr-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <span id="ctr-modal-title" style="font-size:.8rem;font-weight:700">Add Contractor</span>
+      <button class="modal-close" id="ctr-modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:.9rem">
+      <div>
+        <label>Contractor ID <span style="font-size:.6rem;font-weight:400;color:var(--g3)">(short code, e.g. C1)</span></label>
+        <input id="ctr-id-inp" type="text" placeholder="C4"
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Company Name</label>
+        <input id="ctr-name-inp" type="text" placeholder="Costruzioni Esempio S.r.l."
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Trade / Scope</label>
+        <input id="ctr-trade-inp" type="text" placeholder="Structural & Civil Works"
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Contact</label>
+        <input id="ctr-contact-inp" type="text" placeholder="ing. Mario Rossi — +39 080 555 0000"
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="ctr-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="ctr-save-btn">Save</button>
+    </div>
+  </div>
 </div>
 
 <div id="milestone-modal" class="modal-overlay">
@@ -742,6 +778,104 @@ const projectJson = JSON.stringify(data);
     if (e.key !== 'Escape') return;
     if (msModal.classList.contains('is-open'))   { closeMsModal();   return; }
     if (descModal.classList.contains('is-open')) { closeDescModal(); return; }
+    if (ctrModal.classList.contains('is-open'))  { closeCtrModal();  return; }
+  });
+
+  // ── Contractor modal ──────────────────────────────────────────────────────
+  const ctrModal     = document.getElementById('ctr-modal');
+  const ctrModalTitle= document.getElementById('ctr-modal-title');
+  const ctrIdInp     = document.getElementById('ctr-id-inp');
+  const ctrNameInp   = document.getElementById('ctr-name-inp');
+  const ctrTradeInp  = document.getElementById('ctr-trade-inp');
+  const ctrContactInp= document.getElementById('ctr-contact-inp');
+  let   ctrEditId    = null;
+
+  function openCtrModal(ctr) {
+    ctrEditId = ctr?.id ?? null;
+    ctrModalTitle.textContent = ctr ? 'Edit Contractor' : 'Add Contractor';
+    ctrIdInp.value      = ctr?.id      ?? '';
+    ctrNameInp.value    = ctr?.name    ?? '';
+    ctrTradeInp.value   = ctr?.trade   ?? '';
+    ctrContactInp.value = ctr?.contact ?? '';
+    ctrIdInp.disabled   = !!ctr;
+    ctrModal.classList.add('is-open');
+    ctrNameInp.focus();
+  }
+  function closeCtrModal() { ctrModal.classList.remove('is-open'); ctrEditId = null; }
+
+  document.getElementById('ctr-modal-close').addEventListener('click', closeCtrModal);
+  document.getElementById('ctr-cancel-btn').addEventListener('click', closeCtrModal);
+  ctrModal.addEventListener('click', e => { if (e.target === ctrModal) closeCtrModal(); });
+
+  document.getElementById('ctr-save-btn').addEventListener('click', () => {
+    const id      = ctrIdInp.value.trim();
+    const name    = ctrNameInp.value.trim();
+    const trade   = ctrTradeInp.value.trim();
+    const contact = ctrContactInp.value.trim();
+    if (!id || !name) { alert('ID and Name are required.'); return; }
+
+    if (ctrEditId) {
+      const ctr = state.contractors.find(c => c.id === ctrEditId);
+      if (ctr) { ctr.name = name; ctr.trade = trade; ctr.contact = contact; }
+      const card = document.querySelector(`.ctr-card[data-ctr-id="${ctrEditId}"]`);
+      if (card) {
+        card.querySelector('.ctr-name').textContent    = name;
+        card.querySelector('.ctr-trade').textContent   = trade;
+        card.querySelector('.ctr-contact').textContent = contact;
+      }
+    } else {
+      if (state.contractors.find(c => c.id === id)) { alert('Contractor ID already exists.'); return; }
+      const newCtr = { id, name, trade, contact, sal: [] };
+      state.contractors.push(newCtr);
+      const grid = document.querySelector('.contractor-grid');
+      const div = document.createElement('div');
+      div.className = 'card ctr-card';
+      div.dataset.budget = '0';
+      div.dataset.ctrId  = id;
+      div.innerHTML = `
+        <div class="ctr-header">
+          <div>
+            <div class="ctr-name">${name}</div>
+            <div class="ctr-trade">${trade}</div>
+            <div class="ctr-contact">${contact}</div>
+            <div class="ctr-budget">Budget: <strong class="ctr-budget-val">€ 0.00</strong> <span class="auto-tag">auto</span></div>
+          </div>
+          <div class="ctr-actions">
+            <button class="btn-icon btn-edit-ctr" title="Edit">✎</button>
+            <button class="btn-icon btn-del-ctr" title="Delete">🗑</button>
+          </div>
+        </div>
+        <table class="sal-table"><thead><tr><th style="width:50px">Ref.</th><th>Milestone</th><th style="width:90px">Trigger</th><th class="right" style="width:115px">Amount (net) <span class="auto-tag">auto</span></th><th style="width:60px"></th></tr></thead>
+        <tbody><tr class="sal-total"><td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td><td class="sal-amt sal-total-amt" style="color:var(--red);font-weight:700">€ 0.00 ⚠ 0%</td><td></td></tr></tbody></table>
+        <div class="sal-add-row"><button class="btn btn-add btn-add-milestone" style="font-size:.7rem;padding:.3rem .7rem">+ Add milestone</button></div>`;
+      grid.appendChild(div);
+    }
+    closeCtrModal();
+  });
+
+  // Add contractor button
+  document.querySelector('.contractor-grid')?.closest('#tab-contractors')
+    ?.querySelector('.btn-add')
+    ?.addEventListener('click', () => openCtrModal(null));
+
+  // Edit contractor
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-edit-ctr');
+    if (!btn) return;
+    const ctrId = btn.closest('.ctr-card')?.dataset.ctrId;
+    const ctr   = state.contractors.find(c => c.id === ctrId);
+    if (ctr) openCtrModal(ctr);
+  });
+
+  // Delete contractor
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-del-ctr');
+    if (!btn) return;
+    const card  = btn.closest('.ctr-card');
+    const ctrId = card?.dataset.ctrId;
+    if (!ctrId || !confirm(`Delete contractor "${ctrId}"?`)) return;
+    state.contractors = state.contractors.filter(c => c.id !== ctrId);
+    card.remove();
   });
 </script>
 </body>
