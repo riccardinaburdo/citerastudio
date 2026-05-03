@@ -26,3 +26,6 @@ pnpm-debug.log*
 # Local Netlify folder
 .netlify
 .vercel
+
+# Dev data fallback
+data/

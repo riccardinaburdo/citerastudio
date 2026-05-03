@@ -1,81 +1,25 @@
 ---
 export const prerender = false;
 
-const role = Astro.locals.role; // set by middleware
+import { getProject } from '../../lib/store';
 
-const project = {
-  name:       'Villa delle Azalee — Full Renovation',
-  client:     'Mr. & Mrs. James Thompson',
-  location:   'Contrada Monti Ausoni, Alberobello (BA) — Puglia, Italy',
-  architect:  'Arch. Vito Depalo — CiteraStudio',
-  contractor: 'Costruzioni Generali S.r.l.',
-  start:      '15 April 2024',
-  end:        '31 January 2025',
-  updated:    '1 November 2024',
-  updateNum:  3,
-};
+const role = Astro.locals.role;
 
-interface WorkItem { id: string; desc: string; unit: string; qty: number; unitPrice: number; doneQty: number; isExtra?: boolean; }
-interface Category  { id: string; label: string; items: WorkItem[]; }
+const projectData = await getProject();
+const { info: project, contractors, categories: rawCategories } = projectData;
 
-const categories: Category[] = [
-  { id: 'A', label: 'Site Preparation & Demolition', items: [
-    { id: 'A.01', desc: 'Demolition of existing masonry structures',      unit: 'm³',  qty: 48,   unitPrice: 73.50,   doneQty: 52   },
-    { id: 'A.02', desc: 'Removal of old roof covering and flashings',     unit: 'm²',  qty: 320,  unitPrice: 9.63,    doneQty: 320  },
-    { id: 'A.03', desc: 'Removal of existing floor finishes and screed',  unit: 'm²',  qty: 415,  unitPrice: 7.00,    doneQty: 370  },
-    { id: 'A.04', desc: 'Stripping of deteriorated internal plaster',     unit: 'm²',  qty: 580,  unitPrice: 6.56,    doneQty: 400  },
-  ]},
-  { id: 'B', label: 'Structural Works', items: [
-    { id: 'B.01', desc: 'Reinforced concrete — foundations & ring beams', unit: 'm³',  qty: 85,   unitPrice: 175.00,  doneQty: 80   },
-    { id: 'B.02', desc: 'Steel reinforcement bars, cut & fixed',          unit: 'kg',  qty: 8500, unitPrice: 1.75,    doneQty: 8000 },
-    { id: 'B.03', desc: 'Load-bearing concrete block masonry walls',      unit: 'm²',  qty: 280,  unitPrice: 68.25,   doneQty: 230  },
-  ]},
-  { id: 'C', label: 'Internal Finishes', items: [
-    { id: 'C.01', desc: 'Three-coat internal plaster with skim finish',   unit: 'm²',  qty: 1250, unitPrice: 18.40,   doneQty: 950  },
-    { id: 'C.02', desc: 'Screed flooring base, 60 mm thick',              unit: 'm²',  qty: 850,  unitPrice: 12.25,   doneQty: 780  },
-    { id: 'C.03', desc: 'Porcelain floor tiles 60×60 cm, laid & grouted', unit: 'm²',  qty: 780,  unitPrice: 48.00,   doneQty: 600  },
-    { id: 'C.04', desc: 'Ceramic wall tiles, bathrooms & kitchen',        unit: 'm²',  qty: 320,  unitPrice: 42.00,   doneQty: 280  },
-    { id: 'C.05', desc: 'Interior emulsion paint, two finish coats',      unit: 'm²',  qty: 2100, unitPrice: 6.30,    doneQty: 1800 },
-    { id: 'C.EX1', desc: 'Feature stone cladding — entrance hall (variation agreed 12/09/2024)', unit: 'm²', qty: 0, unitPrice: 185.00, doneQty: 45, isExtra: true },
-  ]},
-  { id: 'D', label: 'Roofing Works', items: [
-    { id: 'D.01', desc: 'Torch-on waterproofing membrane, 4 mm',          unit: 'm²',  qty: 320,  unitPrice: 24.50,   doneQty: 320  },
-    { id: 'D.02', desc: 'XPS thermal insulation boards, 80 mm',           unit: 'm²',  qty: 320,  unitPrice: 21.00,   doneQty: 320  },
-    { id: 'D.03', desc: 'Clay roof tiles, ridges, verges & flashings',    unit: 'm²',  qty: 285,  unitPrice: 38.50,   doneQty: 270  },
-  ]},
-  { id: 'E', label: 'Doors & Windows', items: [
-    { id: 'E.01', desc: 'PVC triple-glazed windows (Uw ≤ 1.2 W/m²K)',    unit: 'unit', qty: 28,  unitPrice: 485.00,  doneQty: 24   },
-    { id: 'E.02', desc: 'Internal timber doors, frame & ironmongery',     unit: 'unit', qty: 45,  unitPrice: 320.00,  doneQty: 37   },
-    { id: 'E.03', desc: 'Security entrance doors, Class 3 anti-burglary', unit: 'unit', qty: 8,   unitPrice: 1850.00, doneQty: 6    },
-    { id: 'E.04', desc: 'Motorised aluminium external shutters',          unit: 'unit', qty: 28,  unitPrice: 380.00,  doneQty: 18   },
-  ]},
-  { id: 'F', label: 'Plumbing & Drainage', items: [
-    { id: 'F.01', desc: 'Hot & cold water supply pipework (multi-layer)', unit: 'lump', qty: 1,   unitPrice: 18500.00, doneQty: 1   },
-    { id: 'F.02', desc: 'Internal drainage & soil pipework, PVC',         unit: 'lump', qty: 1,   unitPrice: 8750.00,  doneQty: 1   },
-    { id: 'F.03', desc: 'Bathroom fittings & sanitary ware (8 bathrooms)',unit: 'lump', qty: 1,   unitPrice: 22400.00, doneQty: 0   },
-    { id: 'F.EX1', desc: 'Additional external rainwater harvesting tank (extra works)', unit: 'lump', qty: 0, unitPrice: 4800.00, doneQty: 1, isExtra: true },
-  ]},
-  { id: 'G', label: 'Electrical Installation', items: [
-    { id: 'G.01', desc: 'Full electrical installation, 8 units',          unit: 'lump', qty: 1,   unitPrice: 28500.00, doneQty: 0   },
-    { id: 'G.02', desc: 'TV, data & structured cabling Cat.6',            unit: 'lump', qty: 1,   unitPrice: 4800.00,  doneQty: 0   },
-  ]},
-  { id: 'H', label: 'Site Management & Safety', items: [
-    { id: 'H.01', desc: 'Health & safety plan implementation (PSC)',       unit: 'lump', qty: 1,   unitPrice: 12500.00, doneQty: 1   },
-  ]},
-];
-
-const enrich = (item: WorkItem) => {
-  const budget  = item.isExtra ? 0 : item.qty * item.unitPrice;
-  const done    = item.doneQty * item.unitPrice;
-  const perc    = (!item.isExtra && budget > 0) ? (done / budget) * 100 : null;
-  const overrun = !item.isExtra && item.doneQty > item.qty;
+const enrich = (item: typeof rawCategories[0]['items'][0]) => {
+  const budget  = item.extra ? 0 : item.qty * item.price;
+  const done    = item.done * item.price;
+  const perc    = (!item.extra && budget > 0) ? (done / budget) * 100 : null;
+  const overrun = !item.extra && item.done > item.qty;
   return { ...item, budget, done, perc, overrun };
 };
-const enrichedCats = categories.map(cat => {
+const enrichedCats = rawCategories.map(cat => {
   const items        = cat.items.map(enrich);
-  const catBudget    = items.filter(i => !i.isExtra).reduce((s, i) => s + i.budget, 0);
-  const catDoneContr = items.filter(i => !i.isExtra).reduce((s, i) => s + i.done,   0);
-  const catDoneExtra = items.filter(i =>  i.isExtra).reduce((s, i) => s + i.done,   0);
+  const catBudget    = items.filter(i => !i.extra).reduce((s, i) => s + i.budget, 0);
+  const catDoneContr = items.filter(i => !i.extra).reduce((s, i) => s + i.done,   0);
+  const catDoneExtra = items.filter(i =>  i.extra).reduce((s, i) => s + i.done,   0);
   const catDone      = catDoneContr + catDoneExtra;
   const catPerc      = catBudget > 0 ? (catDoneContr / catBudget) * 100 : 0;
   return { ...cat, items, catBudget, catDoneContr, catDoneExtra, catDone, catPerc };
@@ -116,6 +60,12 @@ const fmtQ = (n: number, unit: string) => unit === 'lump' ? (n === 0 ? '–' : '
 const statusLabel = (p: number | null) => p === null ? 'Extra' : p >= 100 ? 'Complete' : p > 0 ? 'In Progress' : 'Not Started';
 const statusClass = (p: number | null) => p === null ? 'extra' : p >= 100 ? 'complete' : p > 0 ? 'progress' : 'pending';
 const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : p > 0 ? '#f59e0b' : '#cbd5e1';
+
+const fmtDate = (d: string) => {
+  try {
+    return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch { return d; }
+};
 ---
 
 <!doctype html>
@@ -139,45 +89,19 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
     }
     html { scroll-behavior: smooth; }
     body { font-family: var(--sans); color: var(--text); background: var(--grey-1); font-size: 14px; }
-
-    /* TOP BAR */
-    .topbar {
-      position: sticky; top: 0; z-index: 100;
-      display: flex; align-items: center; gap: 1rem;
-      background: var(--navy); color: #fff;
-      padding: .6rem 1.5rem;
-      box-shadow: 0 2px 12px rgba(0,0,0,.25);
-    }
+    .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 1rem; background: var(--navy); color: #fff; padding: .6rem 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,.25); }
     .topbar-brand   { font-family: var(--brand); font-weight: 700; font-size: 1rem; color: var(--orange); flex-shrink: 0; }
     .topbar-sep     { color: rgba(255,255,255,.25); }
     .topbar-project { font-size: 0.82rem; color: rgba(255,255,255,.8); flex: 1; }
-    .topbar-lock {
-      display: flex; align-items: center; gap: .4rem;
-      font-size: 0.72rem; color: rgba(255,255,255,.5);
-      border: 1px solid rgba(255,255,255,.2); border-radius: 20px;
-      padding: .25rem .7rem; flex-shrink: 0;
-    }
+    .topbar-lock { display: flex; align-items: center; gap: .4rem; font-size: 0.72rem; color: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.2); border-radius: 20px; padding: .25rem .7rem; flex-shrink: 0; }
     .topbar-lock .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-    .role-badge {
-      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-      padding: .2rem .6rem; border-radius: 20px; flex-shrink: 0;
-    }
+    .role-badge { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: .2rem .6rem; border-radius: 20px; flex-shrink: 0; }
     .role-badge.client { background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
     .role-badge.admin  { background: var(--orange); color: #fff; }
-    .btn-top {
-      padding: .3rem .9rem; border: 1px solid rgba(255,255,255,.3);
-      background: transparent; color: #fff; border-radius: 5px;
-      font-size: 0.75rem; cursor: pointer; transition: background .2s; flex-shrink: 0;
-    }
+    .btn-top { padding: .3rem .9rem; border: 1px solid rgba(255,255,255,.3); background: transparent; color: #fff; border-radius: 5px; font-size: 0.75rem; cursor: pointer; transition: background .2s; flex-shrink: 0; text-decoration: none; }
     .btn-top:hover { background: rgba(255,255,255,.12); }
-    .btn-logout {
-      padding: .3rem .9rem; border: 1px solid rgba(255,80,80,.4);
-      background: transparent; color: rgba(255,150,150,.9); border-radius: 5px;
-      font-size: 0.75rem; cursor: pointer; transition: background .2s; flex-shrink: 0;
-    }
+    .btn-logout { padding: .3rem .9rem; border: 1px solid rgba(255,80,80,.4); background: transparent; color: rgba(255,150,150,.9); border-radius: 5px; font-size: 0.75rem; cursor: pointer; transition: background .2s; flex-shrink: 0; }
     .btn-logout:hover { background: rgba(255,80,80,.15); }
-
-    /* HERO */
     .hero { background: linear-gradient(135deg, var(--navy) 0%, #2d5a8e 100%); color: #fff; padding: 2.5rem 2rem 2rem; }
     .hero-inner { max-width: 1400px; margin: 0 auto; }
     .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem; flex-wrap: wrap; }
@@ -186,26 +110,16 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
     .hero-meta  { display: grid; grid-template-columns: repeat(2,1fr); gap: .4rem .8rem; font-size: 0.75rem; }
     .hero-meta dt { color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .06em; font-size: 0.62rem; }
     .hero-meta dd { color: rgba(255,255,255,.85); font-weight: 500; }
-    .update-badge {
-      margin-top: 1.5rem; display: inline-flex; align-items: center; gap: .5rem;
-      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
-      border-radius: 20px; padding: .35rem 1rem; font-size: 0.75rem; color: rgba(255,255,255,.8);
-    }
+    .update-badge { margin-top: 1.5rem; display: inline-flex; align-items: center; gap: .5rem; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 20px; padding: .35rem 1rem; font-size: 0.75rem; color: rgba(255,255,255,.8); }
     .update-badge .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
-
-    /* LAYOUT */
     .main { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-
-    /* METRIC CARDS */
     .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 2rem; }
     .metric-card { background: #fff; border-radius: var(--radius); padding: 1.2rem 1.5rem; border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
     .metric-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-3); font-weight: 600; margin-bottom: .5rem; }
     .metric-value { font-size: 1.6rem; font-weight: 700; color: var(--navy); line-height: 1; }
     .metric-sub   { font-size: 0.75rem; color: var(--slate); margin-top: .3rem; }
     .metric-card.highlight .metric-value { color: var(--orange); }
-
-    /* PAYMENT CARD */
     .payment-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 1.5rem; margin-bottom: 2rem; }
     .pay-summary { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 0; margin-bottom: 1.6rem; }
     .pay-sum-item { padding: 1.1rem 1.4rem; border-radius: var(--radius); }
@@ -264,8 +178,6 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
     .pay-badge.pending { background: #f1f5f9; color: #94a3b8; }
     tr.pay-row-next .pay-col-label { font-weight: 700; color: var(--orange); }
     tr.pay-row-next .pay-col-gross { color: var(--orange); }
-
-    /* OVERVIEW */
     .overview { display: grid; grid-template-columns: 280px 1fr; gap: 2rem; margin-bottom: 2rem; }
     .donut-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; text-align: center; }
     .donut-wrap { position: relative; width: 160px; height: 160px; margin-bottom: 1.2rem; }
@@ -288,8 +200,6 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
     .cat-status.complete { background: #dcfce7; color: #16a34a; }
     .cat-status.progress { background: #fff7ed; color: #c2410c; }
     .cat-status.pending  { background: #f1f5f9; color: var(--grey-3); }
-
-    /* WORKS TABLE */
     .section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-3); font-weight: 600; margin-bottom: 1rem; }
     .works-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: hidden; margin-bottom: 2rem; }
     .works-scroll { overflow-x: auto; }
@@ -324,8 +234,6 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
     tr.subtotal td { background: #f8fafc; padding: .4rem .75rem; font-size: 0.72rem; font-weight: 600; color: var(--navy); border-top: 1px dashed #c7d9f0; border-bottom: 2px solid var(--grey-2); }
     tr.subtotal .sub-label { color: var(--slate); font-weight: 400; }
     tr.grand-total td { background: var(--navy); color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: 0.8rem; }
-
-    /* UPDATES */
     .updates-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 2rem; }
     .update-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 1.2rem; border-left: 4px solid var(--orange); }
     .update-card.latest { border-left-color: var(--green); }
@@ -335,25 +243,11 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
     .update-pct span { font-size: 0.72rem; color: var(--grey-3); font-weight: 400; }
     .update-note { font-size: 0.75rem; color: var(--slate); margin-top: .6rem; line-height: 1.5; }
     .update-card.latest .update-pct { color: var(--green); }
-
-    /* FOOTER */
     .page-footer { background: var(--navy); color: rgba(255,255,255,.6); text-align: center; padding: 1.2rem; font-size: 0.72rem; margin-top: 2rem; }
     .page-footer strong { color: var(--orange); }
-
-    @media print {
-      .topbar, .btn-top, .btn-logout { display: none; }
-      body { background: #fff; }
-      .main { padding: .5rem; }
-    }
+    @media print { .topbar, .btn-top, .btn-logout { display: none; } body { background: #fff; } .main { padding: .5rem; } }
     @media (max-width: 1100px) { .overview { grid-template-columns: 1fr; } .cat-bar-track { width: 120px; } }
-    @media (max-width: 900px) {
-      .metrics { grid-template-columns: repeat(2,1fr); }
-      .updates-grid { grid-template-columns: 1fr; }
-      .hero-top { flex-direction: column; }
-      .pay-summary { grid-template-columns: 1fr; }
-      .pay-sum-arrow { display: none; }
-      .pay-timeline-wrap { display: none; }
-    }
+    @media (max-width: 900px) { .metrics { grid-template-columns: repeat(2,1fr); } .updates-grid { grid-template-columns: 1fr; } .hero-top { flex-direction: column; } .pay-summary { grid-template-columns: 1fr; } .pay-sum-arrow { display: none; } .pay-timeline-wrap { display: none; } }
     @media (max-width: 600px) { .metrics { grid-template-columns: 1fr; } .topbar-project { display: none; } .main { padding: 1rem; } }
   </style>
 </head>
@@ -368,6 +262,7 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
     Private Access
   </div>
   <span class={`role-badge ${role}`}>{role === 'admin' ? '⚙ Admin' : 'Client'}</span>
+  {role === 'admin' && <a href="/area-riservata/admin" class="btn-top">Admin Dashboard</a>}
   <button class="btn-top" onclick="window.print()">⎙ Print</button>
   <form method="POST" action="/api/area-riservata/logout" style="display:inline">
     <button type="submit" class="btn-logout">Sign out</button>
@@ -382,14 +277,14 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
         <div class="hero-sub">{project.location}</div>
         <div class="update-badge">
           <span class="pulse"></span>
-          Progress Update #{project.updateNum} — Last updated {project.updated}
+          Progress Update #{project.updateNum} — Last updated {fmtDate(project.updated)}
         </div>
       </div>
       <dl class="hero-meta">
-        <dt>Client</dt>            <dd>{project.client}</dd>
+        <dt>Client</dt>            <dd>{project.clientName}</dd>
         <dt>Architect / D.L.</dt> <dd>{project.architect}</dd>
-        <dt>Main Contractor</dt>  <dd>{project.contractor}</dd>
-        <dt>Contract period</dt>  <dd>{project.start} → {project.end}</dd>
+        <dt>Contract period</dt>  <dd>{fmtDate(project.start)} → {fmtDate(project.end)}</dd>
+        <dt>Location</dt>         <dd>{project.location.split(',')[0]}</dd>
       </dl>
     </div>
   </div>
@@ -430,7 +325,7 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
         <div class="pay-sum-label">Paid to Date</div>
         <div class="pay-sum-amount">{fmt(paidToDate)}</div>
         <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(paidToDate * 1.10)}</div>
-        <div class="pay-sum-paid-note">&#10003; Deposit + 2 progress payments</div>
+        <div class="pay-sum-paid-note">&#10003; Deposit + progress payments</div>
       </div>
       <div class="pay-sum-arrow">&#8594;</div>
       <div class="pay-sum-item next">
@@ -459,7 +354,7 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
           </div>
         ))}
         <div class="pay-now" style={`left:${totalPerc.toFixed(1)}%`}>
-          <div class="pay-now-lbl">at {project.updated}</div>
+          <div class="pay-now-lbl">at {fmtDate(project.updated)}</div>
           <div class="pay-now-line"></div>
           <div class="pay-now-dot"></div>
         </div>
@@ -516,7 +411,7 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
         </div>
       </div>
       <div class="donut-title">Overall Progress</div>
-      <div class="donut-sub">Progress Update #{project.updateNum}<br/>{project.updated}</div>
+      <div class="donut-sub">Progress Update #{project.updateNum}<br/>{fmtDate(project.updated)}</div>
     </div>
     <div class="cat-card">
       <div class="cat-card-title">Progress by work category</div>
@@ -566,29 +461,29 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
                 </td>
               </tr>
               {cat.items.map(item => (
-                <tr class={`item${item.isExtra ? ' extra-item' : ''}`}>
+                <tr class={`item${item.extra ? ' extra-item' : ''}`}>
                   <td class="item-id">{item.id}</td>
                   <td class="item-desc">
-                    {item.isExtra && <span class="extra-badge">Extra</span>}
-                    {item.desc}
+                    {item.extra && <span class="extra-badge">Extra</span>}
+                    {item.brief}
                   </td>
                   <td style="color:var(--slate); font-size:0.72rem">{item.unit}</td>
-                  <td class="item-num" style={item.isExtra ? 'color:var(--grey-3)' : ''}>
-                    {item.isExtra ? '–' : fmtQ(item.qty, item.unit)}
+                  <td class="item-num" style={item.extra ? 'color:var(--grey-3)' : ''}>
+                    {item.extra ? '–' : fmtQ(item.qty, item.unit)}
                   </td>
-                  <td class="item-money">{fmt(item.unitPrice)}</td>
-                  <td class="item-money" style={`font-weight:500; ${item.isExtra ? 'color:var(--grey-3)' : ''}`}>
-                    {item.isExtra ? '–' : fmt(item.budget)}
+                  <td class="item-money">{fmt(item.price)}</td>
+                  <td class="item-money" style={`font-weight:500; ${item.extra ? 'color:var(--grey-3)' : ''}`}>
+                    {item.extra ? '–' : fmt(item.budget)}
                   </td>
                   <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : catColor(item.perc)}; font-weight:600`}>
-                    {fmtQ(item.doneQty, item.unit)}
+                    {fmtQ(item.done, item.unit)}
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
-                  <td class="item-money" style={`color:${item.isExtra ? 'var(--amber)' : catColor(item.perc)}; font-weight:500`}>
-                    {item.done > 0 ? fmt(item.done) : '–'}
+                  <td class="item-money" style={`color:${item.extra ? 'var(--amber)' : catColor(item.perc)}; font-weight:500`}>
+                    {item.done > 0 ? fmt(item.done * item.price) : '–'}
                   </td>
                   <td class="perc-cell">
-                    {item.isExtra ? (
+                    {item.extra ? (
                       <span style="font-size:0.7rem; color:var(--amber); font-weight:600">Extra works</span>
                     ) : item.perc !== null ? (
                       <div class="perc-wrap">
@@ -604,7 +499,7 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
                     )}
                   </td>
                   <td>
-                    {item.isExtra ? (
+                    {item.extra ? (
                       <span class="badge extra">Extra</span>
                     ) : item.overrun ? (
                       <span class="badge overrun">Overrun</span>
@@ -655,10 +550,10 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
   <div class="section-title">Progress Updates</div>
   <div class="updates-grid">
     <div class="update-card latest">
-      <div class="update-num">Progress Update #3 — Latest</div>
-      <div class="update-date">October 2024</div>
+      <div class="update-num">Progress Update #{project.updateNum} — Latest</div>
+      <div class="update-date">{fmtDate(project.updated)}</div>
       <div class="update-pct">{totalPerc.toFixed(1)}% <span>overall complete</span></div>
-      <div class="update-note">Roofing now 98% complete. Internal finishes progressing well — tiling underway in all units. Doors & windows 78% installed. Plumbing first-fix 100%. Electrical works to start next month.</div>
+      <div class="update-note">Roofing now 98% complete. Internal finishes progressing well — tiling underway in all units. Doors &amp; windows 78% installed. Plumbing first-fix 100%. Electrical works to start next month.</div>
     </div>
     <div class="update-card">
       <div class="update-num">Progress Update #2</div>
@@ -679,8 +574,11 @@ const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#
 <div class="page-footer">
   <strong>CiteraStudio</strong> — Landscape Architecture &amp; Project Management &nbsp;|&nbsp;
   Arch. Vito Depalo &nbsp;|&nbsp; {project.location} &nbsp;|&nbsp;
-  This document is confidential and intended solely for {project.client}.
+  This document is confidential and intended solely for {project.clientName}.
 </div>
 
 </body>
 </html>
+ENDOFFILEwc -l src/pages/area-riservata/portal.astro
+wc -l src/pages/area-riservata/portal.astro
+

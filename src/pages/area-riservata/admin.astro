@@ -1,0 +1,748 @@
+---
+export const prerender = false;
+import { getProject } from '../../lib/store';
+import type { ProjectData } from '../../lib/schema';
+
+const data: ProjectData = await getProject();
+const { info: project, contractors, categories } = data;
+
+const enrich = (item: any) => {
+  const budget = item.extra ? 0 : item.qty * item.price;
+  const done   = item.done * item.price;
+  const perc   = (!item.extra && budget > 0) ? (done / budget) * 100 : null;
+  return { ...item, budget, valueDone: done, perc };
+};
+const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
+
+const ctrBudgets = new Map<string, { budget: number; itemCount: number }>();
+for (const cat of categories) {
+  for (const item of cat.items) {
+    if (!item.extra) {
+      const cur = ctrBudgets.get(item.contractor) ?? { budget: 0, itemCount: 0 };
+      ctrBudgets.set(item.contractor, { budget: cur.budget + item.qty * item.price, itemCount: cur.itemCount + 1 });
+    }
+  }
+}
+
+const triggerLabel = (m: any) =>
+  m.triggerType === 'signing' ? 'On signing' :
+  m.triggerType === 'final'   ? 'Final works' :
+  `at ${m.triggerPct}%`;
+
+const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const projectJson = JSON.stringify(data);
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — {project.name} | CiteraStudio</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:#1a3a5c; --orange:#FB8503; --green:#22c55e; --red:#dc2626;
+      --amber:#f59e0b; --slate:#64748b;
+      --g1:#f8fafc; --g2:#e2e8f0; --g3:#94a3b8; --g4:#cbd5e1;
+      --text:#1e293b; --sans:'Inter',sans-serif; --brand:'Quicksand',sans-serif;
+      --r:8px;
+    }
+    body { font-family:var(--sans); color:var(--text); background:var(--g1); font-size:14px; }
+    .topbar { position:sticky; top:0; z-index:100; background:var(--navy); color:#fff;
+      display:flex; align-items:center; gap:1rem; padding:.6rem 1.5rem;
+      box-shadow:0 2px 12px rgba(0,0,0,.25); }
+    .topbar-brand { font-family:var(--brand); font-weight:700; font-size:1rem; color:var(--orange); text-decoration:none; flex-shrink:0; }
+    .topbar-sep   { color:rgba(255,255,255,.25); }
+    .topbar-title { font-size:.82rem; color:rgba(255,255,255,.75); flex:1; }
+    .save-status  { font-size:.75rem; color:rgba(255,255,255,.7); margin-right:.25rem; min-width:80px; text-align:right; }
+    .btn-top { padding:.3rem .9rem; border:1px solid rgba(255,255,255,.3); background:transparent;
+      color:#fff; border-radius:5px; font-size:.75rem; cursor:pointer; }
+    .btn-top:hover { background:rgba(255,255,255,.1); }
+    .btn-save-all { background:var(--orange); border:none; color:#fff; border-radius:5px;
+      font-size:.75rem; font-weight:700; padding:.35rem 1rem; cursor:pointer; }
+    .btn-save-all:hover { opacity:.9; }
+    .btn-save-all:disabled { opacity:.5; cursor:default; }
+    .tabs { background:#fff; border-bottom:2px solid var(--g2); padding:0 2rem; display:flex; gap:0; }
+    .tab-btn { padding:.75rem 1.4rem; font-size:.8rem; font-weight:600; color:var(--g3);
+      border:none; background:none; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color .15s; }
+    .tab-btn:hover { color:var(--slate); }
+    .tab-btn.active { color:var(--navy); border-bottom-color:var(--orange); }
+    .admin-main { max-width:1400px; margin:0 auto; padding:2rem; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.2rem; }
+    .section-title { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--g3); font-weight:600; }
+    .card { background:#fff; border-radius:var(--r); border:1px solid var(--g2); box-shadow:0 1px 4px rgba(0,0,0,.06); }
+    .btn { display:inline-flex; align-items:center; gap:.35rem; padding:.4rem .9rem;
+      border-radius:6px; font-size:.78rem; font-weight:500; cursor:pointer; border:none; transition:opacity .15s; }
+    .btn:hover { opacity:.85; }
+    .btn-primary   { background:var(--navy); color:#fff; }
+    .btn-secondary { background:var(--g1); color:var(--slate); border:1px solid var(--g2); }
+    .btn-add       { background:rgba(34,197,94,.1); color:#15803d; border:1px solid #bbf7d0; }
+    .btn-danger    { background:rgba(220,38,38,.08); color:var(--red); border:1px solid #fca5a5; }
+    .btn-extra     { background:rgba(245,158,11,.12); color:#92400e; border:1px solid #fcd34d; }
+    .btn-icon      { padding:.3rem .5rem; font-size:.85rem; background:none; border:1px solid var(--g2);
+      border-radius:5px; cursor:pointer; color:var(--g3); transition:background .15s; }
+    .btn-icon:hover { background:var(--g1); color:var(--text); }
+    .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem 2rem; }
+    .form-grid.cols3 { grid-template-columns:repeat(3,1fr); }
+    .form-full { grid-column:1/-1; }
+    .field { display:flex; flex-direction:column; gap:.3rem; }
+    .field label { font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--g3); }
+    .field input, .field select, .field textarea {
+      padding:.5rem .75rem; border:1px solid var(--g2); border-radius:6px;
+      font-size:.85rem; font-family:var(--sans); color:var(--text); background:#fff; transition:border-color .15s; }
+    .field input:focus, .field select:focus { outline:none; border-color:var(--navy); }
+    .field input[readonly] { background:var(--g1); color:var(--slate); cursor:default; }
+    .auto-field { background:#f0f6ff !important; color:var(--navy) !important; font-family:monospace; font-size:.82rem; }
+    .project-card { padding:1.5rem; }
+    .contractor-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:1.2rem; margin-bottom:1.2rem; }
+    .ctr-card { padding:1.2rem 1.4rem; }
+    .ctr-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+    .ctr-name  { font-size:.9rem; font-weight:700; color:var(--navy); }
+    .ctr-trade { font-size:.72rem; color:var(--slate); margin-top:.15rem; }
+    .ctr-contact { font-size:.7rem; color:var(--g3); margin-top:.1rem; }
+    .ctr-budget { font-size:.72rem; color:var(--slate); margin-top:.2rem; }
+    .ctr-budget strong { color:var(--navy); }
+    .ctr-actions { display:flex; gap:.4rem; flex-shrink:0; }
+    .sal-table { width:100%; border-collapse:collapse; font-size:.75rem; margin-top:.3rem; }
+    .sal-table th { font-size:.6rem; text-transform:uppercase; letter-spacing:.05em; color:var(--g3);
+      font-weight:600; padding:.3rem .6rem; border-bottom:1px solid var(--g2); text-align:left; }
+    .sal-table th.right { text-align:right; }
+    .sal-table td { padding:.35rem .6rem; border-bottom:1px solid var(--g2); vertical-align:middle; }
+    .sal-table tr:last-child td { border-bottom:none; }
+    .sal-id   { font-size:.68rem; font-weight:700; font-family:monospace; color:var(--navy); }
+    .sal-amt  { text-align:right; font-family:monospace; color:var(--slate); font-size:.7rem; }
+    .sal-total{ background:var(--g1); }
+    .sal-total td { font-weight:700; font-size:.72rem; padding:.4rem .6rem; }
+    .sal-trigger { font-size:.7rem; color:var(--slate); }
+    .sal-add-row { margin-top:.5rem; }
+    .auto-tag { display:inline-block; font-size:.55rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.05em; background:#f0f6ff; color:var(--navy); border:1px solid #c7d9f0;
+      padding:.05rem .35rem; border-radius:3px; margin-left:.4rem; vertical-align:middle; }
+    .works-wrap { overflow-x:auto; }
+    table.works { width:100%; border-collapse:collapse; font-size:.75rem; }
+    table.works thead th { background:var(--navy); color:rgba(255,255,255,.85); padding:.5rem .65rem;
+      text-align:left; font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; white-space:nowrap; }
+    table.works thead th.right { text-align:right; }
+    tr.cat-row td { background:#f0f6ff; color:var(--navy); padding:.4rem .65rem;
+      font-weight:700; font-size:.72rem; border-top:2px solid var(--g2); border-bottom:1px solid #c7d9f0; }
+    .brief-link { font-size:.72rem; color:var(--slate); cursor:pointer; display:block;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;
+      text-decoration:underline dotted; text-underline-offset:2px; }
+    .brief-link:hover { color:var(--navy); }
+    .brief-empty { font-size:.68rem; color:var(--g4); font-style:italic; cursor:pointer; }
+    .brief-empty:hover { color:var(--g3); }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000;
+      align-items:center; justify-content:center; padding:1rem; }
+    .modal-overlay.is-open { display:flex; }
+    .modal-box { background:#fff; border-radius:var(--r); box-shadow:0 20px 60px rgba(0,0,0,.25);
+      width:100%; max-width:580px; display:flex; flex-direction:column; overflow:hidden; }
+    .modal-header { display:flex; align-items:center; gap:.75rem; padding:1rem 1.2rem; background:var(--navy); color:#fff; }
+    .modal-item-id { font-family:monospace; font-size:.75rem; font-weight:700;
+      background:rgba(255,255,255,.15); padding:.2rem .55rem; border-radius:4px; flex-shrink:0; }
+    .modal-item-brief { font-size:.82rem; font-weight:500; flex:1; opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .modal-close { margin-left:auto; background:none; border:none; color:rgba(255,255,255,.7);
+      font-size:1.1rem; cursor:pointer; flex-shrink:0; line-height:1; }
+    .modal-close:hover { color:#fff; }
+    .modal-body { padding:1.2rem; }
+    .modal-body label { display:block; font-size:.65rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.07em; color:var(--g3); margin-bottom:.5rem; }
+    .modal-body textarea { width:100%; border:1px solid var(--g2); border-radius:6px;
+      padding:.65rem .75rem; font-size:.82rem; font-family:var(--sans); color:var(--text);
+      resize:vertical; line-height:1.6; min-height:160px; }
+    .modal-body textarea:focus { outline:none; border-color:var(--navy); }
+    .modal-footer { display:flex; justify-content:flex-end; gap:.5rem;
+      padding:.85rem 1.2rem; border-top:1px solid var(--g2); background:var(--g1); }
+    .cat-badge { display:inline-flex; align-items:center; justify-content:center;
+      width:20px; height:20px; border-radius:50%; background:var(--navy); color:#fff;
+      font-size:.6rem; font-weight:700; margin-right:.4rem; }
+    .ctr-pill { display:inline-block; font-size:.6rem; font-weight:700; padding:.1rem .5rem;
+      border-radius:10px; background:rgba(251,133,3,.12); color:#c2410c; margin-left:.5rem; }
+    table.works tbody tr.item td { padding:.4rem .65rem; border-bottom:1px solid var(--g2); vertical-align:middle; }
+    table.works tbody tr.item:hover td { background:#f8fafc; }
+    table.works tbody tr.item.extra-row td { background:#fffdf5; }
+    .item-id  { font-size:.65rem; font-family:monospace; color:var(--g3); white-space:nowrap; }
+    .auto-cell { background:#f0f6ff; font-family:monospace; font-size:.72rem; text-align:right;
+      color:var(--navy); white-space:nowrap; position:relative; }
+    .auto-cell::after { content:'auto'; position:absolute; bottom:2px; right:4px;
+      font-size:.45rem; color:var(--g4); font-family:var(--sans); text-transform:uppercase; letter-spacing:.04em; }
+    .editable-cell input { width:100%; border:none; background:transparent; font-size:.75rem;
+      font-family:var(--sans); color:var(--text); padding:0; text-align:right; }
+    .editable-cell input:focus { outline:1px solid var(--navy); border-radius:3px; background:#fff; padding:0 3px; }
+    .extra-badge { display:inline-block; font-size:.55rem; font-weight:800; text-transform:uppercase;
+      padding:.1rem .35rem; border-radius:3px; background:var(--amber); color:#fff; margin-right:.3rem; }
+    .overrun-badge { font-size:.62rem; font-weight:700; color:var(--red); }
+    .perc-wrap { display:flex; align-items:center; gap:.35rem; }
+    .perc-mini { flex:1; min-width:40px; height:5px; background:var(--g2); border-radius:3px; overflow:hidden; }
+    .perc-fill { height:100%; border-radius:3px; }
+    .perc-num  { font-size:.68rem; font-weight:600; width:32px; text-align:right; white-space:nowrap; }
+    .status-badge { display:inline-block; font-size:.58rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.04em; padding:.15rem .5rem; border-radius:20px; white-space:nowrap; }
+    .status-complete { background:#dcfce7; color:#15803d; }
+    .status-progress { background:#fff7ed; color:#c2410c; }
+    .status-pending  { background:#f1f5f9; color:var(--g3); }
+    .status-overrun  { background:#fee2e2; color:var(--red); border:1px solid #fca5a5; }
+    .status-extra    { background:#fef3c7; color:#92400e; }
+    tr.subtotal td { background:var(--g1); padding:.35rem .65rem; font-size:.7rem; font-weight:600;
+      color:var(--navy); border-top:1px dashed #c7d9f0; border-bottom:2px solid var(--g2); }
+    tr.item.extra-row .extra-toggle { accent-color:var(--amber); }
+    .toggle-wrapper { display:flex; align-items:center; justify-content:center; }
+    input[type=checkbox].extra-toggle { width:14px; height:14px; cursor:pointer; }
+    tr.grand-total td { background:var(--navy); color:#fff; padding:.5rem .65rem; font-weight:700; font-size:.78rem; }
+    .legend { display:flex; gap:1.2rem; align-items:center; flex-wrap:wrap; font-size:.7rem; color:var(--slate); }
+    .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .legend-item { display:flex; align-items:center; gap:.4rem; }
+    .auto-legend { display:inline-block; width:28px; height:12px; background:#f0f6ff;
+      border:1px solid #c7d9f0; border-radius:3px; vertical-align:middle; }
+    @media(max-width:900px) { .form-grid { grid-template-columns:1fr; } .contractor-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="topbar-brand">citerastudio</a>
+  <span class="topbar-sep">|</span>
+  <span class="topbar-title">Admin Dashboard</span>
+  <span id="save-status" class="save-status"></span>
+  <button id="save-all-btn" class="btn-save-all">Save All</button>
+  <a href="/area-riservata/portal" class="btn-top" style="margin-left:.5rem">Client Portal</a>
+  <a href="/area-riservata/admin-mockup" class="btn-top" style="opacity:.5;font-size:.68rem">Mockup</a>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="project">Project Info</button>
+  <button class="tab-btn" data-tab="contractors">Contractors &amp; Payments</button>
+  <button class="tab-btn" data-tab="works">Bill of Works</button>
+</div>
+
+<div class="admin-main">
+
+  <div id="tab-project">
+    <div class="section-head">
+      <span class="section-title">Project Information</span>
+      <button class="btn btn-primary save-trigger">Save Changes</button>
+    </div>
+    <div class="card project-card">
+      <div class="form-grid">
+        <div class="field form-full">
+          <label>Project Title</label>
+          <input type="text" value={project.name} data-info="name" />
+        </div>
+        <div class="field form-full">
+          <label>Location</label>
+          <input type="text" value={project.location} data-info="location" />
+        </div>
+        <div class="field">
+          <label>Client Name</label>
+          <input type="text" value={project.clientName} data-info="clientName" />
+        </div>
+        <div class="field">
+          <label>Client Email</label>
+          <input type="email" value={project.clientEmail} data-info="clientEmail" />
+        </div>
+        <div class="field">
+          <label>Architect / D.L.</label>
+          <input type="text" value={project.architect} data-info="architect" />
+        </div>
+        <div class="field">
+          <label>Overall Contract Budget (net ex. VAT)</label>
+          <input type="text" id="total-budget-display" readonly class="auto-field"
+            value={fmt(enrichedCats.flatMap((c:any)=>c.items).filter((i:any)=>!i.extra).reduce((s:number,i:any)=>s+i.budget,0))} />
+        </div>
+        <div class="field">
+          <label>Contract Start</label>
+          <input type="date" value={project.start} data-info="start" />
+        </div>
+        <div class="field">
+          <label>Contract End</label>
+          <input type="date" value={project.end} data-info="end" />
+        </div>
+        <div class="field">
+          <label>Last Updated</label>
+          <input type="date" value={project.updated} data-info="updated" />
+        </div>
+        <div class="field">
+          <label>Update Number</label>
+          <input type="number" value={project.updateNum} data-info="updateNum" style="width:80px" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-contractors" hidden>
+    <div class="section-head">
+      <span class="section-title">Contractors &amp; Payment Schedules</span>
+      <button class="btn btn-add">+ Add Contractor</button>
+    </div>
+    <div class="contractor-grid">
+      {contractors.map(c => {
+        const info   = ctrBudgets.get(c.id) ?? { budget: 0, itemCount: 0 };
+        const budget = info.budget;
+        const total  = c.sal.reduce((s, m) => s + m.pct, 0);
+        return (
+          <div class="card ctr-card" data-budget={budget.toFixed(2)} data-ctr-id={c.id}>
+            <div class="ctr-header">
+              <div>
+                <div class="ctr-name">{c.name}</div>
+                <div class="ctr-trade">{c.trade}</div>
+                <div class="ctr-contact">{c.contact}</div>
+                <div class="ctr-budget">
+                  Budget: <strong class="ctr-budget-val">{fmt(budget)}</strong>
+                  <span class="auto-tag">auto</span>
+                  <span style="font-size:.6rem;color:var(--g3)">· {info.itemCount} items (net ex. VAT)</span>
+                </div>
+              </div>
+              <div class="ctr-actions">
+                <button class="btn-icon" title="Edit">✎</button>
+                <button class="btn-icon" title="Delete">🗑</button>
+              </div>
+            </div>
+            <table class="sal-table">
+              <thead>
+                <tr>
+                  <th style="width:50px">Ref.</th>
+                  <th>Milestone</th>
+                  <th style="width:90px">Trigger</th>
+                  <th class="right" style="width:115px">Amount (net) <span class="auto-tag">auto</span></th>
+                  <th style="width:60px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {c.sal.map(m => (
+                  <tr data-pct={m.pct} data-sal-id={m.id}>
+                    <td class="sal-id">{m.id}</td>
+                    <td>{m.label}</td>
+                    <td class="sal-trigger">{triggerLabel(m)}</td>
+                    <td class="sal-amt">{fmt(budget * m.pct / 100)}</td>
+                    <td style="white-space:nowrap">
+                      <button class="btn-icon btn-del-milestone" title="Delete milestone" style="padding:.15rem .4rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button>
+                    </td>
+                  </tr>
+                ))}
+                <tr class="sal-total">
+                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
+                  <td class="sal-amt sal-total-amt" style={`color:${total === 100 ? 'var(--green)' : 'var(--red)'};font-weight:700`}>
+                    {fmt(budget)} {total === 100 ? '✓' : `⚠ ${total}%`}
+                  </td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="sal-add-row">
+              <button class="btn btn-add btn-add-milestone" style="font-size:.7rem;padding:.3rem .7rem">+ Add milestone</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
+  <div id="tab-works" hidden>
+    <div class="section-head">
+      <span class="section-title">Bill of Works</span>
+      <div style="display:flex;gap:.75rem;align-items:center">
+        <div class="legend">
+          <span class="legend-item"><span class="auto-legend"></span> auto-calculated</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span> Extra works</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--red)"></span> Overrun</span>
+        </div>
+        <button class="btn btn-add">+ Add Category</button>
+      </div>
+    </div>
+    <div class="card" style="overflow:hidden">
+      <div class="works-wrap">
+        <table class="works">
+          <thead>
+            <tr>
+              <th style="width:60px">#</th>
+              <th style="width:220px">Brief description<br/><span style="font-size:.5rem;opacity:.65;font-weight:400">click to expand full text</span></th>
+              <th style="width:55px">Unit</th>
+              <th class="right" style="width:90px">Contracted Qty</th>
+              <th class="right" style="width:100px">Unit Price<br/><span style="font-size:.5rem;opacity:.65">net ex. VAT</span></th>
+              <th class="right" style="width:105px">Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th class="right" style="width:80px">Done Qty</th>
+              <th class="right" style="width:105px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th style="width:105px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th style="width:72px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th style="width:130px">Contractor</th>
+              <th style="width:52px;text-align:center">Extra</th>
+              <th style="width:62px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {enrichedCats.map(cat => {
+              const catBudget = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
+              const catDone   = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);
+              const catPerc   = catBudget > 0 ? catDone/catBudget*100 : 0;
+              return (<>
+                <tr class="cat-row" data-cat-id={cat.id}>
+                  <td colspan="13">
+                    <span class="cat-badge">{cat.id}</span>
+                    {cat.label}
+                    <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">
+                      Budget: {fmt(catBudget)} &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
+                    </span>
+                    <span style="float:right;display:flex;gap:.3rem;margin-top:-.1rem">
+                      <button class="btn btn-add btn-add-item" data-cat-id={cat.id} style="font-size:.62rem;padding:.2rem .55rem">+ Add item</button>
+                      <button class="btn btn-extra btn-add-item" data-cat-id={cat.id} data-extra="true" style="font-size:.62rem;padding:.2rem .55rem">+ Add extra item</button>
+                      <button class="btn-icon btn-del-cat" data-cat-id={cat.id} title="Delete category" style="font-size:.72rem;padding:.2rem .45rem;color:var(--red);border-color:#fca5a5">🗑 Delete</button>
+                    </span>
+                  </td>
+                </tr>
+                {cat.items.map((item:any) => {
+                  const overrun = !item.extra && item.done > item.qty;
+                  const pColor  = overrun ? '#dc2626' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
+                  const barW    = item.perc !== null ? Math.min(item.perc,100) : 0;
+                  return (
+                    <tr class={`item${item.extra ? ' extra-row' : ''}`} data-cat-id={cat.id} data-item-id={item.id}>
+                      <td class="item-id">{item.id}</td>
+                      <td style="max-width:220px">
+                        {item.extra && <span class="extra-badge">Extra</span>}
+                        <span class="brief-link" data-id={item.id} data-cat-id={cat.id} data-brief={item.brief} data-fulldesc={item.fullDesc ?? ''} title="Click to view / edit full description">{item.brief || <em class="brief-empty">+ add description</em>}</span>
+                      </td>
+                      <td>
+                        <select data-cat-id={cat.id} data-item-id={item.id} data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">
+                          {['m²','m³','lm','unit','lump','kg'].map((u:string) => <option selected={item.unit===u}>{u}</option>)}
+                        </select>
+                      </td>
+                      <td class="editable-cell">
+                        <input type="number" value={item.extra ? '' : item.qty} placeholder={item.extra ? '–' : ''} disabled={item.extra} style={item.extra ? 'color:var(--g3)' : ''} data-cat-id={cat.id} data-item-id={item.id} data-field="qty" />
+                      </td>
+                      <td class="editable-cell">
+                        <input type="number" value={item.price} step="0.01" data-cat-id={cat.id} data-item-id={item.id} data-field="price" />
+                      </td>
+                      <td class="auto-cell auto-cell-budget">{item.extra ? '–' : fmt(item.budget)}</td>
+                      <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
+                        <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} data-cat-id={cat.id} data-item-id={item.id} data-field="done" />
+                        {overrun && <span class="overrun-badge">↑</span>}
+                      </td>
+                      <td class="auto-cell auto-cell-done">{fmt(item.valueDone)}</td>
+                      <td style="min-width:90px">
+                        {item.extra ? (
+                          <span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>
+                        ) : item.perc !== null ? (
+                          <div class="perc-wrap">
+                            <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
+                            <span class="perc-num" style={`color:${pColor}`}>{item.perc.toFixed(0)}%</span>
+                          </div>
+                        ) : '–'}
+                      </td>
+                      <td>
+                        {item.extra ? <span class="status-badge status-extra">Extra</span>
+                          : overrun ? <span class="status-badge status-overrun">Overrun</span>
+                          : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
+                          : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
+                          : <span class="status-badge status-pending">Not Started</span>}
+                      </td>
+                      <td>
+                        <select data-cat-id={cat.id} data-item-id={item.id} data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%">
+                          <option value="">— none —</option>
+                          {contractors.map(c => <option value={c.id} selected={item.contractor===c.id}>{c.name}</option>)}
+                        </select>
+                      </td>
+                      <td class="toggle-wrapper">
+                        <input type="checkbox" class="extra-toggle" checked={item.extra} data-cat-id={cat.id} data-item-id={item.id} data-field="extra" title="Mark as extra works" />
+                      </td>
+                      <td style="white-space:nowrap">
+                        <button class="btn-icon btn-del-item" data-cat-id={cat.id} data-item-id={item.id} title="Delete" style="margin-left:.2rem">🗑</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr class="subtotal">
+                  <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
+                  <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
+                  <td></td>
+                  <td style="text-align:right;font-family:monospace;color:var(--navy)">{fmt(catDone)}</td>
+                  <td colspan="5"></td>
+                </tr>
+              </>);
+            })}
+            <tr class="grand-total">
+              <td colspan="5" style="text-align:right;padding-right:.75rem;letter-spacing:.04em;font-size:.72rem">TOTAL <span style="opacity:.55;font-weight:400">(net ex. VAT — contracted only)</span></td>
+              <td style="text-align:right;font-family:monospace">{fmt(enrichedCats.flatMap((c:any)=>c.items).filter((i:any)=>!i.extra).reduce((s:number,i:any)=>s+i.budget,0))}</td>
+              <td></td>
+              <td style="text-align:right;font-family:monospace">{fmt(enrichedCats.flatMap((c:any)=>c.items).reduce((s:number,i:any)=>s+i.valueDone,0))}</td>
+              <td colspan="5"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="milestone-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <span style="font-size:.8rem;font-weight:700">Add Milestone</span>
+      <span id="ms-ctr-name" style="font-size:.72rem;opacity:.75;flex:1;margin-left:.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button class="modal-close" id="ms-close-btn">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:.9rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div>
+          <label>Ref.</label>
+          <input id="ms-ref" type="text" placeholder="e.g. SAL2" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+        </div>
+        <div>
+          <label>Milestone name</label>
+          <input id="ms-label" type="text" placeholder="e.g. Progress Payment 2" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+        </div>
+      </div>
+      <div>
+        <label>Trigger</label>
+        <select id="ms-trigger-type" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff">
+          <option value="signing">On signing (contract signature)</option>
+          <option value="percent">At % completion</option>
+          <option value="final">Final works / testing</option>
+        </select>
+      </div>
+      <div id="ms-pct-row">
+        <label>Completion % trigger</label>
+        <input id="ms-trigger-pct" type="number" min="1" max="99" placeholder="e.g. 30" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Payment % (of contractor budget)</label>
+        <input id="ms-pct" type="number" min="0" max="100" placeholder="e.g. 20" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="ms-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="ms-save-btn">Add Milestone</button>
+    </div>
+  </div>
+</div>
+
+<div id="desc-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span id="modal-item-id" class="modal-item-id"></span>
+      <span id="modal-item-brief" class="modal-item-brief"></span>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>Full Description</label>
+      <textarea id="modal-fulldesc" rows="8" placeholder="Enter the full technical description for this work item…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="modal-save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ projectJson }}>
+  let state = JSON.parse(projectJson);
+  const fmtAmt = n => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+  function findItem(catId, itemId) {
+    const cat = state.categories.find(c => c.id === catId);
+    return cat ? cat.items.find(i => i.id === itemId) : null;
+  }
+
+  const saveAllBtn = document.getElementById('save-all-btn');
+  const saveStatus = document.getElementById('save-status');
+
+  async function saveAll() {
+    saveAllBtn.disabled = true;
+    saveStatus.textContent = 'Saving…';
+    saveStatus.style.color = 'rgba(255,255,255,.7)';
+    try {
+      const res = await fetch('/api/area-riservata/project', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error ?? 'Unknown error');
+      saveStatus.textContent = 'Saved ✓';
+      saveStatus.style.color = '#22c55e';
+      setTimeout(() => { saveStatus.textContent = ''; }, 3000);
+    } catch (err) {
+      saveStatus.textContent = 'Error: ' + err.message;
+      saveStatus.style.color = '#fca5a5';
+    } finally {
+      saveAllBtn.disabled = false;
+    }
+  }
+
+  saveAllBtn.addEventListener('click', saveAll);
+  document.querySelectorAll('.save-trigger').forEach(btn => btn.addEventListener('click', saveAll));
+
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = { project: document.getElementById('tab-project'), contractors: document.getElementById('tab-contractors'), works: document.getElementById('tab-works') };
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      Object.entries(panels).forEach(([k, el]) => { if (el) el.hidden = (k !== btn.dataset.tab); });
+    });
+  });
+
+  document.querySelectorAll('[data-info]').forEach(el => {
+    el.addEventListener('input', () => {
+      const field = el.dataset.info;
+      state.info[field] = el.type === 'number' ? parseFloat(el.value) || 0 : el.value;
+    });
+  });
+
+  document.addEventListener('input', e => {
+    const el = e.target;
+    const { catId, itemId, field } = el.dataset;
+    if (!catId || !itemId || !field) return;
+    const item = findItem(catId, itemId);
+    if (!item) return;
+    const newVal = el.type === 'number' ? (parseFloat(el.value) || 0) : el.type === 'checkbox' ? el.checked : el.value;
+    item[field] = newVal;
+    const row = el.closest('tr');
+    if (row && (field === 'qty' || field === 'price' || field === 'done')) {
+      const budget = item.extra ? 0 : (item.qty || 0) * (item.price || 0);
+      const valDone = (item.done || 0) * (item.price || 0);
+      const bCell = row.querySelector('.auto-cell-budget');
+      const dCell = row.querySelector('.auto-cell-done');
+      if (bCell) bCell.textContent = item.extra ? '–' : fmtAmt(budget);
+      if (dCell) dCell.textContent = fmtAmt(valDone);
+    }
+  });
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-del-item');
+    if (!btn) return;
+    const { catId, itemId } = btn.dataset;
+    const cat = state.categories.find(c => c.id === catId);
+    if (cat) cat.items = cat.items.filter(i => i.id !== itemId);
+    btn.closest('tr')?.remove();
+  });
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-del-cat');
+    if (!btn) return;
+    const { catId } = btn.dataset;
+    state.categories = state.categories.filter(c => c.id !== catId);
+    document.querySelectorAll(`[data-cat-id="${catId}"]`).forEach(row => row.remove());
+  });
+
+  function recalcCard(card) {
+    const budget = parseFloat(card.dataset.budget ?? '0');
+    let totalPct = 0;
+    card.querySelectorAll('tbody tr:not(.sal-total)').forEach(row => {
+      const pct = parseFloat(row.dataset.pct ?? '0') || 0;
+      totalPct += pct;
+      const amtCell = row.querySelector('.sal-amt');
+      if (amtCell) amtCell.textContent = fmtAmt(budget * pct / 100);
+    });
+    const totalAmtCell = card.querySelector('.sal-total-amt');
+    if (totalAmtCell) {
+      totalAmtCell.textContent = fmtAmt(budget) + ' ' + (totalPct === 100 ? '✓' : `⚠ ${totalPct}%`);
+      totalAmtCell.style.color = totalPct === 100 ? 'var(--green)' : 'var(--red)';
+    }
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-del-milestone');
+    if (!btn) return;
+    const row = btn.closest('tr');
+    const card = btn.closest('.ctr-card');
+    const ctrId = card?.dataset.ctrId;
+    const salId = row?.dataset.salId;
+    if (ctrId && salId) {
+      const ctr = state.contractors.find(c => c.id === ctrId);
+      if (ctr) ctr.sal = ctr.sal.filter(m => m.id !== salId);
+    }
+    row?.remove();
+    if (card) recalcCard(card);
+  });
+
+  const msModal       = document.getElementById('milestone-modal');
+  const msCtrName     = document.getElementById('ms-ctr-name');
+  const msRef         = document.getElementById('ms-ref');
+  const msLabel       = document.getElementById('ms-label');
+  const msTriggerType = document.getElementById('ms-trigger-type');
+  const msTriggerPct  = document.getElementById('ms-trigger-pct');
+  const msPct         = document.getElementById('ms-pct');
+  const msPctRow      = document.getElementById('ms-pct-row');
+  let msTargetCard    = null;
+
+  msTriggerType.addEventListener('change', () => { msPctRow.style.display = msTriggerType.value === 'percent' ? '' : 'none'; });
+  msPctRow.style.display = 'none';
+
+  function openMsModal(card) {
+    msTargetCard = card;
+    msCtrName.textContent = card.querySelector('.ctr-name')?.textContent ?? '';
+    msRef.value = ''; msLabel.value = ''; msPct.value = ''; msTriggerPct.value = '';
+    msTriggerType.value = 'signing'; msPctRow.style.display = 'none';
+    msModal.classList.add('is-open'); msRef.focus();
+  }
+  function closeMsModal() { msModal.classList.remove('is-open'); msTargetCard = null; }
+
+  document.getElementById('ms-close-btn').addEventListener('click', closeMsModal);
+  document.getElementById('ms-cancel-btn').addEventListener('click', closeMsModal);
+  msModal.addEventListener('click', e => { if (e.target === msModal) closeMsModal(); });
+
+  document.getElementById('ms-save-btn').addEventListener('click', () => {
+    if (!msTargetCard) return;
+    const ref = msRef.value.trim() || '—';
+    const label = msLabel.value.trim() || 'New Milestone';
+    const pct = parseFloat(msPct.value) || 0;
+    const ttype = msTriggerType.value;
+    const tpct = parseFloat(msTriggerPct.value) || null;
+    const triggerTxt = ttype === 'signing' ? 'On signing' : ttype === 'final' ? 'Final works' : `at ${tpct}%`;
+    const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
+    const ctrId = msTargetCard.dataset.ctrId;
+    const ctr = state.contractors.find(c => c.id === ctrId);
+    if (ctr) ctr.sal.push({ id: ref, label, triggerType: ttype, triggerPct: tpct, pct });
+    const tbody = msTargetCard.querySelector('tbody');
+    const totalRow = tbody.querySelector('.sal-total');
+    const tr = document.createElement('tr');
+    tr.dataset.pct = String(pct);
+    tr.dataset.salId = ref;
+    tr.innerHTML = `<td class="sal-id">${ref}</td><td>${label}</td><td class="sal-trigger">${triggerTxt}</td><td class="sal-amt">${fmtAmt(budget * pct / 100)}</td><td><button class="btn-icon btn-del-milestone" style="padding:.15rem .4rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button></td>`;
+    tbody.insertBefore(tr, totalRow);
+    recalcCard(msTargetCard);
+    closeMsModal();
+  });
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-add-milestone');
+    if (!btn) return;
+    const card = btn.closest('.ctr-card');
+    if (card) openMsModal(card);
+  });
+
+  const descModal  = document.getElementById('desc-modal');
+  const modalIdEl  = document.getElementById('modal-item-id');
+  const modalBrief = document.getElementById('modal-item-brief');
+  const modalText  = document.getElementById('modal-fulldesc');
+  let   descActiveCatId = null;
+
+  function openDescModal(catId, id, brief, fullDesc) {
+    descActiveCatId = catId;
+    modalIdEl.textContent = id;
+    modalBrief.textContent = brief;
+    modalText.value = fullDesc;
+    descModal.classList.add('is-open');
+    modalText.focus();
+  }
+  function closeDescModal() { descModal.classList.remove('is-open'); descActiveCatId = null; }
+
+  document.getElementById('modal-close-btn').addEventListener('click', closeDescModal);
+  document.getElementById('modal-cancel-btn').addEventListener('click', closeDescModal);
+  document.getElementById('modal-save-btn').addEventListener('click', () => {
+    const itemId = modalIdEl.textContent;
+    const item = findItem(descActiveCatId, itemId);
+    if (item) item.fullDesc = modalText.value;
+    closeDescModal();
+  });
+  descModal.addEventListener('click', e => { if (e.target === descModal) closeDescModal(); });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (msModal.classList.contains('is-open'))   { closeMsModal();   return; }
+    if (descModal.classList.contains('is-open')) { closeDescModal(); return; }
+  });
+</script>
+</body>
+</html>
