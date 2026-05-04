@@ -771,13 +771,49 @@ const projectJson = JSON.stringify(data);
     const newVal = el.type === 'number' ? (parseFloat(el.value) || 0) : el.type === 'checkbox' ? el.checked : el.value;
     item[field] = newVal;
     const row = el.closest('tr');
-    if (row && (field === 'qty' || field === 'price' || field === 'done')) {
-      const budget = item.extra ? 0 : (item.qty || 0) * (item.price || 0);
-      const valDone = (item.done || 0) * (item.price || 0);
-      const bCell = row.querySelector('.auto-cell-budget');
-      const dCell = row.querySelector('.auto-cell-done');
-      if (bCell) bCell.textContent = item.extra ? '–' : fmtAmt(budget);
-      if (dCell) dCell.textContent = fmtAmt(valDone);
+    if (!row || !(field === 'qty' || field === 'price' || field === 'done')) return;
+
+    const budget   = item.extra ? 0 : (item.qty || 0) * (item.price || 0);
+    const valDone  = (item.done || 0) * (item.price || 0);
+    const overrun  = !item.extra && (item.done || 0) > (item.qty || 0);
+    const percActual = (!item.extra && budget > 0) ? (valDone / budget) * 100 : 0;
+    const barW     = Math.min(percActual, 100);
+    const pColor   = overrun ? '#dc2626' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
+
+    // Auto cells
+    const bCell = row.querySelector('.auto-cell-budget');
+    const dCell = row.querySelector('.auto-cell-done');
+    if (bCell) bCell.textContent = item.extra ? '–' : fmtAmt(budget);
+    if (dCell) dCell.textContent = fmtAmt(valDone);
+
+    // Done cell — overrun color + badge
+    const doneTd  = row.querySelector('[data-field="done"]')?.closest('td');
+    if (doneTd) {
+      const inp = doneTd.querySelector('input');
+      if (inp) inp.style.color = overrun ? 'var(--red)' : '';
+      let badge = doneTd.querySelector('.overrun-badge');
+      if (overrun && !badge) {
+        const s = document.createElement('span'); s.className = 'overrun-badge'; s.textContent = '↑';
+        doneTd.appendChild(s);
+      } else if (!overrun && badge) { badge.remove(); }
+    }
+
+    // Progress bar
+    const percWrap = row.querySelector('.perc-wrap');
+    if (percWrap) {
+      const fill = percWrap.querySelector('.perc-fill');
+      const num  = percWrap.querySelector('.perc-num');
+      if (fill) { fill.style.width = `${barW}%`; fill.style.background = pColor; }
+      if (num)  { num.textContent = `${Math.round(percActual)}%`; num.style.color = pColor; }
+    }
+
+    // Status badge
+    const statusSpan = row.querySelector('.status-badge');
+    if (statusSpan && !item.extra) {
+      if (overrun)              { statusSpan.className = 'status-badge status-overrun';  statusSpan.textContent = 'Overrun'; }
+      else if (percActual >= 100) { statusSpan.className = 'status-badge status-complete'; statusSpan.textContent = 'Complete'; }
+      else if (percActual > 0)    { statusSpan.className = 'status-badge status-progress'; statusSpan.textContent = 'In Progress'; }
+      else                      { statusSpan.className = 'status-badge status-pending';  statusSpan.textContent = 'Not Started'; }
     }
   });
 
