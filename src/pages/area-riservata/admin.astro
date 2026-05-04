@@ -57,8 +57,23 @@ const projectJson = JSON.stringify(data);
     .topbar-brand { font-family:var(--brand); font-weight:700; font-size:1rem; color:var(--orange); text-decoration:none; flex-shrink:0; }
     .topbar-sep   { color:rgba(255,255,255,.25); }
     .topbar-title { font-size:.82rem; color:rgba(255,255,255,.75); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .topbar-project { font-size:.72rem; color:rgba(255,255,255,.5); }
-    .topbar-project strong { color:rgba(255,255,255,.9); font-weight:600; }
+    .proj-switcher { position:relative; }
+    .proj-switcher-btn { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff;
+      padding:.3rem .85rem; border-radius:5px; font-size:.78rem; font-weight:600; cursor:pointer;
+      display:flex; align-items:center; gap:.4rem; white-space:nowrap; max-width:220px; overflow:hidden; text-overflow:ellipsis; }
+    .proj-switcher-btn:hover { background:rgba(255,255,255,.18); }
+    .proj-switcher-drop { display:none; position:absolute; top:calc(100% + .5rem); left:0; min-width:240px;
+      background:#fff; border:1px solid var(--g2); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.18);
+      z-index:500; overflow:hidden; }
+    .proj-switcher-drop.is-open { display:block; }
+    .proj-drop-item { display:flex; align-items:center; justify-content:space-between; padding:.65rem 1rem;
+      font-size:.82rem; color:var(--text); text-decoration:none; gap:.5rem; }
+    .proj-drop-item:hover { background:var(--g1); }
+    .proj-drop-item.active { font-weight:700; color:var(--navy); background:#f0f6ff; }
+    .proj-drop-item span { font-size:.7rem; color:var(--green); flex-shrink:0; }
+    .proj-drop-new { width:100%; text-align:left; padding:.65rem 1rem; font-size:.82rem; color:var(--navy);
+      font-weight:600; background:none; border:none; border-top:1px solid var(--g2); cursor:pointer; }
+    .proj-drop-new:hover { background:#f0f6ff; }
     .save-status  { font-size:.75rem; color:rgba(255,255,255,.7); margin-right:.25rem; min-width:80px; text-align:right; }
     .btn-top { padding:.3rem .9rem; border:1px solid rgba(255,255,255,.3); background:transparent;
       color:#fff; border-radius:5px; font-size:.75rem; cursor:pointer; }
@@ -215,9 +230,20 @@ const projectJson = JSON.stringify(data);
   <a href="/" class="topbar-brand">citerastudio</a>
   <span class="topbar-sep">|</span>
   <span class="topbar-title">Admin</span>
-  <span class="topbar-project"><strong>{project.name}</strong></span>
+  <div class="proj-switcher">
+    <button class="proj-switcher-btn" id="proj-switcher-btn">{project.name} ▾</button>
+    <div class="proj-switcher-drop" id="proj-switcher-drop">
+      {(allProjects as any[]).map(p => (
+        <a href={`/area-riservata/admin?p=${p.id}`} class={`proj-drop-item${p.id === projectId ? ' active' : ''}`}>
+          <span style="flex:1">{p.name}</span>
+          {p.id === projectId && <span>✓ current</span>}
+        </a>
+      ))}
+      <button class="proj-drop-new" id="proj-drop-new">+ New Project</button>
+    </div>
+  </div>
   <span id="save-status" class="save-status"></span>
-  <button id="save-all-btn" class="btn-save-all">Save All</button>
+  <button id="save-all-btn" class="btn-save-all" title="Save all changes to database">Save All</button>
   <a href={`/area-riservata/portal?p=${projectId}`} class="btn-top" style="margin-left:.5rem">Client Portal</a>
   <a href="/area-riservata/admin-mockup" class="btn-top" style="opacity:.5;font-size:.68rem">Mockup</a>
 </div>
@@ -648,6 +674,27 @@ const projectJson = JSON.stringify(data);
   saveAllBtn.addEventListener('click', saveAll);
   document.querySelectorAll('.save-trigger').forEach(btn => btn.addEventListener('click', saveAll));
 
+  // ── Project switcher dropdown ─────────────────────────────────────────────
+  const switcherDrop = document.getElementById('proj-switcher-drop');
+  document.getElementById('proj-switcher-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    switcherDrop.classList.toggle('is-open');
+  });
+  document.addEventListener('click', () => switcherDrop.classList.remove('is-open'));
+  switcherDrop.addEventListener('click', e => e.stopPropagation());
+
+  document.getElementById('proj-drop-new').addEventListener('click', async () => {
+    switcherDrop.classList.remove('is-open');
+    const name = prompt('Project name:')?.trim();
+    if (!name) return;
+    const res  = await fetch('/api/area-riservata/projects', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
+    });
+    const json = await res.json();
+    if (json.ok) window.location.href = `/area-riservata/admin?p=${json.id}`;
+    else alert('Error: ' + json.error);
+  });
+
   const tabs = document.querySelectorAll('.tab-btn');
   const panels = {
     projects:    document.getElementById('tab-projects'),
@@ -663,21 +710,9 @@ const projectJson = JSON.stringify(data);
     });
   });
 
-  // New Project button (in Projects tab)
-  document.getElementById('btn-new-project').addEventListener('click', async () => {
-    const name = prompt('Project name:')?.trim();
-    if (!name) return;
-    const btn = document.getElementById('btn-new-project');
-    btn.disabled = true; btn.textContent = 'Creating…';
-    try {
-      const res  = await fetch('/api/area-riservata/projects', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
-      });
-      const json = await res.json();
-      if (json.ok) { window.location.href = `/area-riservata/admin?p=${json.id}`; }
-      else { alert('Error: ' + json.error); btn.disabled = false; btn.textContent = '+ New Project'; }
-    } catch { alert('Network error'); btn.disabled = false; btn.textContent = '+ New Project'; }
-  });
+  // New Project button (in Projects tab) — delegates to the same handler
+  document.getElementById('btn-new-project').addEventListener('click', () =>
+    document.getElementById('proj-drop-new').click());
 
   document.querySelectorAll('[data-info]').forEach(el => {
     el.addEventListener('input', () => {
