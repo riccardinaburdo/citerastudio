@@ -56,7 +56,9 @@ const projectJson = JSON.stringify(data);
       box-shadow:0 2px 12px rgba(0,0,0,.25); }
     .topbar-brand { font-family:var(--brand); font-weight:700; font-size:1rem; color:var(--orange); text-decoration:none; flex-shrink:0; }
     .topbar-sep   { color:rgba(255,255,255,.25); }
-    .topbar-title { font-size:.82rem; color:rgba(255,255,255,.75); flex:1; }
+    .topbar-title { font-size:.82rem; color:rgba(255,255,255,.75); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .topbar-project { font-size:.72rem; color:rgba(255,255,255,.5); }
+    .topbar-project strong { color:rgba(255,255,255,.9); font-weight:600; }
     .save-status  { font-size:.75rem; color:rgba(255,255,255,.7); margin-right:.25rem; min-width:80px; text-align:right; }
     .btn-top { padding:.3rem .9rem; border:1px solid rgba(255,255,255,.3); background:transparent;
       color:#fff; border-radius:5px; font-size:.75rem; cursor:pointer; }
@@ -196,7 +198,15 @@ const projectJson = JSON.stringify(data);
     .legend-item { display:flex; align-items:center; gap:.4rem; }
     .auto-legend { display:inline-block; width:28px; height:12px; background:#f0f6ff;
       border:1px solid #c7d9f0; border-radius:3px; vertical-align:middle; }
-    @media(max-width:900px) { .form-grid { grid-template-columns:1fr; } .contractor-grid { grid-template-columns:1fr; } }
+    .projects-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.2rem; }
+    .proj-card { padding:1.4rem; display:flex; flex-direction:column; gap:.75rem; }
+    .proj-card--current { border-color:var(--navy); background:#f0f6ff; }
+    .proj-name { font-size:.95rem; font-weight:700; color:var(--navy); }
+    .proj-meta { font-size:.72rem; color:var(--slate); display:flex; flex-direction:column; gap:.15rem; }
+    .proj-badge { display:inline-block; font-size:.55rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; background:var(--navy); color:#fff; padding:.15rem .5rem; border-radius:10px; }
+    .proj-card-footer { margin-top:auto; padding-top:.75rem; border-top:1px solid var(--g2); display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+    .proj-active-label { font-size:.72rem; color:var(--navy); font-weight:600; }
+    @media(max-width:900px) { .form-grid { grid-template-columns:1fr; } .contractor-grid { grid-template-columns:1fr; } .projects-grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -204,21 +214,49 @@ const projectJson = JSON.stringify(data);
 <div class="topbar">
   <a href="/" class="topbar-brand">citerastudio</a>
   <span class="topbar-sep">|</span>
-  <span class="topbar-title">Admin Dashboard</span>
+  <span class="topbar-title">Admin</span>
+  <span class="topbar-project"><strong>{project.name}</strong></span>
   <span id="save-status" class="save-status"></span>
   <button id="save-all-btn" class="btn-save-all">Save All</button>
-  <button id="btn-new-project" class="btn-top" style="margin-left:.5rem">+ New Project</button>
-  <a href={`/area-riservata/portal?p=${projectId}`} class="btn-top">Client Portal</a>
+  <a href={`/area-riservata/portal?p=${projectId}`} class="btn-top" style="margin-left:.5rem">Client Portal</a>
   <a href="/area-riservata/admin-mockup" class="btn-top" style="opacity:.5;font-size:.68rem">Mockup</a>
 </div>
 
 <div class="tabs">
+  <button class="tab-btn" data-tab="projects">Projects</button>
   <button class="tab-btn active" data-tab="project">Project Info</button>
   <button class="tab-btn" data-tab="contractors">Contractors &amp; Payments</button>
   <button class="tab-btn" data-tab="works">Bill of Works</button>
 </div>
 
 <div class="admin-main">
+
+  <div id="tab-projects" hidden>
+    <div class="section-head">
+      <span class="section-title">All Projects</span>
+      <button id="btn-new-project" class="btn btn-add">+ New Project</button>
+    </div>
+    <div class="projects-grid">
+      {allProjects.map((p: any) => (
+        <div class={`card proj-card${p.id === projectId ? ' proj-card--current' : ''}`}>
+          <div>
+            <div class="proj-name">{p.name}</div>
+            <div class="proj-meta" style="margin-top:.4rem">
+              {p.clientName && <span>{p.clientName}</span>}
+              {p.location   && <span>{p.location}</span>}
+              {p.updated    && <span>Updated: {p.updated}</span>}
+            </div>
+          </div>
+          <div class="proj-card-footer">
+            {p.id === projectId
+              ? <><span class="proj-badge">Current</span><span class="proj-active-label">Now editing</span></>
+              : <a href={`/area-riservata/admin?p=${p.id}`} class="btn btn-primary" style="font-size:.78rem">Open project →</a>
+            }
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
 
   <div id="tab-project">
     <div class="section-head">
@@ -611,13 +649,34 @@ const projectJson = JSON.stringify(data);
   document.querySelectorAll('.save-trigger').forEach(btn => btn.addEventListener('click', saveAll));
 
   const tabs = document.querySelectorAll('.tab-btn');
-  const panels = { project: document.getElementById('tab-project'), contractors: document.getElementById('tab-contractors'), works: document.getElementById('tab-works') };
+  const panels = {
+    projects:    document.getElementById('tab-projects'),
+    project:     document.getElementById('tab-project'),
+    contractors: document.getElementById('tab-contractors'),
+    works:       document.getElementById('tab-works'),
+  };
   tabs.forEach(btn => {
     btn.addEventListener('click', () => {
       tabs.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       Object.entries(panels).forEach(([k, el]) => { if (el) el.hidden = (k !== btn.dataset.tab); });
     });
+  });
+
+  // New Project button (in Projects tab)
+  document.getElementById('btn-new-project').addEventListener('click', async () => {
+    const name = prompt('Project name:')?.trim();
+    if (!name) return;
+    const btn = document.getElementById('btn-new-project');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      const res  = await fetch('/api/area-riservata/projects', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
+      });
+      const json = await res.json();
+      if (json.ok) { window.location.href = `/area-riservata/admin?p=${json.id}`; }
+      else { alert('Error: ' + json.error); btn.disabled = false; btn.textContent = '+ New Project'; }
+    } catch { alert('Network error'); btn.disabled = false; btn.textContent = '+ New Project'; }
   });
 
   document.querySelectorAll('[data-info]').forEach(el => {
@@ -952,21 +1011,6 @@ const projectJson = JSON.stringify(data);
     </tr>`);
   });
 
-  // ── New Project ───────────────────────────────────────────────────────────
-  document.getElementById('btn-new-project').addEventListener('click', async () => {
-    const name = prompt('Project name:')?.trim();
-    if (!name) return;
-    const btn = document.getElementById('btn-new-project');
-    btn.disabled = true; btn.textContent = 'Creating…';
-    try {
-      const res  = await fetch('/api/area-riservata/projects', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
-      });
-      const json = await res.json();
-      if (json.ok) { window.location.href = `/area-riservata/admin?p=${json.id}`; }
-      else { alert('Error: ' + json.error); btn.disabled = false; btn.textContent = '+ New Project'; }
-    } catch { alert('Network error'); btn.disabled = false; btn.textContent = '+ New Project'; }
-  });
 </script>
 </body>
 </html>

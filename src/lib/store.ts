@@ -79,7 +79,13 @@ export async function saveProject(data: ProjectData): Promise<void> {
   if (db) {
     await db.set(pk(id), data);
     const idx = (await db.get<{ id: string; name: string }[]>(INDEX_KEY)) ?? [];
-    const entry = { id, name: data.info.name };
+    const entry = {
+      id,
+      name: data.info.name,
+      clientName: data.info.clientName || '',
+      location: data.info.location || '',
+      updated: data.info.updated || '',
+    };
     const updated = idx.some(p => p.id === id)
       ? idx.map(p => p.id === id ? entry : p)
       : [...idx, entry];
@@ -93,7 +99,13 @@ export async function saveProject(data: ProjectData): Promise<void> {
       const { readFileSync } = await import('node:fs');
       idx = JSON.parse(readFileSync(new URL('../../../data/_index.json', import.meta.url)).toString());
     } catch {}
-    const entry = { id, name: data.info.name };
+    const entry = {
+      id,
+      name: data.info.name,
+      clientName: data.info.clientName || '',
+      location: data.info.location || '',
+      updated: data.info.updated || '',
+    };
     const updated = idx.some(p => p.id === id) ? idx.map(p => p.id === id ? entry : p) : [...idx, entry];
     await devWrite('_index', updated);
     return;
