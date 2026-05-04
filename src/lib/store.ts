@@ -113,6 +113,30 @@ export async function saveProject(data: ProjectData): Promise<void> {
   throw new Error('No storage backend configured');
 }
 
+export async function deleteProject(id: string): Promise<void> {
+  const db = await getKV();
+  if (db) {
+    await db.del(pk(id));
+    const idx = (await db.get<{ id: string }[]>(INDEX_KEY)) ?? [];
+    await db.set(INDEX_KEY, idx.filter(p => p.id !== id));
+    return;
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const { unlinkSync } = await import('node:fs');
+      unlinkSync(new URL(`../../../data/${id}.json`, import.meta.url));
+    } catch {}
+    let idx: { id: string }[] = [];
+    try {
+      const { readFileSync } = await import('node:fs');
+      idx = JSON.parse(readFileSync(new URL('../../../data/_index.json', import.meta.url)).toString());
+    } catch {}
+    await devWrite('_index', idx.filter(p => p.id !== id));
+    return;
+  }
+  throw new Error('No storage backend configured');
+}
+
 export async function createProject(name: string): Promise<string> {
   const slug = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

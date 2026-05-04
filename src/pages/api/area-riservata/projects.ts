@@ -1,6 +1,6 @@
 export const prerender = false;
 import type { APIRoute } from 'astro';
-import { listProjects, createProject } from '../../../lib/store';
+import { listProjects, createProject, deleteProject } from '../../../lib/store';
 
 export const GET: APIRoute = async () => {
   const data = await listProjects();
@@ -25,5 +25,16 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ ok: false, error: err.message }), {
       status: 500, headers: { 'Content-Type': 'application/json' }
     });
+  }
+};
+
+export const DELETE: APIRoute = async ({ url }) => {
+  try {
+    const id = url.searchParams.get('id');
+    if (!id) return new Response(JSON.stringify({ ok: false, error: 'id required' }), { status: 400 });
+    await deleteProject(id);
+    return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500 });
   }
 };
