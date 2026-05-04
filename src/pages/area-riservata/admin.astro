@@ -181,10 +181,13 @@ const projectJson = JSON.stringify(data);
     table.works tbody tr.item:hover td { background:#f8fafc; }
     table.works tbody tr.item.extra-row td { background:#fffdf5; }
     .item-id  { font-size:.65rem; font-family:monospace; color:var(--g3); white-space:nowrap; }
-    .auto-cell { background:#f0f6ff; font-family:monospace; font-size:.72rem; text-align:right;
+    .auto-cell { background:#f0f6ff !important; font-family:monospace; font-size:.72rem; text-align:right;
       color:var(--navy); white-space:nowrap; position:relative; }
     .auto-cell::after { content:'auto'; position:absolute; bottom:2px; right:4px;
       font-size:.45rem; color:var(--g4); font-family:var(--sans); text-transform:uppercase; letter-spacing:.04em; }
+    .auto-bg  { background:#f0f6ff !important; }
+    .edit-col { background:#fff !important; }
+    table.works tbody tr.item td.editable-cell { background:#fff !important; }
     .editable-cell input { width:100%; border:none; background:transparent; font-size:.75rem;
       font-family:var(--sans); color:var(--text); padding:0; text-align:right; }
     .editable-cell input:focus { outline:1px solid var(--navy); border-radius:3px; background:#fff; padding:0 3px; }
@@ -472,7 +475,7 @@ const projectJson = JSON.stringify(data);
                         {item.extra && <span class="extra-badge">Extra</span>}
                         <span class="brief-link" data-id={item.id} data-cat-id={cat.id} data-brief={item.brief} data-fulldesc={item.fullDesc ?? ''} title="Click to view / edit full description">{item.brief || <em class="brief-empty">+ add description</em>}</span>
                       </td>
-                      <td>
+                      <td class="edit-col">
                         <select data-cat-id={cat.id} data-item-id={item.id} data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">
                           {['m²','m³','lm','unit','lump','kg'].map((u:string) => <option selected={item.unit===u}>{u}</option>)}
                         </select>
@@ -489,7 +492,7 @@ const projectJson = JSON.stringify(data);
                         {overrun && <span class="overrun-badge">↑</span>}
                       </td>
                       <td class="auto-cell auto-cell-done">{fmt(item.valueDone)}</td>
-                      <td style="min-width:90px">
+                      <td class="auto-bg" style="min-width:90px">
                         {item.extra ? '–' : item.perc !== null ? (
                           <div class="perc-wrap">
                             <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
@@ -497,14 +500,14 @@ const projectJson = JSON.stringify(data);
                           </div>
                         ) : '–'}
                       </td>
-                      <td>
+                      <td class="auto-bg">
                         {overrun ? <span class="status-badge status-overrun">Overrun</span>
-                          : item.extra ? (item.done > 0 ? <span class="status-badge status-progress">In Progress</span> : <span class="status-badge status-pending">Not Started</span>)
+                          : item.extra ? (item.done > 0 ? <span class="status-badge status-complete">Complete</span> : <span class="status-badge status-pending">Not Started</span>)
                           : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
                           : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
                           : <span class="status-badge status-pending">Not Started</span>}
                       </td>
-                      <td>
+                      <td class="edit-col">
                         <select data-cat-id={cat.id} data-item-id={item.id} data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%">
                           <option value="">— none —</option>
                           {contractors.map(c => <option value={c.id} selected={item.contractor===c.id}>{c.name}</option>)}
@@ -619,30 +622,27 @@ const projectJson = JSON.stringify(data);
 </div>
 
 <div id="new-item-modal" class="modal-overlay">
-  <div class="modal-box" style="max-width:380px">
+  <div class="modal-box" style="max-width:320px">
     <div class="modal-header">
       <span style="font-size:.8rem;font-weight:700">New Work Item</span>
+      <span id="new-item-cat-label" style="font-size:.72rem;color:var(--g3);margin-left:.5rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
       <button class="modal-close" id="new-item-close">✕</button>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:.9rem">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-        <div>
-          <label>Category</label>
-          <select id="new-item-cat" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff"></select>
-        </div>
-        <div>
-          <label>Number <span style="font-size:.6rem;font-weight:400;color:var(--g3)">e.g. 05</span></label>
-          <input id="new-item-num" type="text" placeholder="01" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:monospace" />
-        </div>
-      </div>
-      <div>
-        <label style="font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--g3)">Item ID preview</label>
-        <div id="new-item-id-preview" style="margin-top:.3rem;font-family:monospace;font-size:.95rem;font-weight:700;color:var(--navy);padding:.4rem .65rem;background:var(--g1);border-radius:6px;border:1px solid var(--g2)">—</div>
-      </div>
-      <div id="new-item-id-error" style="color:var(--red);font-size:.75rem;display:none;padding:.35rem .65rem;background:#fef2f2;border-radius:6px;border:1px solid #fca5a5">This ID already exists in the selected category.</div>
       <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .65rem;background:rgba(245,158,11,.07);border-radius:6px;border:1px solid #fcd34d">
         <input type="checkbox" id="new-item-extra" style="width:14px;height:14px;accent-color:var(--amber);cursor:pointer" />
         <label for="new-item-extra" style="font-size:.8rem;cursor:pointer;font-weight:500">Extra / variation work</label>
+      </div>
+      <div id="new-item-status-row" style="display:none">
+        <label style="font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--g3)">Initial status</label>
+        <div style="display:flex;gap:.5rem;margin-top:.4rem">
+          <label style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;cursor:pointer;padding:.4rem .75rem;border:1px solid var(--g2);border-radius:6px;flex:1;justify-content:center">
+            <input type="radio" name="new-item-status" value="pending" checked style="accent-color:var(--navy)" /> Not Started
+          </label>
+          <label style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;cursor:pointer;padding:.4rem .75rem;border:1px solid var(--g2);border-radius:6px;flex:1;justify-content:center">
+            <input type="radio" name="new-item-status" value="complete" style="accent-color:var(--navy)" /> Complete
+          </label>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -839,7 +839,7 @@ const projectJson = JSON.stringify(data);
     const statusSpan = row.querySelector('.status-badge');
     if (statusSpan) {
       if (item.extra) {
-        if ((item.done || 0) > 0) { statusSpan.className = 'status-badge status-progress'; statusSpan.textContent = 'In Progress'; }
+        if ((item.done || 0) > 0) { statusSpan.className = 'status-badge status-complete'; statusSpan.textContent = 'Complete'; }
         else                      { statusSpan.className = 'status-badge status-pending';  statusSpan.textContent = 'Not Started'; }
       } else if (overrun)              { statusSpan.className = 'status-badge status-overrun';  statusSpan.textContent = 'Overrun'; }
       else if (percActual >= 100) { statusSpan.className = 'status-badge status-complete'; statusSpan.textContent = 'Complete'; }
@@ -1116,105 +1116,67 @@ const projectJson = JSON.stringify(data);
         ${item.extra?'<span class="extra-badge">Extra</span>':''}
         <span class="brief-link" data-id="${item.id}" data-cat-id="${catId}" data-brief="" data-fulldesc="" title="Click to view / edit full description"><em class="brief-empty">+ add description</em></span>
       </td>
-      <td><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">${['m²','m³','lm','unit','lump','kg'].map(u=>`<option${item.unit===u?' selected':''}>${u}</option>`).join('')}</select></td>
+      <td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">${['m²','m³','lm','unit','lump','kg'].map(u=>`<option${item.unit===u?' selected':''}>${u}</option>`).join('')}</select></td>
       <td class="editable-cell"><input type="number" value="" ${qtyAttrs} data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" /></td>
       <td class="editable-cell"><input type="number" value="0" step="0.01" data-cat-id="${catId}" data-item-id="${item.id}" data-field="price" /></td>
       <td class="auto-cell auto-cell-budget">${item.extra?'–':'€ 0.00'}</td>
-      <td class="editable-cell"><input type="number" value="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="done" /></td>
+      <td class="editable-cell"><input type="number" value="${item.done||0}" data-cat-id="${catId}" data-item-id="${item.id}" data-field="done" /></td>
       <td class="auto-cell auto-cell-done">€ 0.00</td>
-      <td style="min-width:90px">${item.extra
+      <td class="auto-bg" style="min-width:90px">${item.extra
         ? '–'
         : '<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:0%;background:#cbd5e1"></div></div><span class="perc-num" style="color:#cbd5e1">0%</span></div>'}</td>
-      <td><span class="status-badge status-pending">Not Started</span></td>
-      <td><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%"><option value="">— none —</option>${opts}</select></td>
+      <td class="auto-bg">${item.extra
+        ? (item.done > 0 ? '<span class="status-badge status-complete">Complete</span>' : '<span class="status-badge status-pending">Not Started</span>')
+        : '<span class="status-badge status-pending">Not Started</span>'}</td>
+      <td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%"><option value="">— none —</option>${opts}</select></td>
       <td style="white-space:nowrap"><button class="btn-icon btn-del-item" data-cat-id="${catId}" data-item-id="${item.id}" title="Delete" style="margin-left:.2rem">🗑</button></td>
     </tr>`;
   }
 
   // ── New Item Modal ────────────────────────────────────────────────────────
-  const newItemModal   = document.getElementById('new-item-modal');
-  const newItemCatSel  = document.getElementById('new-item-cat');
-  const newItemNumInp  = document.getElementById('new-item-num');
-  const newItemPreview = document.getElementById('new-item-id-preview');
-  const newItemError   = document.getElementById('new-item-id-error');
-  const newItemExtra   = document.getElementById('new-item-extra');
-  const newItemConfirm = document.getElementById('new-item-confirm');
+  const newItemModal     = document.getElementById('new-item-modal');
+  const newItemCatLabel  = document.getElementById('new-item-cat-label');
+  const newItemExtra     = document.getElementById('new-item-extra');
+  const newItemStatusRow = document.getElementById('new-item-status-row');
+  const newItemConfirm   = document.getElementById('new-item-confirm');
+  let _newItemCatId = null;
 
   function itemIdNum(id) { const m = id.match(/\.(\d+)$/); return m ? parseInt(m[1]) : 0; }
 
   function openNewItemModal(catId, isExtra) {
+    _newItemCatId = catId;
+    const cat = state.categories.find(c => c.id === catId);
+    newItemCatLabel.textContent = cat ? `${cat.id} — ${cat.label}` : catId;
     newItemExtra.checked = isExtra;
-    newItemCatSel.innerHTML = state.categories.map(c =>
-      `<option value="${c.id}"${c.id === catId ? ' selected' : ''}>${c.id} — ${c.label}</option>`
-    ).join('');
-    prefillNextNum();
-    newItemError.style.display = 'none';
+    newItemStatusRow.style.display = isExtra ? 'block' : 'none';
+    const pending = document.querySelector('input[name="new-item-status"][value="pending"]');
+    if (pending) pending.checked = true;
     newItemModal.classList.add('is-open');
-    newItemNumInp.focus();
-    newItemNumInp.select();
   }
 
-  function prefillNextNum() {
-    const cat = state.categories.find(c => c.id === newItemCatSel.value);
-    if (!cat) return;
-    const nums = cat.items.map(i => itemIdNum(i.id));
-    const next = (nums.length ? Math.max(...nums) : 0) + 1;
-    newItemNumInp.value = String(next).padStart(2, '0');
-    updateNewItemPreview();
-  }
+  newItemExtra.addEventListener('change', () => {
+    newItemStatusRow.style.display = newItemExtra.checked ? 'block' : 'none';
+  });
 
-  function getNewItemId() {
-    const catId = newItemCatSel.value;
-    const raw   = newItemNumInp.value.trim();
-    if (!catId || !raw || isNaN(parseInt(raw))) return null;
-    return `${catId}.${String(parseInt(raw)).padStart(2, '0')}`;
-  }
-
-  function updateNewItemPreview() {
-    const id = getNewItemId();
-    newItemPreview.textContent = id || '—';
-    const exists = id && state.categories.some(c => c.items.some(i => i.id === id));
-    newItemError.style.display = exists ? 'block' : 'none';
-    newItemConfirm.disabled = !id || !!exists;
-  }
-
-  newItemCatSel.addEventListener('change', prefillNextNum);
-  newItemNumInp.addEventListener('input', updateNewItemPreview);
   document.getElementById('new-item-close').addEventListener('click', () => newItemModal.classList.remove('is-open'));
   document.getElementById('new-item-cancel').addEventListener('click', () => newItemModal.classList.remove('is-open'));
 
   newItemConfirm.addEventListener('click', () => {
-    const id = getNewItemId();
-    if (!id) return;
-    const catId   = newItemCatSel.value;
-    const isExtra = newItemExtra.checked;
-    const cat     = state.categories.find(c => c.id === catId);
+    const catId = _newItemCatId;
+    const cat   = state.categories.find(c => c.id === catId);
     if (!cat) return;
-    if (cat.items.some(i => i.id === id)) return;
-
-    const item = { id, brief: '', fullDesc: '', unit: 'm²', qty: 0, price: 0, done: 0, contractor: '', extra: isExtra };
-
-    // Insert in sorted position in state
-    const stateIdx = cat.items.findIndex(i => itemIdNum(i.id) > itemIdNum(id));
-    if (stateIdx === -1) cat.items.push(item);
-    else cat.items.splice(stateIdx, 0, item);
-
-    // Insert in sorted position in DOM
-    const rowHtml = buildItemRow(catId, item);
+    const isExtra   = newItemExtra.checked;
+    const statusVal = document.querySelector('input[name="new-item-status"]:checked')?.value;
+    const done      = (isExtra && statusVal === 'complete') ? 1 : 0;
+    const nums      = cat.items.map(i => itemIdNum(i.id));
+    const next      = (nums.length ? Math.max(...nums) : 0) + 1;
+    const id        = `${catId}.${String(next).padStart(2, '0')}`;
+    const item      = { id, brief: '', fullDesc: '', unit: 'm²', qty: 0, price: 0, done, contractor: '', extra: isExtra };
+    cat.items.push(item);
     const allItemRows = [...document.querySelectorAll(`tr.item[data-cat-id="${catId}"]`)];
-    let insertAfterRow = null;
-    for (const row of allItemRows) {
-      if (itemIdNum(row.dataset.itemId) < itemIdNum(id)) insertAfterRow = row;
-      else break;
-    }
-    if (insertAfterRow) {
-      insertAfterRow.insertAdjacentHTML('afterend', rowHtml);
-    } else if (allItemRows.length > 0) {
-      allItemRows[0].insertAdjacentHTML('beforebegin', rowHtml);
-    } else {
-      document.querySelector(`tr.cat-row[data-cat-id="${catId}"]`).insertAdjacentHTML('afterend', rowHtml);
-    }
-
+    const rowHtml = buildItemRow(catId, item);
+    if (allItemRows.length > 0) allItemRows[allItemRows.length - 1].insertAdjacentHTML('afterend', rowHtml);
+    else document.querySelector(`tr.cat-row[data-cat-id="${catId}"]`).insertAdjacentHTML('afterend', rowHtml);
     newItemModal.classList.remove('is-open');
   });
 
