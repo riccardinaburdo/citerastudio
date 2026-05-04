@@ -438,7 +438,7 @@ const projectJson = JSON.stringify(data);
               <th style="width:105px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
               <th style="width:72px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
               <th style="width:130px">Contractor</th>
-              <th style="width:52px;text-align:center">Extra</th>
+              <th style="width:52px;text-align:center" title="Mark as extra/variation work — excluded from contracted budget">Extra<br/><span style="font-size:.45rem;opacity:.6;font-weight:400">variation</span></th>
               <th style="width:62px"></th>
             </tr>
           </thead>
@@ -514,7 +514,7 @@ const projectJson = JSON.stringify(data);
                         </select>
                       </td>
                       <td class="toggle-wrapper">
-                        <input type="checkbox" class="extra-toggle" checked={item.extra} data-cat-id={cat.id} data-item-id={item.id} data-field="extra" title="Mark as extra works" />
+                        <input type="checkbox" class="extra-toggle" checked={item.extra} data-cat-id={cat.id} data-item-id={item.id} data-field="extra" title="Extra / variation work — not in contracted budget" />
                       </td>
                       <td style="white-space:nowrap">
                         <button class="btn-icon btn-del-item" data-cat-id={cat.id} data-item-id={item.id} title="Delete" style="margin-left:.2rem">🗑</button>
@@ -821,6 +821,9 @@ const projectJson = JSON.stringify(data);
     const btn = e.target.closest('.btn-del-item');
     if (!btn) return;
     const { catId, itemId } = btn.dataset;
+    const item = state.categories.find(c => c.id === catId)?.items.find(i => i.id === itemId);
+    const label = item?.brief ? `"${item.brief}"` : `item ${itemId}`;
+    if (!confirm(`Delete ${label}?\n\nThis cannot be undone.`)) return;
     const cat = state.categories.find(c => c.id === catId);
     if (cat) cat.items = cat.items.filter(i => i.id !== itemId);
     btn.closest('tr')?.remove();
