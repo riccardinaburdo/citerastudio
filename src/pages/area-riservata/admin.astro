@@ -618,6 +618,40 @@ const projectJson = JSON.stringify(data);
   </div>
 </div>
 
+<div id="new-item-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <span style="font-size:.8rem;font-weight:700">New Work Item</span>
+      <button class="modal-close" id="new-item-close">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:.9rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div>
+          <label>Category</label>
+          <select id="new-item-cat" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff"></select>
+        </div>
+        <div>
+          <label>Number <span style="font-size:.6rem;font-weight:400;color:var(--g3)">e.g. 05</span></label>
+          <input id="new-item-num" type="text" placeholder="01" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:monospace" />
+        </div>
+      </div>
+      <div>
+        <label style="font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--g3)">Item ID preview</label>
+        <div id="new-item-id-preview" style="margin-top:.3rem;font-family:monospace;font-size:.95rem;font-weight:700;color:var(--navy);padding:.4rem .65rem;background:var(--g1);border-radius:6px;border:1px solid var(--g2)">—</div>
+      </div>
+      <div id="new-item-id-error" style="color:var(--red);font-size:.75rem;display:none;padding:.35rem .65rem;background:#fef2f2;border-radius:6px;border:1px solid #fca5a5">This ID already exists in the selected category.</div>
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .65rem;background:rgba(245,158,11,.07);border-radius:6px;border:1px solid #fcd34d">
+        <input type="checkbox" id="new-item-extra" style="width:14px;height:14px;accent-color:var(--amber);cursor:pointer" />
+        <label for="new-item-extra" style="font-size:.8rem;cursor:pointer;font-weight:500">Extra / variation work</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="new-item-cancel">Cancel</button>
+      <button class="btn btn-primary" id="new-item-confirm">Add Item</button>
+    </div>
+  </div>
+</div>
+
 <div id="desc-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">
@@ -1097,20 +1131,97 @@ const projectJson = JSON.stringify(data);
     </tr>`;
   }
 
+  // ── New Item Modal ────────────────────────────────────────────────────────
+  const newItemModal   = document.getElementById('new-item-modal');
+  const newItemCatSel  = document.getElementById('new-item-cat');
+  const newItemNumInp  = document.getElementById('new-item-num');
+  const newItemPreview = document.getElementById('new-item-id-preview');
+  const newItemError   = document.getElementById('new-item-id-error');
+  const newItemExtra   = document.getElementById('new-item-extra');
+  const newItemConfirm = document.getElementById('new-item-confirm');
+
+  function itemIdNum(id) { const m = id.match(/\.(\d+)$/); return m ? parseInt(m[1]) : 0; }
+
+  function openNewItemModal(catId, isExtra) {
+    newItemExtra.checked = isExtra;
+    newItemCatSel.innerHTML = state.categories.map(c =>
+      `<option value="${c.id}"${c.id === catId ? ' selected' : ''}>${c.id} — ${c.label}</option>`
+    ).join('');
+    prefillNextNum();
+    newItemError.style.display = 'none';
+    newItemModal.classList.add('is-open');
+    newItemNumInp.focus();
+    newItemNumInp.select();
+  }
+
+  function prefillNextNum() {
+    const cat = state.categories.find(c => c.id === newItemCatSel.value);
+    if (!cat) return;
+    const nums = cat.items.map(i => itemIdNum(i.id));
+    const next = (nums.length ? Math.max(...nums) : 0) + 1;
+    newItemNumInp.value = String(next).padStart(2, '0');
+    updateNewItemPreview();
+  }
+
+  function getNewItemId() {
+    const catId = newItemCatSel.value;
+    const raw   = newItemNumInp.value.trim();
+    if (!catId || !raw || isNaN(parseInt(raw))) return null;
+    return `${catId}.${String(parseInt(raw)).padStart(2, '0')}`;
+  }
+
+  function updateNewItemPreview() {
+    const id = getNewItemId();
+    newItemPreview.textContent = id || '—';
+    const exists = id && state.categories.some(c => c.items.some(i => i.id === id));
+    newItemError.style.display = exists ? 'block' : 'none';
+    newItemConfirm.disabled = !id || !!exists;
+  }
+
+  newItemCatSel.addEventListener('change', prefillNextNum);
+  newItemNumInp.addEventListener('input', updateNewItemPreview);
+  document.getElementById('new-item-close').addEventListener('click', () => newItemModal.classList.remove('is-open'));
+  document.getElementById('new-item-cancel').addEventListener('click', () => newItemModal.classList.remove('is-open'));
+
+  newItemConfirm.addEventListener('click', () => {
+    const id = getNewItemId();
+    if (!id) return;
+    const catId   = newItemCatSel.value;
+    const isExtra = newItemExtra.checked;
+    const cat     = state.categories.find(c => c.id === catId);
+    if (!cat) return;
+    if (cat.items.some(i => i.id === id)) return;
+
+    const item = { id, brief: '', fullDesc: '', unit: 'm²', qty: 0, price: 0, done: 0, contractor: '', extra: isExtra };
+
+    // Insert in sorted position in state
+    const stateIdx = cat.items.findIndex(i => itemIdNum(i.id) > itemIdNum(id));
+    if (stateIdx === -1) cat.items.push(item);
+    else cat.items.splice(stateIdx, 0, item);
+
+    // Insert in sorted position in DOM
+    const rowHtml = buildItemRow(catId, item);
+    const allItemRows = [...document.querySelectorAll(`tr.item[data-cat-id="${catId}"]`)];
+    let insertAfterRow = null;
+    for (const row of allItemRows) {
+      if (itemIdNum(row.dataset.itemId) < itemIdNum(id)) insertAfterRow = row;
+      else break;
+    }
+    if (insertAfterRow) {
+      insertAfterRow.insertAdjacentHTML('afterend', rowHtml);
+    } else if (allItemRows.length > 0) {
+      allItemRows[0].insertAdjacentHTML('beforebegin', rowHtml);
+    } else {
+      document.querySelector(`tr.cat-row[data-cat-id="${catId}"]`).insertAdjacentHTML('afterend', rowHtml);
+    }
+
+    newItemModal.classList.remove('is-open');
+  });
+
   document.addEventListener('click', e => {
     const btn = e.target.closest('.btn-add-item');
     if (!btn) return;
-    const catId   = btn.dataset.catId;
-    const isExtra = btn.dataset.extra === 'true';
-    const cat     = state.categories.find(c => c.id === catId);
-    if (!cat) return;
-    const nums  = cat.items.map(i => { const m = i.id.match(/\.(\d+)$/); return m ? parseInt(m[1]) : 0; });
-    const next  = (nums.length ? Math.max(...nums) : 0) + 1;
-    const newId = `${catId}.${String(next).padStart(2,'0')}`;
-    const item  = { id: newId, brief: '', fullDesc: '', unit: 'm²', qty: 0, price: 0, done: 0, contractor: '', extra: isExtra };
-    cat.items.push(item);
-    const rows = [...document.querySelectorAll(`tr[data-cat-id="${catId}"]`)];
-    rows[rows.length - 1].insertAdjacentHTML('afterend', buildItemRow(catId, item));
+    openNewItemModal(btn.dataset.catId, btn.dataset.extra === 'true');
   });
 
   // ── Add Category ──────────────────────────────────────────────────────────
