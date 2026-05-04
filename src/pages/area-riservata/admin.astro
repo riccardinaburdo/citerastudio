@@ -260,7 +260,10 @@ const projectJson = JSON.stringify(data);
   <div id="tab-projects" hidden>
     <div class="section-head">
       <span class="section-title">All Projects</span>
-      <button id="btn-new-project" class="btn btn-add">+ New Project</button>
+      <div style="display:flex;gap:.6rem">
+        <button id="btn-from-template" class="btn btn-secondary">↺ From template</button>
+        <button id="btn-new-project" class="btn btn-add">+ New Project</button>
+      </div>
     </div>
     <div class="projects-grid">
       {allProjects.map((p: any) => (
@@ -730,6 +733,21 @@ const projectJson = JSON.stringify(data);
   // New Project button (in Projects tab) — delegates to the same handler
   document.getElementById('btn-new-project').addEventListener('click', () =>
     document.getElementById('proj-drop-new').click());
+
+  // From template button
+  document.getElementById('btn-from-template').addEventListener('click', async () => {
+    const name = prompt('Project name (will be pre-filled with example data):')?.trim();
+    if (!name) return;
+    const btn = document.getElementById('btn-from-template');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    const res  = await fetch('/api/area-riservata/projects', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, template: true })
+    });
+    const json = await res.json();
+    if (json.ok) window.location.href = `/area-riservata/admin?p=${json.id}`;
+    else { alert('Error: ' + json.error); btn.disabled = false; btn.textContent = '↺ From template'; }
+  });
 
   document.querySelectorAll('[data-info]').forEach(el => {
     el.addEventListener('input', () => {

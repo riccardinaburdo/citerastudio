@@ -137,6 +137,17 @@ export async function deleteProject(id: string): Promise<void> {
   throw new Error('No storage backend configured');
 }
 
+export async function createProjectFromTemplate(name: string): Promise<string> {
+  const slug = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const id = (slug || 'project') + '-' + Date.now().toString(36);
+  await saveProject({
+    ...structuredClone(defaultData),
+    info: { ...defaultData.info, id, name },
+  });
+  return id;
+}
+
 export async function createProject(name: string): Promise<string> {
   const slug = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
