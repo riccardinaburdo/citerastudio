@@ -628,12 +628,18 @@ const projectJson = JSON.stringify(data);
   <div class="modal-box">
     <div class="modal-header">
       <span id="modal-item-id" class="modal-item-id"></span>
-      <span id="modal-item-brief" class="modal-item-brief"></span>
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
-    <div class="modal-body">
-      <label>Full Description</label>
-      <textarea id="modal-fulldesc" rows="8" placeholder="Enter the full technical description for this work item…"></textarea>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:.9rem">
+      <div>
+        <label>Brief description <span style="font-size:.6rem;font-weight:400;color:var(--g3)">(short text shown in the table)</span></label>
+        <input type="text" id="modal-brief" placeholder="e.g. Reinforced concrete foundations"
+          style="width:100%;padding:.5rem .75rem;border:1px solid var(--g2);border-radius:6px;font-size:.85rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Full technical description</label>
+        <textarea id="modal-fulldesc" rows="7" placeholder="Enter the full technical description for this work item…"></textarea>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
@@ -879,28 +885,39 @@ const projectJson = JSON.stringify(data);
     if (card) openMsModal(card);
   });
 
-  const descModal  = document.getElementById('desc-modal');
-  const modalIdEl  = document.getElementById('modal-item-id');
-  const modalBrief = document.getElementById('modal-item-brief');
-  const modalText  = document.getElementById('modal-fulldesc');
-  let   descActiveCatId = null;
+  const descModal     = document.getElementById('desc-modal');
+  const modalIdEl     = document.getElementById('modal-item-id');
+  const modalBriefInp = document.getElementById('modal-brief');
+  const modalText     = document.getElementById('modal-fulldesc');
+  let   descActiveCatId  = null;
+  let   descActiveLinkEl = null;
 
-  function openDescModal(catId, id, brief, fullDesc) {
-    descActiveCatId = catId;
+  function openDescModal(catId, id, brief, fullDesc, linkEl) {
+    descActiveCatId  = catId;
+    descActiveLinkEl = linkEl ?? null;
     modalIdEl.textContent = id;
-    modalBrief.textContent = brief;
-    modalText.value = fullDesc;
+    modalBriefInp.value   = brief;
+    modalText.value       = fullDesc;
     descModal.classList.add('is-open');
-    modalText.focus();
+    modalBriefInp.focus();
   }
-  function closeDescModal() { descModal.classList.remove('is-open'); descActiveCatId = null; }
+  function closeDescModal() { descModal.classList.remove('is-open'); descActiveCatId = null; descActiveLinkEl = null; }
 
   document.getElementById('modal-close-btn').addEventListener('click', closeDescModal);
   document.getElementById('modal-cancel-btn').addEventListener('click', closeDescModal);
   document.getElementById('modal-save-btn').addEventListener('click', () => {
-    const itemId = modalIdEl.textContent;
+    const itemId  = modalIdEl.textContent;
+    const brief   = modalBriefInp.value.trim();
+    const fullDesc = modalText.value;
     const item = findItem(descActiveCatId, itemId);
-    if (item) item.fullDesc = modalText.value;
+    if (item) { item.brief = brief; item.fullDesc = fullDesc; }
+    if (descActiveLinkEl) {
+      descActiveLinkEl.dataset.brief    = brief;
+      descActiveLinkEl.dataset.fulldesc = fullDesc;
+      descActiveLinkEl.innerHTML = brief
+        ? brief
+        : '<em class="brief-empty">+ add description</em>';
+    }
     closeDescModal();
   });
   descModal.addEventListener('click', e => { if (e.target === descModal) closeDescModal(); });
@@ -1013,23 +1030,31 @@ const projectJson = JSON.stringify(data);
   document.addEventListener('click', e => {
     const el = e.target.closest('.brief-link');
     if (!el) return;
-    openDescModal(el.dataset.catId, el.dataset.id, el.dataset.brief ?? '', el.dataset.fulldesc ?? '');
+    openDescModal(el.dataset.catId, el.dataset.id, el.dataset.brief ?? '', el.dataset.fulldesc ?? '', el);
   });
 
   // ── Add item / Add extra item ─────────────────────────────────────────────
   function buildItemRow(catId, item) {
     const opts = state.contractors.map(c =>
       `<option value="${c.id}"${item.contractor===c.id?' selected':''}>${c.name}</option>`).join('');
+    const qtyAttrs = item.extra
+      ? 'disabled placeholder="–" style="color:var(--g3)"'
+      : 'placeholder=""';
     return `<tr class="item${item.extra?' extra-row':''}" data-cat-id="${catId}" data-item-id="${item.id}">
       <td class="item-id">${item.id}</td>
-      <td style="max-width:220px">${item.extra?'<span class="extra-badge">Extra</span>':''}<span class="brief-link" data-id="${item.id}" data-cat-id="${catId}" data-brief="" data-fulldesc="" title="Click to view / edit full description"><em class="brief-empty">+ add description</em></span></td>
+      <td style="max-width:220px">
+        ${item.extra?'<span class="extra-badge">Extra</span>':''}
+        <span class="brief-link" data-id="${item.id}" data-cat-id="${catId}" data-brief="" data-fulldesc="" title="Click to view / edit full description"><em class="brief-empty">+ add description</em></span>
+      </td>
       <td><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">${['m²','m³','lm','unit','lump','kg'].map(u=>`<option${item.unit===u?' selected':''}>${u}</option>`).join('')}</select></td>
-      <td class="editable-cell"><input type="number" value="" placeholder="${item.extra?'–':''}" ${item.extra?'disabled style="color:var(--g3)"':''} data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" /></td>
+      <td class="editable-cell"><input type="number" value="" ${qtyAttrs} data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" /></td>
       <td class="editable-cell"><input type="number" value="0" step="0.01" data-cat-id="${catId}" data-item-id="${item.id}" data-field="price" /></td>
       <td class="auto-cell auto-cell-budget">${item.extra?'–':'€ 0.00'}</td>
       <td class="editable-cell"><input type="number" value="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="done" /></td>
       <td class="auto-cell auto-cell-done">€ 0.00</td>
-      <td style="min-width:90px">${item.extra?'<span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>':'<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:0%;background:#cbd5e1"></div></div><span class="perc-num" style="color:#cbd5e1">0%</span></div>'}</td>
+      <td style="min-width:90px">${item.extra
+        ? '<span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>'
+        : '<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:0%;background:#cbd5e1"></div></div><span class="perc-num" style="color:#cbd5e1">0%</span></div>'}</td>
       <td>${item.extra?'<span class="status-badge status-extra">Extra</span>':'<span class="status-badge status-pending">Not Started</span>'}</td>
       <td><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%"><option value="">— none —</option>${opts}</select></td>
       <td class="toggle-wrapper"><input type="checkbox" class="extra-toggle"${item.extra?' checked':''} data-cat-id="${catId}" data-item-id="${item.id}" data-field="extra" title="Mark as extra works" /></td>
