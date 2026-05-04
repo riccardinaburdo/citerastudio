@@ -2,8 +2,9 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { getProject, saveProject } from '../../../lib/store';
 
-export const GET: APIRoute = async () => {
-  const data = await getProject();
+export const GET: APIRoute = async ({ url }) => {
+  const id = url.searchParams.get('id') ?? 'default';
+  const data = await getProject(id);
   return new Response(JSON.stringify(data), {
     headers: { 'Content-Type': 'application/json' }
   });

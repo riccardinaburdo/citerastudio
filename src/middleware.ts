@@ -2,7 +2,7 @@ import { defineMiddleware } from 'astro:middleware';
 import { verifyToken } from './lib/auth';
 
 const PROTECTED = ['/area-riservata/portal', '/area-riservata/admin'];
-const ADMIN_ONLY = ['/area-riservata/admin', '/api/area-riservata/project'];
+const ADMIN_ONLY = ['/area-riservata/admin', '/api/area-riservata/project', '/api/area-riservata/projects'];
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;

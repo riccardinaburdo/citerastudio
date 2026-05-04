@@ -33,6 +33,7 @@ export interface Category {
 }
 
 export interface ProjectInfo {
+  id: string;
   name: string;
   location: string;
   clientName: string;

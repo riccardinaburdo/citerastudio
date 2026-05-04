@@ -2,6 +2,7 @@ import type { ProjectData } from './schema';
 
 export const defaultData: ProjectData = {
   info: {
+    id: 'default',
     name: 'Villa delle Azalee — Full Renovation',
     location: 'Contrada Monti Ausoni, Alberobello (BA) — Puglia, Italy',
     clientName: 'Mr. & Mrs. James Thompson',

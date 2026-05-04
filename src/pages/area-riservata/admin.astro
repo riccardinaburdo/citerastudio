@@ -1,9 +1,10 @@
 ---
 export const prerender = false;
-import { getProject } from '../../lib/store';
+import { getProject, listProjects } from '../../lib/store';
 import type { ProjectData } from '../../lib/schema';
 
-const data: ProjectData = await getProject();
+const projectId = Astro.url.searchParams.get('p') ?? 'default';
+const [data, allProjects] = await Promise.all([getProject(projectId), listProjects()]);
 const { info: project, contractors, categories } = data;
 
 const enrich = (item: any) => {
@@ -206,7 +207,8 @@ const projectJson = JSON.stringify(data);
   <span class="topbar-title">Admin Dashboard</span>
   <span id="save-status" class="save-status"></span>
   <button id="save-all-btn" class="btn-save-all">Save All</button>
-  <a href="/area-riservata/portal" class="btn-top" style="margin-left:.5rem">Client Portal</a>
+  <button id="btn-projects" class="btn-top" style="margin-left:.5rem">Projects ▾</button>
+  <a href={`/area-riservata/portal?p=${projectId}`} class="btn-top">Client Portal</a>
   <a href="/area-riservata/admin-mockup" class="btn-top" style="opacity:.5;font-size:.68rem">Mockup</a>
 </div>
 
@@ -472,6 +474,34 @@ const projectJson = JSON.stringify(data);
     </div>
   </div>
 
+</div>
+
+<!-- PROJECTS MODAL -->
+<div id="projects-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-header">
+      <span style="font-size:.8rem;font-weight:700">Projects</span>
+      <button class="modal-close" id="proj-modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:.6rem">
+      {allProjects.map(p => (
+        <a href={`/area-riservata/admin?p=${p.id}`}
+          style={`display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;border-radius:6px;text-decoration:none;border:1px solid ${p.id === projectId ? 'var(--navy)' : 'var(--g2)'};background:${p.id === projectId ? '#f0f6ff' : '#fff'};color:var(--text)`}>
+          <span style="font-weight:600;flex:1;font-size:.82rem">{p.name}</span>
+          {p.id === projectId && <span style="font-size:.62rem;font-weight:700;color:var(--navy);letter-spacing:.04em">CURRENT</span>}
+        </a>
+      ))}
+      <hr style="border:none;border-top:1px solid var(--g2);margin:.1rem 0" />
+      <div>
+        <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g3);margin-bottom:.45rem">New Project</label>
+        <div style="display:flex;gap:.5rem">
+          <input id="new-proj-name" type="text" placeholder="Project name"
+            style="flex:1;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+          <button id="btn-create-proj" class="btn btn-primary">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ADD / EDIT CONTRACTOR MODAL -->
@@ -948,6 +978,34 @@ const projectJson = JSON.stringify(data);
       <td style="text-align:right;font-family:monospace;color:var(--navy)">€ 0.00</td>
       <td colspan="5"></td>
     </tr>`);
+  });
+
+  // ── Projects modal ────────────────────────────────────────────────────────
+  const projModal = document.getElementById('projects-modal');
+  document.getElementById('btn-projects').addEventListener('click', () => {
+    projModal.classList.add('is-open');
+    document.getElementById('new-proj-name').focus();
+  });
+  document.getElementById('proj-modal-close').addEventListener('click', () => projModal.classList.remove('is-open'));
+  projModal.addEventListener('click', e => { if (e.target === projModal) projModal.classList.remove('is-open'); });
+
+  document.getElementById('btn-create-proj').addEventListener('click', async () => {
+    const nameEl = document.getElementById('new-proj-name');
+    const name   = nameEl.value.trim();
+    if (!name) { nameEl.focus(); return; }
+    const btn = document.getElementById('btn-create-proj');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      const res  = await fetch('/api/area-riservata/projects', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
+      });
+      const json = await res.json();
+      if (json.ok) { window.location.href = `/area-riservata/admin?p=${json.id}`; }
+      else { alert('Error: ' + json.error); btn.disabled = false; btn.textContent = 'Create'; }
+    } catch (err) { alert('Network error'); btn.disabled = false; btn.textContent = 'Create'; }
+  });
+  document.getElementById('new-proj-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-create-proj').click();
   });
 </script>
 </body>
