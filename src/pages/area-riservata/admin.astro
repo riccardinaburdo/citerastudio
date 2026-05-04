@@ -438,7 +438,6 @@ const projectJson = JSON.stringify(data);
               <th style="width:105px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
               <th style="width:72px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
               <th style="width:130px">Contractor</th>
-              <th style="width:52px;text-align:center" title="Mark as extra/variation work — excluded from contracted budget">Extra<br/><span style="font-size:.45rem;opacity:.6;font-weight:400">variation</span></th>
               <th style="width:62px"></th>
             </tr>
           </thead>
@@ -449,7 +448,7 @@ const projectJson = JSON.stringify(data);
               const catPerc   = catBudget > 0 ? catDone/catBudget*100 : 0;
               return (<>
                 <tr class="cat-row" data-cat-id={cat.id}>
-                  <td colspan="13">
+                  <td colspan="12">
                     <span class="cat-badge">{cat.id}</span>
                     {cat.label}
                     <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">
@@ -491,9 +490,7 @@ const projectJson = JSON.stringify(data);
                       </td>
                       <td class="auto-cell auto-cell-done">{fmt(item.valueDone)}</td>
                       <td style="min-width:90px">
-                        {item.extra ? (
-                          <span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>
-                        ) : item.perc !== null ? (
+                        {item.extra ? '–' : item.perc !== null ? (
                           <div class="perc-wrap">
                             <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
                             <span class="perc-num" style={`color:${pColor}`}>{item.perc.toFixed(0)}%</span>
@@ -501,8 +498,8 @@ const projectJson = JSON.stringify(data);
                         ) : '–'}
                       </td>
                       <td>
-                        {item.extra ? <span class="status-badge status-extra">Extra</span>
-                          : overrun ? <span class="status-badge status-overrun">Overrun</span>
+                        {overrun ? <span class="status-badge status-overrun">Overrun</span>
+                          : item.extra ? (item.done > 0 ? <span class="status-badge status-progress">In Progress</span> : <span class="status-badge status-pending">Not Started</span>)
                           : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
                           : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
                           : <span class="status-badge status-pending">Not Started</span>}
@@ -512,9 +509,6 @@ const projectJson = JSON.stringify(data);
                           <option value="">— none —</option>
                           {contractors.map(c => <option value={c.id} selected={item.contractor===c.id}>{c.name}</option>)}
                         </select>
-                      </td>
-                      <td class="toggle-wrapper">
-                        <input type="checkbox" class="extra-toggle" checked={item.extra} data-cat-id={cat.id} data-item-id={item.id} data-field="extra" title="Extra / variation work — not in contracted budget" />
                       </td>
                       <td style="white-space:nowrap">
                         <button class="btn-icon btn-del-item" data-cat-id={cat.id} data-item-id={item.id} title="Delete" style="margin-left:.2rem">🗑</button>
@@ -527,7 +521,7 @@ const projectJson = JSON.stringify(data);
                   <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
                   <td></td>
                   <td style="text-align:right;font-family:monospace;color:var(--navy)">{fmt(catDone)}</td>
-                  <td colspan="5"></td>
+                  <td colspan="4"></td>
                 </tr>
               </>);
             })}
@@ -536,7 +530,7 @@ const projectJson = JSON.stringify(data);
               <td style="text-align:right;font-family:monospace">{fmt(enrichedCats.flatMap((c:any)=>c.items).filter((i:any)=>!i.extra).reduce((s:number,i:any)=>s+i.budget,0))}</td>
               <td></td>
               <td style="text-align:right;font-family:monospace">{fmt(enrichedCats.flatMap((c:any)=>c.items).reduce((s:number,i:any)=>s+i.valueDone,0))}</td>
-              <td colspan="5"></td>
+              <td colspan="4"></td>
             </tr>
           </tbody>
         </table>
@@ -809,11 +803,14 @@ const projectJson = JSON.stringify(data);
 
     // Status badge
     const statusSpan = row.querySelector('.status-badge');
-    if (statusSpan && !item.extra) {
-      if (overrun)              { statusSpan.className = 'status-badge status-overrun';  statusSpan.textContent = 'Overrun'; }
+    if (statusSpan) {
+      if (item.extra) {
+        if ((item.done || 0) > 0) { statusSpan.className = 'status-badge status-progress'; statusSpan.textContent = 'In Progress'; }
+        else                      { statusSpan.className = 'status-badge status-pending';  statusSpan.textContent = 'Not Started'; }
+      } else if (overrun)              { statusSpan.className = 'status-badge status-overrun';  statusSpan.textContent = 'Overrun'; }
       else if (percActual >= 100) { statusSpan.className = 'status-badge status-complete'; statusSpan.textContent = 'Complete'; }
       else if (percActual > 0)    { statusSpan.className = 'status-badge status-progress'; statusSpan.textContent = 'In Progress'; }
-      else                      { statusSpan.className = 'status-badge status-pending';  statusSpan.textContent = 'Not Started'; }
+      else                        { statusSpan.className = 'status-badge status-pending';  statusSpan.textContent = 'Not Started'; }
     }
   });
 
@@ -1092,11 +1089,10 @@ const projectJson = JSON.stringify(data);
       <td class="editable-cell"><input type="number" value="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="done" /></td>
       <td class="auto-cell auto-cell-done">€ 0.00</td>
       <td style="min-width:90px">${item.extra
-        ? '<span style="font-size:.68rem;color:var(--amber);font-weight:600">Extra works</span>'
+        ? '–'
         : '<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:0%;background:#cbd5e1"></div></div><span class="perc-num" style="color:#cbd5e1">0%</span></div>'}</td>
-      <td>${item.extra?'<span class="status-badge status-extra">Extra</span>':'<span class="status-badge status-pending">Not Started</span>'}</td>
+      <td><span class="status-badge status-pending">Not Started</span></td>
       <td><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%"><option value="">— none —</option>${opts}</select></td>
-      <td class="toggle-wrapper"><input type="checkbox" class="extra-toggle"${item.extra?' checked':''} data-cat-id="${catId}" data-item-id="${item.id}" data-field="extra" title="Mark as extra works" /></td>
       <td style="white-space:nowrap"><button class="btn-icon btn-del-item" data-cat-id="${catId}" data-item-id="${item.id}" title="Delete" style="margin-left:.2rem">🗑</button></td>
     </tr>`;
   }
@@ -1127,7 +1123,7 @@ const projectJson = JSON.stringify(data);
     state.categories.push({ id, label, items: [] });
     const grandTotal = document.querySelector('table.works tbody tr.grand-total');
     grandTotal.insertAdjacentHTML('beforebegin', `<tr class="cat-row" data-cat-id="${id}">
-      <td colspan="13">
+      <td colspan="12">
         <span class="cat-badge">${id}</span> ${label}
         <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">Budget: € 0.00 &nbsp;|&nbsp; Done: € 0.00 &nbsp;|&nbsp; 0%</span>
         <span style="float:right;display:flex;gap:.3rem;margin-top:-.1rem">
@@ -1141,7 +1137,7 @@ const projectJson = JSON.stringify(data);
       <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category ${id} subtotal</td>
       <td style="text-align:right;font-family:monospace">€ 0.00</td><td></td>
       <td style="text-align:right;font-family:monospace;color:var(--navy)">€ 0.00</td>
-      <td colspan="5"></td>
+      <td colspan="4"></td>
     </tr>`);
   });
 
