@@ -414,27 +414,39 @@ const projectJson = JSON.stringify(data);
             <table class="sal-table">
               <thead>
                 <tr>
-                  <th style="width:50px">Ref.</th>
+                  <th style="width:62px">Ref.</th>
                   <th>Milestone</th>
-                  <th style="width:90px">Trigger</th>
-                  <th class="right" style="width:115px">Amount (net) <span class="auto-tag">auto</span></th>
-                  <th style="width:60px"></th>
+                  <th style="width:160px">Trigger</th>
+                  <th class="right" style="width:58px">%</th>
+                  <th class="right" style="width:105px">Amount (net) <span class="auto-tag">auto</span></th>
+                  <th style="width:36px"></th>
                 </tr>
               </thead>
               <tbody>
                 {c.sal.map(m => (
-                  <tr data-pct={m.pct} data-sal-id={m.id}>
-                    <td class="sal-id">{m.id}</td>
-                    <td>{m.label}</td>
-                    <td class="sal-trigger">{triggerLabel(m)}</td>
-                    <td class="sal-amt">{fmt(budget * m.pct / 100)}</td>
+                  <tr>
+                    <td><input class="sal-ref-input" type="text" value={m.id} style="width:52px;padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>
+                    <td><input class="sal-label-input" type="text" value={m.label} style="width:100%;padding:.22rem .4rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:var(--sans)" /></td>
                     <td style="white-space:nowrap">
-                      <button class="btn-icon btn-del-milestone" title="Delete milestone" style="padding:.15rem .4rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button>
+                      <select class="sal-trigger-type-input" style="padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:var(--sans);background:#fff">
+                        <option value="signing" selected={m.triggerType === 'signing'}>On signing</option>
+                        <option value="percent" selected={m.triggerType === 'percent'}>At %</option>
+                        <option value="final" selected={m.triggerType === 'final'}>Final</option>
+                      </select>
+                      <input class="sal-trigger-pct-input" type="number" min="1" max="99" value={m.triggerPct ?? ''} placeholder="%" style={`width:38px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType !== 'percent' ? 'display:none' : ''}`} />
+                    </td>
+                    <td style="text-align:right;white-space:nowrap">
+                      <input class="sal-pct-input" type="number" min="0" max="100" value={m.pct} style="width:42px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right" />
+                      <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
+                    </td>
+                    <td class="sal-amt">{fmt(budget * m.pct / 100)}</td>
+                    <td>
+                      <button class="btn-icon btn-del-milestone" title="Delete milestone" style="padding:.15rem .35rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button>
                     </td>
                   </tr>
                 ))}
                 <tr class="sal-total">
-                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
+                  <td colspan="4" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
                   <td class="sal-amt sal-total-amt" style={`color:${total === 100 ? 'var(--green)' : 'var(--red)'};font-weight:700`}>
                     {fmt(budget)} {total === 100 ? '✓' : `⚠ ${total}%`}
                   </td>
@@ -976,11 +988,33 @@ const projectJson = JSON.stringify(data);
     document.querySelectorAll(`[data-cat-id="${catId}"]`).forEach(row => row.remove());
   });
 
+  // ── SAL milestone helpers ─────────────────────────────────────────────────
+  function buildSalRowHtml(m, budget) {
+    const inpStyle = 'padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-family:var(--sans)';
+    const triggerOpts = ['signing','percent','final'].map(v =>
+      `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':'Final'}</option>`
+    ).join('');
+    return [
+      `<td><input class="sal-ref-input" type="text" value="${m.id}" style="width:52px;${inpStyle};font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>`,
+      `<td><input class="sal-label-input" type="text" value="${m.label}" style="width:100%;${inpStyle};font-size:.75rem" /></td>`,
+      `<td style="white-space:nowrap">`,
+        `<select class="sal-trigger-type-input" style="${inpStyle};font-size:.72rem;background:#fff">${triggerOpts}</select>`,
+        `<input class="sal-trigger-pct-input" type="number" min="1" max="99" value="${m.triggerPct??''}" placeholder="%" style="width:38px;${inpStyle};font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType!=='percent'?'display:none':''}" />`,
+      `</td>`,
+      `<td style="text-align:right;white-space:nowrap">`,
+        `<input class="sal-pct-input" type="number" min="0" max="100" value="${m.pct}" style="width:42px;${inpStyle};font-size:.72rem;font-family:monospace;text-align:right" />`,
+        `<span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>`,
+      `</td>`,
+      `<td class="sal-amt">${fmtAmt(budget * m.pct / 100)}</td>`,
+      `<td><button class="btn-icon btn-del-milestone" style="padding:.15rem .35rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button></td>`,
+    ].join('');
+  }
+
   function recalcCard(card) {
     const budget = parseFloat(card.dataset.budget ?? '0');
     let totalPct = 0;
     card.querySelectorAll('tbody tr:not(.sal-total)').forEach(row => {
-      const pct = parseFloat(row.dataset.pct ?? '0') || 0;
+      const pct = parseFloat(row.querySelector('.sal-pct-input')?.value ?? '0') || 0;
       totalPct += pct;
       const amtCell = row.querySelector('.sal-amt');
       if (amtCell) amtCell.textContent = fmtAmt(budget * pct / 100);
@@ -992,19 +1026,42 @@ const projectJson = JSON.stringify(data);
     }
   }
 
+  function syncSalFromCard(card) {
+    const ctrId = card.dataset.ctrId;
+    const ctr = state.contractors.find(c => c.id === ctrId);
+    if (!ctr) return;
+    ctr.sal = Array.from(card.querySelectorAll('tbody tr:not(.sal-total)')).map(row => ({
+      id:          row.querySelector('.sal-ref-input')?.value.trim() ?? '',
+      label:       row.querySelector('.sal-label-input')?.value.trim() ?? '',
+      triggerType: row.querySelector('.sal-trigger-type-input')?.value ?? 'signing',
+      triggerPct:  row.querySelector('.sal-trigger-type-input')?.value === 'percent'
+                     ? (parseFloat(row.querySelector('.sal-trigger-pct-input')?.value) || null)
+                     : null,
+      pct:         parseFloat(row.querySelector('.sal-pct-input')?.value) || 0,
+    }));
+  }
+
+  // Inline SAL editing
+  document.addEventListener('input', e => {
+    const row = e.target.closest('.sal-table tbody tr:not(.sal-total)');
+    if (!row) return;
+    const card = row.closest('.ctr-card');
+    if (!card) return;
+    if (e.target.classList.contains('sal-trigger-type-input')) {
+      const pctInput = row.querySelector('.sal-trigger-pct-input');
+      if (pctInput) pctInput.style.display = e.target.value === 'percent' ? '' : 'none';
+    }
+    if (e.target.classList.contains('sal-pct-input')) recalcCard(card);
+    syncSalFromCard(card);
+  });
+
   document.addEventListener('click', e => {
     const btn = e.target.closest('.btn-del-milestone');
     if (!btn) return;
     const row = btn.closest('tr');
     const card = btn.closest('.ctr-card');
-    const ctrId = card?.dataset.ctrId;
-    const salId = row?.dataset.salId;
-    if (ctrId && salId) {
-      const ctr = state.contractors.find(c => c.id === ctrId);
-      if (ctr) ctr.sal = ctr.sal.filter(m => m.id !== salId);
-    }
     row?.remove();
-    if (card) recalcCard(card);
+    if (card) { recalcCard(card); syncSalFromCard(card); }
   });
 
   const msModal       = document.getElementById('milestone-modal');
@@ -1035,24 +1092,19 @@ const projectJson = JSON.stringify(data);
 
   document.getElementById('ms-save-btn').addEventListener('click', () => {
     if (!msTargetCard) return;
-    const ref = msRef.value.trim() || '—';
-    const label = msLabel.value.trim() || 'New Milestone';
-    const pct = parseFloat(msPct.value) || 0;
-    const ttype = msTriggerType.value;
-    const tpct = parseFloat(msTriggerPct.value) || null;
-    const triggerTxt = ttype === 'signing' ? 'On signing' : ttype === 'final' ? 'Final works' : `at ${tpct}%`;
+    const ref    = msRef.value.trim() || '—';
+    const label  = msLabel.value.trim() || 'New Milestone';
+    const pct    = parseFloat(msPct.value) || 0;
+    const ttype  = msTriggerType.value;
+    const tpct   = parseFloat(msTriggerPct.value) || null;
     const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
-    const ctrId = msTargetCard.dataset.ctrId;
-    const ctr = state.contractors.find(c => c.id === ctrId);
-    if (ctr) ctr.sal.push({ id: ref, label, triggerType: ttype, triggerPct: tpct, pct });
-    const tbody = msTargetCard.querySelector('tbody');
+    const tbody  = msTargetCard.querySelector('tbody');
     const totalRow = tbody.querySelector('.sal-total');
     const tr = document.createElement('tr');
-    tr.dataset.pct = String(pct);
-    tr.dataset.salId = ref;
-    tr.innerHTML = `<td class="sal-id">${ref}</td><td>${label}</td><td class="sal-trigger">${triggerTxt}</td><td class="sal-amt">${fmtAmt(budget * pct / 100)}</td><td><button class="btn-icon btn-del-milestone" style="padding:.15rem .4rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button></td>`;
+    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, pct }, budget);
     tbody.insertBefore(tr, totalRow);
     recalcCard(msTargetCard);
+    syncSalFromCard(msTargetCard);
     closeMsModal();
   });
 
