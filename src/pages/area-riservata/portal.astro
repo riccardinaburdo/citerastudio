@@ -31,29 +31,6 @@ const totalDone      = totalDoneContr + totalDoneExtra;
 const totalPerc      = totalBudget > 0 ? (totalDoneContr / totalBudget) * 100 : 0;
 const totalLeft      = totalBudget - totalDoneContr;
 
-const rawMilestones = [
-  { id: 'DEP',  label: 'Initial Deposit',    trigger: 0,   amount: totalBudget * 0.20, note: 'On contract signing' },
-  { id: 'SAL1', label: 'Progress Payment 1', trigger: 30,  amount: totalBudget * 0.10, note: 'Triggered at 30% completion' },
-  { id: 'SAL2', label: 'Progress Payment 2', trigger: 60,  amount: totalBudget * 0.30, note: 'Triggered at 60% completion' },
-  { id: 'SAL3', label: 'Progress Payment 3', trigger: 90,  amount: totalBudget * 0.30, note: 'Triggered at 90% completion' },
-  { id: 'FIN',  label: 'Final Balance',       trigger: 100, amount: totalBudget * 0.10, note: 'On practical completion' },
-];
-let nextFound = false;
-const payMilestones = rawMilestones.map(m => {
-  let status: 'paid' | 'next' | 'pending';
-  if (totalPerc >= m.trigger)   { status = 'paid'; }
-  else if (!nextFound)          { status = 'next'; nextFound = true; }
-  else                          { status = 'pending'; }
-  return { ...m, status };
-});
-const paidToDate     = payMilestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.amount, 0);
-const nextMilestone  = payMilestones.find(m => m.status === 'next');
-const nextPayNet     = nextMilestone?.amount ?? 0;
-const nextPayVat     = nextPayNet * 0.10;
-const nextPayGross   = nextPayNet + nextPayVat;
-const nextTriggerPct = nextMilestone?.trigger ?? 100;
-const progressNeeded = Math.max(0, nextTriggerPct - totalPerc);
-const remainingPend  = payMilestones.filter(m => m.status === 'pending').reduce((s, m) => s + m.amount, 0);
 
 // Per-contractor payment schedules (uses each contractor's sal milestones and their own budget)
 const contractorSchedules = contractors.flatMap(c => {
@@ -138,7 +115,7 @@ const fmtDate = (d: string) => {
     .update-badge .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
     .main { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-    .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 2rem; }
+    .metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 2rem; }
     .metric-card { background: #fff; border-radius: var(--radius); padding: 1.2rem 1.5rem; border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
     .metric-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-3); font-weight: 600; margin-bottom: .5rem; }
     .metric-value { font-size: 1.6rem; font-weight: 700; color: var(--navy); line-height: 1; }
@@ -338,11 +315,6 @@ const fmtDate = (d: string) => {
       <div class="metric-label">Remaining Works <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
       <div class="metric-value">{fmt(totalLeft)}</div>
       <div class="metric-sub">contracted works to execute</div>
-    </div>
-    <div class="metric-card highlight">
-      <div class="metric-label">Next Payment Due</div>
-      <div class="metric-value">{fmt(nextPayGross)}</div>
-      <div class="metric-sub">inc. VAT 10% — triggers at {nextTriggerPct}% ({progressNeeded.toFixed(1)}% to go)</div>
     </div>
   </div>
 
