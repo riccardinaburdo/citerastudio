@@ -1,4 +1,4 @@
-import type { ProjectData } from './schema';
+import type { ProjectData, ProgressUpdate } from './schema';
 
 export const defaultData: ProjectData = {
   info: {
@@ -49,6 +49,11 @@ export const defaultData: ProjectData = {
         { id: 'FIN',  label: 'Final Balance',       triggerType: 'final',    triggerPct: null, pct: 25 },
       ],
     },
+  ],
+  updates: [
+    { num: 3, date: '2024-11-01', note: 'Roofing now 98% complete. Internal finishes progressing well — tiling underway in all units. Doors & windows 78% installed. Plumbing first-fix 100%. Electrical works to start next month.' },
+    { num: 2, date: '2024-09-01', note: 'Structural works substantially complete. Roof waterproofing and insulation installed. First-fix plumbing complete. Internal plaster commenced on ground floor.' },
+    { num: 1, date: '2024-06-01', note: 'All demolition and site preparation works complete. Foundations and ring beams cast. Steel reinforcement 70% in place. Site hoarding and welfare facilities established.' },
   ],
   categories: [
     {

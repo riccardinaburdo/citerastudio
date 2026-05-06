@@ -7,6 +7,7 @@ const role = Astro.locals.role;
 
 const projectData = await getProject();
 const { info: project, contractors, categories: rawCategories } = projectData;
+const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 
 const enrich = (item: typeof rawCategories[0]['items'][0]) => {
   const budget  = item.extra ? 0 : item.qty * item.price;
@@ -569,27 +570,21 @@ const fmtDate = (d: string) => {
     </div>
   </div>
 
-  <div class="section-title">Progress Updates</div>
-  <div class="updates-grid">
-    <div class="update-card latest">
-      <div class="update-num">Progress Update #{project.updateNum} — Latest</div>
-      <div class="update-date">{fmtDate(project.updated)}</div>
-      <div class="update-pct">{totalPerc.toFixed(1)}% <span>overall complete</span></div>
-      <div class="update-note">Roofing now 98% complete. Internal finishes progressing well — tiling underway in all units. Doors &amp; windows 78% installed. Plumbing first-fix 100%. Electrical works to start next month.</div>
-    </div>
-    <div class="update-card">
-      <div class="update-num">Progress Update #2</div>
-      <div class="update-date">September 2024</div>
-      <div class="update-pct">51.6% <span>overall complete</span></div>
-      <div class="update-note">Structural works substantially complete. Roof waterproofing and insulation installed. First-fix plumbing complete. Internal plaster commenced on ground floor.</div>
-    </div>
-    <div class="update-card">
-      <div class="update-num">Progress Update #1</div>
-      <div class="update-date">June 2024</div>
-      <div class="update-pct">26.7% <span>overall complete</span></div>
-      <div class="update-note">All demolition and site preparation works complete. Foundations and ring beams cast. Steel reinforcement 70% in place. Site hoarding and welfare facilities established.</div>
-    </div>
-  </div>
+  {updates.length > 0 && (
+    <>
+      <div class="section-title">Progress Updates</div>
+      <div class="updates-grid">
+        {updates.map((u, i) => (
+          <div class={`update-card${i === 0 ? ' latest' : ''}`}>
+            <div class="update-num">Progress Update #{u.num}{i === 0 ? ' — Latest' : ''}</div>
+            <div class="update-date">{fmtDate(u.date)}</div>
+            {i === 0 && <div class="update-pct">{totalPerc.toFixed(1)}% <span>overall complete</span></div>}
+            {u.note && <div class="update-note">{u.note}</div>}
+          </div>
+        ))}
+      </div>
+    </>
+  )}
 
 </div>
 

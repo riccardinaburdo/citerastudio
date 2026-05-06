@@ -123,6 +123,11 @@ const projectJson = JSON.stringify(data);
     .ctr-budget { font-size:.72rem; color:var(--slate); margin-top:.2rem; }
     .ctr-budget strong { color:var(--navy); }
     .ctr-actions { display:flex; gap:.4rem; flex-shrink:0; }
+    .updates-admin-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+    .updates-admin-table th { font-size:.6rem; text-transform:uppercase; letter-spacing:.05em; color:var(--g3); font-weight:600; padding:.4rem .75rem; border-bottom:1px solid var(--g2); text-align:left; background:var(--g1); }
+    .updates-admin-table td { padding:.5rem .75rem; border-bottom:1px solid var(--g2); vertical-align:top; }
+    .updates-admin-table tr:last-child td { border-bottom:none; }
+    .upd-num-badge { display:inline-block; background:var(--navy); color:#fff; font-size:.68rem; font-weight:700; padding:.2rem .5rem; border-radius:4px; font-family:monospace; }
     .sal-table { width:100%; border-collapse:collapse; font-size:.75rem; margin-top:.3rem; }
     .sal-table th { font-size:.6rem; text-transform:uppercase; letter-spacing:.05em; color:var(--g3);
       font-weight:600; padding:.3rem .6rem; border-bottom:1px solid var(--g2); text-align:left; }
@@ -341,9 +346,39 @@ const projectJson = JSON.stringify(data);
         </div>
         <div class="field">
           <label>Update Number</label>
-          <input type="number" value={project.updateNum} data-info="updateNum" style="width:80px" />
+          <input type="number" id="update-num-field" value={project.updateNum} data-info="updateNum" style="width:80px" />
         </div>
       </div>
+    </div>
+
+    <div class="section-head" style="margin-top:1.5rem">
+      <span class="section-title">Progress Updates</span>
+      <button class="btn btn-add" id="btn-add-update">+ Add Update</button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden">
+      <table class="updates-admin-table" id="updates-admin-table">
+        <thead>
+          <tr>
+            <th style="width:60px">#</th>
+            <th style="width:130px">Date</th>
+            <th>Note</th>
+            <th style="width:48px"></th>
+          </tr>
+        </thead>
+        <tbody id="updates-admin-tbody">
+          {(data.updates ?? []).slice().sort((a, b) => b.num - a.num).map(u => (
+            <tr data-update-num={u.num}>
+              <td><span class="upd-num-badge">#{u.num}</span></td>
+              <td><input type="date" class="upd-date-input" value={u.date} style="width:120px;padding:.3rem .4rem;border:1px solid var(--g2);border-radius:5px;font-size:.78rem" /></td>
+              <td><textarea class="upd-note-input" rows={2} style="width:100%;padding:.3rem .5rem;border:1px solid var(--g2);border-radius:5px;font-size:.78rem;resize:vertical;font-family:var(--sans)">{u.note}</textarea></td>
+              <td><button class="btn-icon btn-del-update" style="color:var(--red);border-color:#fca5a5" title="Delete">🗑</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {(data.updates ?? []).length === 0 && (
+        <div id="updates-empty-msg" style="padding:1.2rem;text-align:center;font-size:.8rem;color:var(--g3)">No progress updates yet. Click "+ Add Update" to add the first one.</div>
+      )}
     </div>
   </div>
 
@@ -766,6 +801,65 @@ const projectJson = JSON.stringify(data);
       const field = el.dataset.info;
       state.info[field] = el.type === 'number' ? parseFloat(el.value) || 0 : el.value;
     });
+  });
+
+  // ── Progress Updates ─────────────────────────────────────────────────────
+  if (!state.updates) state.updates = [];
+
+  function syncUpdatesFromDOM() {
+    const rows = document.querySelectorAll('#updates-admin-tbody tr[data-update-num]');
+    state.updates = Array.from(rows).map(row => ({
+      num:  parseInt(row.dataset.updateNum),
+      date: row.querySelector('.upd-date-input').value,
+      note: row.querySelector('.upd-note-input').value,
+    }));
+  }
+
+  function buildUpdateRow(num, date, note) {
+    const tr = document.createElement('tr');
+    tr.dataset.updateNum = num;
+    tr.innerHTML = [
+      `<td><span class="upd-num-badge">#${num}</span></td>`,
+      `<td><input type="date" class="upd-date-input" value="${date}" style="width:120px;padding:.3rem .4rem;border:1px solid var(--g2);border-radius:5px;font-size:.78rem" /></td>`,
+      `<td><textarea class="upd-note-input" rows="2" style="width:100%;padding:.3rem .5rem;border:1px solid var(--g2);border-radius:5px;font-size:.78rem;resize:vertical;font-family:var(--sans)">${note}</textarea></td>`,
+      `<td><button class="btn-icon btn-del-update" style="color:var(--red);border-color:#fca5a5" title="Delete">🗑</button></td>`,
+    ].join('');
+    return tr;
+  }
+
+  document.getElementById('btn-add-update').addEventListener('click', () => {
+    const nextNum = (state.info.updateNum || 0) + 1;
+    state.info.updateNum = nextNum;
+    const numField = document.getElementById('update-num-field');
+    if (numField) numField.value = nextNum;
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (!state.updates) state.updates = [];
+    state.updates.unshift({ num: nextNum, date: today, note: '' });
+
+    const tbody = document.getElementById('updates-admin-tbody');
+    const emptyMsg = document.getElementById('updates-empty-msg');
+    if (emptyMsg) emptyMsg.remove();
+    tbody.prepend(buildUpdateRow(nextNum, today, ''));
+    tbody.querySelector('.upd-note-input')?.focus();
+  });
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-del-update');
+    if (!btn) return;
+    const row = btn.closest('tr[data-update-num]');
+    if (!row) return;
+    if (!confirm('Delete this progress update?')) return;
+    const num = parseInt(row.dataset.updateNum);
+    state.updates = (state.updates || []).filter(u => u.num !== num);
+    row.remove();
+  });
+
+  document.addEventListener('input', e => {
+    if (e.target.closest('#updates-admin-tbody')) {
+      syncUpdatesFromDOM();
+      return;
+    }
   });
 
   document.addEventListener('input', e => {

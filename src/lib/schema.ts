@@ -46,8 +46,15 @@ export interface ProjectInfo {
   updateNum: number;
 }
 
+export interface ProgressUpdate {
+  num: number;
+  date: string;
+  note: string;
+}
+
 export interface ProjectData {
   info: ProjectInfo;
   contractors: Contractor[];
   categories: Category[];
+  updates: ProgressUpdate[];
 }

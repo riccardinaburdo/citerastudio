@@ -160,6 +160,7 @@ export async function createProject(name: string): Promise<string> {
     },
     contractors: [],
     categories: [],
+    updates: [],
   });
   return id;
 }
