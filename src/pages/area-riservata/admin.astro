@@ -208,6 +208,8 @@ const projectJson = JSON.stringify(data);
     .status-pending  { background:#f1f5f9; color:var(--g3); }
     .status-overrun  { background:#fee2e2; color:var(--red); border:1px solid #fca5a5; }
     .status-extra    { background:#fef3c7; color:#92400e; }
+    .status-badge.is-toggleable { cursor:pointer; user-select:none; }
+    .status-badge.is-toggleable:hover { opacity:.75; }
     tr.subtotal td { background:var(--g1); padding:.35rem .65rem; font-size:.7rem; font-weight:600;
       color:var(--navy); border-top:1px dashed #c7d9f0; border-bottom:2px solid var(--g2); }
     tr.grand-total td { background:var(--navy); color:#fff; padding:.5rem .65rem; font-weight:700; font-size:.78rem; }
@@ -465,8 +467,9 @@ const projectJson = JSON.stringify(data);
                   </td>
                 </tr>
                 {cat.items.map((item:any) => {
-                  const overrun = !item.extra && item.done > item.qty;
-                  const pColor  = overrun ? '#dc2626' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
+                  const overrun       = !item.extra && item.done > item.qty;
+                  const forceComplete = !!item.complete && !overrun && !item.extra;
+                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
                   const barW    = item.perc !== null ? Math.min(item.perc,100) : 0;
                   return (
                     <tr class={`item${item.extra ? ' extra-row' : ''}`} data-cat-id={cat.id} data-item-id={item.id}>
@@ -501,11 +504,16 @@ const projectJson = JSON.stringify(data);
                         ) : '–'}
                       </td>
                       <td class="auto-bg">
-                        {overrun ? <span class="status-badge status-overrun">Overrun</span>
-                          : item.extra ? (item.done > 0 ? <span class="status-badge status-complete">Complete</span> : <span class="status-badge status-pending">Not Started</span>)
-                          : item.perc >= 100 ? <span class="status-badge status-complete">Complete</span>
-                          : item.perc > 0 ? <span class="status-badge status-progress">In Progress</span>
-                          : <span class="status-badge status-pending">Not Started</span>}
+                        {overrun
+                          ? <span class="status-badge status-overrun">Overrun</span>
+                          : item.extra
+                            ? (item.done > 0 ? <span class="status-badge status-complete">Complete</span> : <span class="status-badge status-pending">Not Started</span>)
+                            : (forceComplete || item.perc >= 100)
+                              ? <span class="status-badge status-complete is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to unmark completion">Complete</span>
+                              : item.perc > 0
+                                ? <span class="status-badge status-progress is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to mark as complete">In Progress</span>
+                                : <span class="status-badge status-pending is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to mark as complete">Not Started</span>
+                        }
                       </td>
                       <td class="edit-col">
                         <select data-cat-id={cat.id} data-item-id={item.id} data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%">
@@ -773,10 +781,11 @@ const projectJson = JSON.stringify(data);
 
     const budget   = item.extra ? 0 : (item.qty || 0) * (item.price || 0);
     const valDone  = (item.done || 0) * (item.price || 0);
-    const overrun  = !item.extra && (item.done || 0) > (item.qty || 0);
-    const percActual = (!item.extra && budget > 0) ? (valDone / budget) * 100 : 0;
-    const barW     = Math.min(percActual, 100);
-    const pColor   = overrun ? '#dc2626' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
+    const overrun       = !item.extra && (item.done || 0) > (item.qty || 0);
+    const forceComplete = !!item.complete && !overrun && !item.extra;
+    const percActual    = (!item.extra && budget > 0) ? (valDone / budget) * 100 : 0;
+    const barW          = Math.min(percActual, 100);
+    const pColor        = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
 
     // Auto cells
     const bCell = row.querySelector('.auto-cell-budget');
@@ -811,10 +820,39 @@ const projectJson = JSON.stringify(data);
       if (item.extra) {
         if ((item.done || 0) > 0) { statusSpan.className = 'status-badge status-complete'; statusSpan.textContent = 'Complete'; }
         else                      { statusSpan.className = 'status-badge status-pending';  statusSpan.textContent = 'Not Started'; }
-      } else if (overrun)              { statusSpan.className = 'status-badge status-overrun';  statusSpan.textContent = 'Overrun'; }
-      else if (percActual >= 100) { statusSpan.className = 'status-badge status-complete'; statusSpan.textContent = 'Complete'; }
-      else if (percActual > 0)    { statusSpan.className = 'status-badge status-progress'; statusSpan.textContent = 'In Progress'; }
-      else                        { statusSpan.className = 'status-badge status-pending';  statusSpan.textContent = 'Not Started'; }
+      } else if (overrun)                    { statusSpan.className = 'status-badge status-overrun';  statusSpan.textContent = 'Overrun'; }
+      else if (forceComplete || percActual >= 100) { statusSpan.className = 'status-badge status-complete is-toggleable'; statusSpan.textContent = 'Complete'; }
+      else if (percActual > 0)               { statusSpan.className = 'status-badge status-progress is-toggleable'; statusSpan.textContent = 'In Progress'; }
+      else                                   { statusSpan.className = 'status-badge status-pending is-toggleable';  statusSpan.textContent = 'Not Started'; }
+    }
+  });
+
+  // ── Toggle complete flag ────────────────────────────────────────────────
+  document.addEventListener('click', e => {
+    const badge = e.target.closest('.status-badge.is-toggleable');
+    if (!badge) return;
+    const { catId, itemId } = badge.dataset;
+    if (!catId || !itemId) return;
+    const item = findItem(catId, itemId);
+    if (!item || item.extra) return;
+    item.complete = !item.complete;
+    const row = badge.closest('tr');
+    const overrun = !item.extra && (item.done || 0) > (item.qty || 0);
+    const budget  = (item.qty || 0) * (item.price || 0);
+    const valDone = (item.done || 0) * (item.price || 0);
+    const perc    = budget > 0 ? valDone / budget * 100 : 0;
+    const force   = item.complete && !overrun;
+    const pColor  = overrun ? '#dc2626' : force ? '#22c55e' : perc >= 100 ? '#22c55e' : perc > 0 ? '#f59e0b' : '#cbd5e1';
+    // Update badge
+    if (force || perc >= 100) { badge.className = 'status-badge status-complete is-toggleable'; badge.textContent = 'Complete'; badge.title = 'Click to unmark completion'; }
+    else if (perc > 0)        { badge.className = 'status-badge status-progress is-toggleable'; badge.textContent = 'In Progress'; badge.title = 'Click to mark as complete'; }
+    else                      { badge.className = 'status-badge status-pending is-toggleable';  badge.textContent = 'Not Started'; badge.title = 'Click to mark as complete'; }
+    // Update progress bar color
+    if (row) {
+      const fill = row.querySelector('.perc-fill');
+      const num  = row.querySelector('.perc-num');
+      if (fill) fill.style.background = pColor;
+      if (num)  num.style.color = pColor;
     }
   });
 
@@ -1082,7 +1120,11 @@ const projectJson = JSON.stringify(data);
     const qtyStyle    = isX ? ' style="color:var(--g3)"' : '';
     const qtyPh       = isX ? '–' : '';
     const percHtml    = isX ? '–' : '<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:0%;background:#cbd5e1"></div></div><span class="perc-num" style="color:#cbd5e1">0%</span></div>';
-    const statusHtml  = (isX && item.done > 0) ? '<span class="status-badge status-complete">Complete</span>' : '<span class="status-badge status-pending">Not Started</span>';
+    const statusHtml  = isX
+      ? (item.done > 0 ? '<span class="status-badge status-complete">Complete</span>' : '<span class="status-badge status-pending">Not Started</span>')
+      : item.complete
+        ? `<span class="status-badge status-complete is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to unmark completion">Complete</span>`
+        : `<span class="status-badge status-pending is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to mark as complete">Not Started</span>`;
     const unitOpts    = ['m²','m³','lm','unit','lump','kg'].map(u=>`<option${item.unit===u?' selected':''}>${u}</option>`).join('');
     return [
       `<tr class="item${isX?' extra-row':''}" data-cat-id="${catId}" data-item-id="${item.id}">`,
@@ -1111,7 +1153,7 @@ const projectJson = JSON.stringify(data);
     const nums = cat.items.map(i => itemIdNum(i.id));
     const next = (nums.length ? Math.max(...nums) : 0) + 1;
     const id   = `${catId}.${String(next).padStart(2, '0')}`;
-    const item = { id, brief: '', fullDesc: '', unit: 'm²', qty: 0, price: 0, done: 0, contractor: '', extra: isExtra };
+    const item = { id, brief: '', fullDesc: '', unit: 'm²', qty: 0, price: 0, done: 0, complete: false, contractor: '', extra: isExtra };
     cat.items.push(item);
     const allItemRows = [...document.querySelectorAll(`tr.item[data-cat-id="${catId}"]`)];
     const rowHtml = buildItemRow(catId, item);

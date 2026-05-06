@@ -22,6 +22,7 @@ export interface WorkItem {
   qty: number;        // contracted quantity
   price: number;      // unit price (net ex. VAT)
   done: number;       // quantity done so far
+  complete: boolean;  // manually marked as complete (overrides In Progress status)
   extra: boolean;     // extra/variation work
   contractor: string; // contractor id
 }
