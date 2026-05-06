@@ -41,7 +41,7 @@ const projectJson = JSON.stringify(data);
   <title>Admin Dashboard — {project.name} | CiteraStudio</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
+  <style is:global>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --navy:#1a3a5c; --orange:#FB8503; --green:#22c55e; --red:#dc2626;
@@ -621,32 +621,6 @@ const projectJson = JSON.stringify(data);
   </div>
 </div>
 
-<div id="new-item-modal" class="modal-overlay">
-  <div class="modal-box" style="max-width:320px">
-    <div class="modal-header">
-      <span style="font-size:.8rem;font-weight:700">New Work Item</span>
-      <span id="new-item-cat-label" style="font-size:.72rem;color:var(--g3);margin-left:.5rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-      <button class="modal-close" id="new-item-close">✕</button>
-    </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:.9rem">
-      <div id="new-item-status-row" style="display:none">
-        <label style="font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--g3)">Initial status</label>
-        <div style="display:flex;gap:.5rem;margin-top:.4rem">
-          <label style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;cursor:pointer;padding:.4rem .75rem;border:1px solid var(--g2);border-radius:6px;flex:1;justify-content:center">
-            <input type="radio" name="new-item-status" value="pending" checked style="accent-color:var(--navy)" /> Not Started
-          </label>
-          <label style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;cursor:pointer;padding:.4rem .75rem;border:1px solid var(--g2);border-radius:6px;flex:1;justify-content:center">
-            <input type="radio" name="new-item-status" value="complete" style="accent-color:var(--navy)" /> Complete
-          </label>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="new-item-cancel">Cancel</button>
-      <button class="btn btn-primary" id="new-item-confirm">Add Item</button>
-    </div>
-  </div>
-</div>
 
 <div id="desc-modal" class="modal-overlay">
   <div class="modal-box">
@@ -1128,53 +1102,27 @@ const projectJson = JSON.stringify(data);
     ].join('');
   }
 
-  // ── New Item Modal ────────────────────────────────────────────────────────
-  const newItemModal     = document.getElementById('new-item-modal');
-  const newItemCatLabel  = document.getElementById('new-item-cat-label');
-  const newItemStatusRow = document.getElementById('new-item-status-row');
-  const newItemConfirm   = document.getElementById('new-item-confirm');
-  let _newItemCatId = null;
-  let _newItemIsExtra = false;
-
+  // ── Add item / Add extra item ─────────────────────────────────────────────
   function itemIdNum(id) { const m = id.match(/\.(\d+)$/); return m ? parseInt(m[1]) : 0; }
 
-  function openNewItemModal(catId, isExtra) {
-    _newItemCatId   = catId;
-    _newItemIsExtra = isExtra;
+  function addItem(catId, isExtra) {
     const cat = state.categories.find(c => c.id === catId);
-    newItemCatLabel.textContent = cat ? `${cat.id} — ${cat.label}` : catId;
-    newItemStatusRow.style.display = isExtra ? 'block' : 'none';
-    const pending = document.querySelector('input[name="new-item-status"][value="pending"]');
-    if (pending) pending.checked = true;
-    newItemModal.classList.add('is-open');
-  }
-
-  document.getElementById('new-item-close').addEventListener('click', () => newItemModal.classList.remove('is-open'));
-  document.getElementById('new-item-cancel').addEventListener('click', () => newItemModal.classList.remove('is-open'));
-
-  newItemConfirm.addEventListener('click', () => {
-    const catId   = _newItemCatId;
-    const cat     = state.categories.find(c => c.id === catId);
     if (!cat) return;
-    const isExtra   = _newItemIsExtra;
-    const statusVal = document.querySelector('input[name="new-item-status"]:checked')?.value;
-    const done      = (isExtra && statusVal === 'complete') ? 1 : 0;
-    const nums      = cat.items.map(i => itemIdNum(i.id));
-    const next      = (nums.length ? Math.max(...nums) : 0) + 1;
-    const id        = `${catId}.${String(next).padStart(2, '0')}`;
-    const item      = { id, brief: '', fullDesc: '', unit: 'm²', qty: 0, price: 0, done, contractor: '', extra: isExtra };
+    const nums = cat.items.map(i => itemIdNum(i.id));
+    const next = (nums.length ? Math.max(...nums) : 0) + 1;
+    const id   = `${catId}.${String(next).padStart(2, '0')}`;
+    const item = { id, brief: '', fullDesc: '', unit: 'm²', qty: 0, price: 0, done: 0, contractor: '', extra: isExtra };
     cat.items.push(item);
     const allItemRows = [...document.querySelectorAll(`tr.item[data-cat-id="${catId}"]`)];
     const rowHtml = buildItemRow(catId, item);
     if (allItemRows.length > 0) allItemRows[allItemRows.length - 1].insertAdjacentHTML('afterend', rowHtml);
     else document.querySelector(`tr.cat-row[data-cat-id="${catId}"]`).insertAdjacentHTML('afterend', rowHtml);
-    newItemModal.classList.remove('is-open');
-  });
+  }
 
   document.addEventListener('click', e => {
     const btn = e.target.closest('.btn-add-item');
     if (!btn) return;
-    openNewItemModal(btn.dataset.catId, btn.dataset.extra === 'true');
+    addItem(btn.dataset.catId, btn.dataset.extra === 'true');
   });
 
   // ── Add Category ──────────────────────────────────────────────────────────
