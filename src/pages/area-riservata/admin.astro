@@ -139,7 +139,7 @@ const projectJson = JSON.stringify(data);
       letter-spacing:.05em; background:#f0f6ff; color:var(--navy); border:1px solid #c7d9f0;
       padding:.05rem .35rem; border-radius:3px; margin-left:.4rem; vertical-align:middle; }
     .works-wrap { overflow-x:auto; }
-    table.works { width:100%; border-collapse:collapse; font-size:.75rem; table-layout:fixed; }
+    table.works { width:100%; border-collapse:collapse; font-size:.75rem; }
     table.works thead th { background:var(--navy); color:rgba(255,255,255,.85); padding:.5rem .65rem;
       text-align:left; font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; white-space:nowrap; }
     table.works thead th.right { text-align:right; }
@@ -191,6 +191,9 @@ const projectJson = JSON.stringify(data);
     .editable-cell input { width:100%; border:none; background:transparent; font-size:.75rem;
       font-family:var(--sans); color:var(--text); padding:0; text-align:right; }
     .editable-cell input:focus { outline:1px solid var(--navy); border-radius:3px; background:#fff; padding:0 3px; }
+    input[type=number] { -moz-appearance:textfield; appearance:textfield; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
     .extra-badge { display:inline-block; font-size:.55rem; font-weight:800; text-transform:uppercase;
       padding:.1rem .35rem; border-radius:3px; background:var(--amber); color:#fff; margin-right:.3rem; }
     .overrun-badge { font-size:.62rem; font-weight:700; color:var(--red); }
@@ -1100,30 +1103,29 @@ const projectJson = JSON.stringify(data);
   function buildItemRow(catId, item) {
     const opts = state.contractors.map(c =>
       `<option value="${c.id}"${item.contractor===c.id?' selected':''}>${c.name}</option>`).join('');
-    const qtyAttrs = item.extra
-      ? 'disabled placeholder="–" style="color:var(--g3)"'
-      : 'placeholder=""';
-    return `<tr class="item${item.extra?' extra-row':''}" data-cat-id="${catId}" data-item-id="${item.id}">
-      <td class="item-id">${item.id}</td>
-      <td style="max-width:220px">
-        ${item.extra?'<span class="extra-badge">Extra</span>':''}
-        <span class="brief-link" data-id="${item.id}" data-cat-id="${catId}" data-brief="" data-fulldesc="" title="Click to view / edit full description"><em class="brief-empty">+ add description</em></span>
-      </td>
-      <td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">${['m²','m³','lm','unit','lump','kg'].map(u=>`<option${item.unit===u?' selected':''}>${u}</option>`).join('')}</select></td>
-      <td class="editable-cell"><input type="number" value="" ${qtyAttrs} data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" /></td>
-      <td class="editable-cell"><input type="number" value="0" step="0.01" data-cat-id="${catId}" data-item-id="${item.id}" data-field="price" /></td>
-      <td class="auto-cell auto-cell-budget">${item.extra?'–':'€ 0.00'}</td>
-      <td class="editable-cell"><input type="number" value="${item.done||0}" data-cat-id="${catId}" data-item-id="${item.id}" data-field="done" /></td>
-      <td class="auto-cell auto-cell-done">€ 0.00</td>
-      <td class="auto-bg" style="min-width:90px">${item.extra
-        ? '–'
-        : '<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:0%;background:#cbd5e1"></div></div><span class="perc-num" style="color:#cbd5e1">0%</span></div>'}</td>
-      <td class="auto-bg">${item.extra
-        ? (item.done > 0 ? '<span class="status-badge status-complete">Complete</span>' : '<span class="status-badge status-pending">Not Started</span>')
-        : '<span class="status-badge status-pending">Not Started</span>'}</td>
-      <td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%"><option value="">— none —</option>${opts}</select></td>
-      <td style="white-space:nowrap"><button class="btn-icon btn-del-item" data-cat-id="${catId}" data-item-id="${item.id}" title="Delete" style="margin-left:.2rem">🗑</button></td>
-    </tr>`;
+    const isX = item.extra;
+    const qtyDisabled = isX ? ' disabled' : '';
+    const qtyStyle    = isX ? ' style="color:var(--g3)"' : '';
+    const qtyPh       = isX ? '–' : '';
+    const percHtml    = isX ? '–' : '<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:0%;background:#cbd5e1"></div></div><span class="perc-num" style="color:#cbd5e1">0%</span></div>';
+    const statusHtml  = (isX && item.done > 0) ? '<span class="status-badge status-complete">Complete</span>' : '<span class="status-badge status-pending">Not Started</span>';
+    const unitOpts    = ['m²','m³','lm','unit','lump','kg'].map(u=>`<option${item.unit===u?' selected':''}>${u}</option>`).join('');
+    return [
+      `<tr class="item${isX?' extra-row':''}" data-cat-id="${catId}" data-item-id="${item.id}">`,
+      `<td class="item-id">${item.id}</td>`,
+      `<td style="max-width:220px">${isX?'<span class="extra-badge">Extra</span>':''}<span class="brief-link" data-id="${item.id}" data-cat-id="${catId}" data-brief="" data-fulldesc="" title="Click to view / edit full description"><em class="brief-empty">+ add description</em></span></td>`,
+      `<td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">${unitOpts}</select></td>`,
+      `<td class="editable-cell"><input type="number" value="${isX?'':0}" placeholder="${qtyPh}"${qtyDisabled}${qtyStyle} data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" /></td>`,
+      `<td class="editable-cell"><input type="number" value="0" step="0.01" data-cat-id="${catId}" data-item-id="${item.id}" data-field="price" /></td>`,
+      `<td class="auto-cell auto-cell-budget">${isX?'–':'€ 0.00'}</td>`,
+      `<td class="editable-cell"><input type="number" value="${item.done||0}" data-cat-id="${catId}" data-item-id="${item.id}" data-field="done" /></td>`,
+      `<td class="auto-cell auto-cell-done">€ 0.00</td>`,
+      `<td class="auto-bg" style="min-width:90px">${percHtml}</td>`,
+      `<td class="auto-bg">${statusHtml}</td>`,
+      `<td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%"><option value="">— none —</option>${opts}</select></td>`,
+      `<td style="white-space:nowrap"><button class="btn-icon btn-del-item" data-cat-id="${catId}" data-item-id="${item.id}" title="Delete" style="margin-left:.2rem">🗑</button></td>`,
+      `</tr>`
+    ].join('');
   }
 
   // ── New Item Modal ────────────────────────────────────────────────────────
