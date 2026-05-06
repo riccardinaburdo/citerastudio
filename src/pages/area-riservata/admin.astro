@@ -133,7 +133,7 @@ const projectJson = JSON.stringify(data);
     .sal-table th { font-size:.6rem; text-transform:uppercase; letter-spacing:.05em; color:var(--g3);
       font-weight:600; padding:.3rem .6rem; border-bottom:1px solid var(--g2); text-align:left; }
     .sal-table th.right { text-align:right; }
-    .sal-table td { padding:.35rem .6rem; border-bottom:1px solid var(--g2); vertical-align:middle; }
+    .sal-table td { padding:.28rem .4rem; border-bottom:1px solid var(--g2); vertical-align:middle; }
     .sal-table tr:last-child td { border-bottom:none; }
     .sal-id   { font-size:.68rem; font-weight:700; font-family:monospace; color:var(--navy); }
     .sal-amt  { text-align:right; font-family:monospace; color:var(--slate); font-size:.7rem; }
@@ -411,6 +411,7 @@ const projectJson = JSON.stringify(data);
                 <button class="btn-icon btn-del-ctr" title="Delete">🗑</button>
               </div>
             </div>
+            <div style="overflow-x:auto;margin:0 -1.4rem;padding:0 1.4rem">
             <table class="sal-table">
               <thead>
                 <tr>
@@ -454,6 +455,7 @@ const projectJson = JSON.stringify(data);
                 </tr>
               </tbody>
             </table>
+            </div>
             <div class="sal-add-row">
               <button class="btn btn-add btn-add-milestone" style="font-size:.7rem;padding:.3rem .7rem">+ Add milestone</button>
             </div>
