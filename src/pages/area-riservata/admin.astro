@@ -734,7 +734,11 @@ const projectJson = JSON.stringify(data);
     switcherDrop.classList.toggle('is-open');
   });
   document.addEventListener('click', () => switcherDrop.classList.remove('is-open'));
-  switcherDrop.addEventListener('click', e => e.stopPropagation());
+  switcherDrop.addEventListener('click', e => {
+    e.stopPropagation();
+    const link = e.target.closest('.proj-drop-item[href]');
+    if (link) window.location.href = link.getAttribute('href');
+  });
 
   // Delete project
   document.addEventListener('click', async e => {

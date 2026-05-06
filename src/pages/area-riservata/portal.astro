@@ -4,8 +4,9 @@ export const prerender = false;
 import { getProject } from '../../lib/store';
 
 const role = Astro.locals.role;
+const projectId = Astro.url.searchParams.get('p') ?? 'default';
 
-const projectData = await getProject();
+const projectData = await getProject(projectId);
 const { info: project, contractors, categories: rawCategories } = projectData;
 const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 

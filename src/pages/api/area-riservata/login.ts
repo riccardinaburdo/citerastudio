@@ -25,5 +25,5 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     path:     '/',
   });
 
-  return redirect('/area-riservata/portal');
+  return redirect(role === 'admin' ? '/area-riservata/admin' : '/area-riservata/portal');
 };

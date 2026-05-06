@@ -6,7 +6,7 @@ import { verifyToken } from '../../lib/auth';
 const token = Astro.cookies.get('ar_token')?.value;
 if (token) {
   const role = await verifyToken(token);
-  if (role) return Astro.redirect('/area-riservata/portal');
+  if (role) return Astro.redirect(role === 'admin' ? '/area-riservata/admin' : '/area-riservata/portal');
 }
 
 const error = Astro.url.searchParams.get('error') === '1';
