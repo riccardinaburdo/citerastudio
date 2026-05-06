@@ -67,7 +67,8 @@ const projectJson = JSON.stringify(data);
       z-index:500; overflow:hidden; }
     .proj-switcher-drop.is-open { display:block; }
     .proj-drop-item { display:flex; align-items:center; justify-content:space-between; padding:.65rem 1rem;
-      font-size:.82rem; color:var(--text); text-decoration:none; gap:.5rem; }
+      font-size:.82rem; color:var(--text); text-decoration:none; gap:.5rem;
+      width:100%; background:none; border:none; cursor:pointer; text-align:left; }
     .proj-drop-item:hover { background:var(--g1); }
     .proj-drop-item.active { font-weight:700; color:var(--navy); background:#f0f6ff; }
     .proj-drop-item span { font-size:.7rem; color:var(--green); flex-shrink:0; }
@@ -244,10 +245,10 @@ const projectJson = JSON.stringify(data);
     <button class="proj-switcher-btn" id="proj-switcher-btn">{project.name} ▾</button>
     <div class="proj-switcher-drop" id="proj-switcher-drop">
       {(allProjects as any[]).map(p => (
-        <a href={`/area-riservata/admin?p=${p.id}`} class={`proj-drop-item${p.id === projectId ? ' active' : ''}`}>
+        <button class={`proj-drop-item${p.id === projectId ? ' active' : ''}`} data-goto={`/area-riservata/admin?p=${p.id}`}>
           <span style="flex:1">{p.name}</span>
           {p.id === projectId && <span>✓ current</span>}
-        </a>
+        </button>
       ))}
       <button class="proj-drop-new" id="proj-drop-new">+ New Project</button>
     </div>
@@ -290,7 +291,7 @@ const projectJson = JSON.stringify(data);
             {p.id === projectId
               ? <><span class="proj-badge">Current</span><span class="proj-active-label">Now editing</span></>
               : <>
-                  <a href={`/area-riservata/admin?p=${p.id}`} class="btn btn-primary" style="font-size:.78rem">Open project →</a>
+                  <button class="btn btn-primary" data-goto={`/area-riservata/admin?p=${p.id}`} style="font-size:.78rem">Open project →</button>
                   <button class="btn btn-danger btn-del-project" data-proj-id={p.id} data-proj-name={p.name} style="font-size:.72rem;padding:.3rem .7rem">Delete</button>
                 </>
             }
@@ -733,11 +734,12 @@ const projectJson = JSON.stringify(data);
     e.stopPropagation();
     switcherDrop.classList.toggle('is-open');
   });
-  document.addEventListener('click', () => switcherDrop.classList.remove('is-open'));
-  switcherDrop.addEventListener('click', e => {
-    e.stopPropagation();
-    const link = e.target.closest('.proj-drop-item[href]');
-    if (link) window.location.href = link.getAttribute('href');
+  document.addEventListener('click', e => {
+    // Close switcher if clicking outside
+    if (!switcherDrop.contains(e.target)) switcherDrop.classList.remove('is-open');
+    // Navigate on any [data-goto] button
+    const btn = e.target.closest('[data-goto]');
+    if (btn) { window.location.href = btn.dataset.goto; }
   });
 
   // Delete project
