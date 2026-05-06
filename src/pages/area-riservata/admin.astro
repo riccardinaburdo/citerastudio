@@ -135,6 +135,8 @@ const projectJson = JSON.stringify(data);
     .sal-table th.right { text-align:right; }
     .sal-table td { padding:.28rem .4rem; border-bottom:1px solid var(--g2); vertical-align:middle; }
     .sal-table tr:last-child td { border-bottom:none; }
+    .sal-table input, .sal-table select { background:#f8fafc; border:1px solid #c7d9f0 !important; border-radius:4px; transition:border-color .15s; }
+    .sal-table input:focus, .sal-table select:focus { outline:none; border-color:var(--navy) !important; background:#fff; }
     .sal-id   { font-size:.68rem; font-weight:700; font-family:monospace; color:var(--navy); }
     .sal-amt  { text-align:right; font-family:monospace; color:var(--slate); font-size:.7rem; }
     .sal-total{ background:var(--g1); }
