@@ -47,7 +47,7 @@ const contractorSchedules = contractors.flatMap(c => {
     const triggerAt   = m.triggerType === 'signing' ? 0 : m.triggerType === 'final' ? 100 : m.triggerType === 'date' ? -1 : (m.triggerPct ?? 100);
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
                       : m.triggerType === 'final'   ? 'On practical completion'
-                      : m.triggerType === 'date'    ? `Alla data del ${m.triggerDate ?? '—'}`
+                      : m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}`
                       : `At ${m.triggerPct}% completion`;
     const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
     const dateExpired = dateDue ? dateDue <= new Date() : false;
@@ -364,7 +364,7 @@ const fmtDate = (d: string) => {
             <div class="pay-sum-label">{nextC ? '&#9654; Next Payment Due' : 'All payments due'}</div>
             <div class="pay-sum-amount">{nextC ? fmt(nextGrossC) : '–'}</div>
             {nextC && <div class="pay-sum-sub">ex. VAT {fmt(nextNetC)} + VAT {fmt(nextVatC)}</div>}
-            {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">Alla data del {nextC.triggerDate ?? '—'}</div>}
+            {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
             {nextC && nextC.triggerType !== 'date'    && <div class="pay-sum-trigger">Triggers at {nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>

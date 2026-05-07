@@ -435,7 +435,7 @@ const projectJson = JSON.stringify(data);
                       <select class="sal-trigger-type-input" style="padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:var(--sans);background:#fff">
                         <option value="signing" selected={m.triggerType === 'signing'}>On signing</option>
                         <option value="percent" selected={m.triggerType === 'percent'}>At %</option>
-                        <option value="date"    selected={m.triggerType === 'date'}>Alla data</option>
+                        <option value="date"    selected={m.triggerType === 'date'}>On date</option>
                         <option value="final"   selected={m.triggerType === 'final'}>Final</option>
                       </select>
                       <input class="sal-trigger-pct-input" type="number" min="1" max="99" value={m.triggerPct ?? ''} placeholder="%" style={`width:38px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType !== 'percent' ? 'display:none' : ''}`} />
@@ -671,7 +671,7 @@ const projectJson = JSON.stringify(data);
         <select id="ms-trigger-type" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff">
           <option value="signing">On signing (contract signature)</option>
           <option value="percent">At % completion</option>
-          <option value="date">Alla data del</option>
+          <option value="date">On date</option>
           <option value="final">Final works / testing</option>
         </select>
       </div>
@@ -680,7 +680,7 @@ const projectJson = JSON.stringify(data);
         <input id="ms-trigger-pct" type="number" min="1" max="99" placeholder="e.g. 30" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
       </div>
       <div id="ms-date-row" style="display:none">
-        <label>Data di scadenza</label>
+        <label>Due date</label>
         <input id="ms-trigger-date" type="date" style="width:180px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
       </div>
       <div>
@@ -1024,7 +1024,7 @@ const projectJson = JSON.stringify(data);
   function buildSalRowHtml(m, budget) {
     const inp = 'padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-family:var(--sans)';
     const triggerOpts = ['signing','percent','date','final'].map(v =>
-      `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':v==='date'?'Alla data':'Final'}</option>`
+      `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':v==='date'?'On date':'Final'}</option>`
     ).join('');
     const amtVal = budget > 0 ? (budget * m.pct / 100).toFixed(2) : (0).toFixed(2);
     return [
