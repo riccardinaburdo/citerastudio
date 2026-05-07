@@ -686,8 +686,8 @@ const projectJson = JSON.stringify(data);
       <div>
         <label>Payment amount</label>
         <div style="display:flex;gap:0;border:1px solid var(--g2);border-radius:6px;overflow:hidden;width:fit-content;margin-bottom:.55rem">
-          <button id="ms-mode-pct" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">%</button>
-          <button id="ms-mode-eur" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:#fff;color:var(--g3)">€ fisso</button>
+          <button type="button" id="ms-mode-pct" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">%</button>
+          <button type="button" id="ms-mode-eur" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:#fff;color:var(--g3)">€ fisso</button>
         </div>
         <div id="ms-pct-amount-row" style="display:flex;align-items:center;gap:.4rem">
           <input id="ms-pct" type="number" min="0" max="100" placeholder="e.g. 20" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
@@ -1026,7 +1026,7 @@ const projectJson = JSON.stringify(data);
     const triggerOpts = ['signing','percent','date','final'].map(v =>
       `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':v==='date'?'On date':'Final'}</option>`
     ).join('');
-    const amtVal = budget > 0 ? (budget * m.pct / 100).toFixed(2) : (0).toFixed(2);
+    const amtVal = m.fixedAmt != null ? parseFloat(m.fixedAmt).toFixed(2) : (budget > 0 ? (budget * m.pct / 100).toFixed(2) : (0).toFixed(2));
     return [
       `<td><input class="sal-ref-input" type="text" value="${m.id}" style="width:52px;${inp};font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>`,
       `<td><input class="sal-label-input" type="text" value="${m.label}" style="width:100%;${inp};font-size:.75rem" /></td>`,
@@ -1197,8 +1197,10 @@ const projectJson = JSON.stringify(data);
     const tdate  = ttype === 'date' ? (msTriggerDate.value || null) : null;
     const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
     let pct;
+    let fixedAmt = null;
     if (msAmountMode === 'eur') {
       const eur = parseFloat(msEurInput.value) || 0;
+      fixedAmt = eur;
       pct = budget > 0 ? (eur / budget) * 100 : 0;
     } else {
       pct = parseFloat(msPct.value) || 0;
@@ -1206,7 +1208,7 @@ const projectJson = JSON.stringify(data);
     const tbody   = msTargetCard.querySelector('tbody');
     const totalRow = tbody.querySelector('.sal-total');
     const tr = document.createElement('tr');
-    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct }, budget);
+    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct, fixedAmt }, budget);
     tbody.insertBefore(tr, totalRow);
     recalcCard(msTargetCard);
     syncSalFromCard(msTargetCard);
