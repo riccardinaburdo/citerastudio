@@ -676,8 +676,22 @@ const projectJson = JSON.stringify(data);
         <input id="ms-trigger-pct" type="number" min="1" max="99" placeholder="e.g. 30" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
       </div>
       <div>
-        <label>Payment % (of contractor budget)</label>
-        <input id="ms-pct" type="number" min="0" max="100" placeholder="e.g. 20" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+        <label>Payment amount</label>
+        <div style="display:flex;gap:0;border:1px solid var(--g2);border-radius:6px;overflow:hidden;width:fit-content;margin-bottom:.55rem">
+          <button id="ms-mode-pct" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">%</button>
+          <button id="ms-mode-eur" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:#fff;color:var(--g3)">€ fisso</button>
+        </div>
+        <div id="ms-pct-amount-row" style="display:flex;align-items:center;gap:.4rem">
+          <input id="ms-pct" type="number" min="0" max="100" placeholder="e.g. 20" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+          <span style="font-size:.8rem;color:var(--g3)">% del budget</span>
+        </div>
+        <div id="ms-eur-amount-row" style="display:none;flex-direction:column;gap:.3rem">
+          <div style="display:flex;align-items:center;gap:.4rem">
+            <span style="font-size:.82rem;color:var(--g3)">€</span>
+            <input id="ms-eur" type="number" min="0" step="0.01" placeholder="e.g. 15000.00" style="width:140px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:monospace" />
+          </div>
+          <div id="ms-eur-hint" style="font-size:.7rem;color:var(--g3)"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1090,15 +1104,53 @@ const projectJson = JSON.stringify(data);
     if (card) { recalcCard(card); syncSalFromCard(card); }
   });
 
-  const msModal       = document.getElementById('milestone-modal');
-  const msCtrName     = document.getElementById('ms-ctr-name');
-  const msRef         = document.getElementById('ms-ref');
-  const msLabel       = document.getElementById('ms-label');
-  const msTriggerType = document.getElementById('ms-trigger-type');
-  const msTriggerPct  = document.getElementById('ms-trigger-pct');
-  const msPct         = document.getElementById('ms-pct');
-  const msPctRow      = document.getElementById('ms-pct-row');
-  let msTargetCard    = null;
+  const msModal          = document.getElementById('milestone-modal');
+  const msCtrName        = document.getElementById('ms-ctr-name');
+  const msRef            = document.getElementById('ms-ref');
+  const msLabel          = document.getElementById('ms-label');
+  const msTriggerType    = document.getElementById('ms-trigger-type');
+  const msTriggerPct     = document.getElementById('ms-trigger-pct');
+  const msPct            = document.getElementById('ms-pct');
+  const msPctRow         = document.getElementById('ms-pct-row');
+  const msModeBtn        = document.getElementById('ms-mode-pct');
+  const msModeBtnEur     = document.getElementById('ms-mode-eur');
+  const msPctAmountRow   = document.getElementById('ms-pct-amount-row');
+  const msEurAmountRow   = document.getElementById('ms-eur-amount-row');
+  const msEurInput       = document.getElementById('ms-eur');
+  const msEurHint        = document.getElementById('ms-eur-hint');
+  let msTargetCard       = null;
+  let msAmountMode       = 'pct'; // 'pct' | 'eur'
+
+  function setMsAmountMode(mode) {
+    msAmountMode = mode;
+    if (mode === 'pct') {
+      msModeBtn.style.background    = 'var(--navy)'; msModeBtn.style.color    = '#fff';
+      msModeBtnEur.style.background = '#fff';        msModeBtnEur.style.color = 'var(--g3)';
+      msPctAmountRow.style.display  = 'flex';
+      msEurAmountRow.style.display  = 'none';
+    } else {
+      msModeBtnEur.style.background = 'var(--navy)'; msModeBtnEur.style.color    = '#fff';
+      msModeBtn.style.background    = '#fff';        msModeBtn.style.color    = 'var(--g3)';
+      msPctAmountRow.style.display  = 'none';
+      msEurAmountRow.style.display  = 'flex';
+      updateEurHint();
+    }
+  }
+
+  function updateEurHint() {
+    if (!msTargetCard) return;
+    const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
+    if (budget <= 0) { msEurHint.textContent = ''; return; }
+    const alreadyPct = Array.from(msTargetCard.querySelectorAll('tbody tr:not(.sal-total) .sal-pct-input'))
+      .reduce((s, inp) => s + (parseFloat(inp.value) || 0), 0);
+    const alreadyEur = budget * alreadyPct / 100;
+    const remaining  = budget - alreadyEur;
+    msEurHint.textContent = `Budget: ${fmtAmt(budget)} — già allocato: ${fmtAmt(alreadyEur)} — residuo: ${fmtAmt(remaining)}`;
+  }
+
+  msModeBtn.addEventListener('click',    () => setMsAmountMode('pct'));
+  msModeBtnEur.addEventListener('click', () => setMsAmountMode('eur'));
+  msEurInput.addEventListener('input', updateEurHint);
 
   msTriggerType.addEventListener('change', () => { msPctRow.style.display = msTriggerType.value === 'percent' ? '' : 'none'; });
   msPctRow.style.display = 'none';
@@ -1106,8 +1158,9 @@ const projectJson = JSON.stringify(data);
   function openMsModal(card) {
     msTargetCard = card;
     msCtrName.textContent = card.querySelector('.ctr-name')?.textContent ?? '';
-    msRef.value = ''; msLabel.value = ''; msPct.value = ''; msTriggerPct.value = '';
+    msRef.value = ''; msLabel.value = ''; msPct.value = ''; msTriggerPct.value = ''; msEurInput.value = '';
     msTriggerType.value = 'signing'; msPctRow.style.display = 'none';
+    setMsAmountMode('pct');
     msModal.classList.add('is-open'); msRef.focus();
   }
   function closeMsModal() { msModal.classList.remove('is-open'); msTargetCard = null; }
@@ -1120,11 +1173,17 @@ const projectJson = JSON.stringify(data);
     if (!msTargetCard) return;
     const ref    = msRef.value.trim() || '—';
     const label  = msLabel.value.trim() || 'New Milestone';
-    const pct    = parseFloat(msPct.value) || 0;
     const ttype  = msTriggerType.value;
     const tpct   = parseFloat(msTriggerPct.value) || null;
     const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
-    const tbody  = msTargetCard.querySelector('tbody');
+    let pct;
+    if (msAmountMode === 'eur') {
+      const eur = parseFloat(msEurInput.value) || 0;
+      pct = budget > 0 ? (eur / budget) * 100 : 0;
+    } else {
+      pct = parseFloat(msPct.value) || 0;
+    }
+    const tbody   = msTargetCard.querySelector('tbody');
     const totalRow = tbody.querySelector('.sal-total');
     const tr = document.createElement('tr');
     tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, pct }, budget);
