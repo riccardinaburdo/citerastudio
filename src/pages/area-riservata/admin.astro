@@ -28,6 +28,7 @@ for (const cat of categories) {
 const triggerLabel = (m: any) =>
   m.triggerType === 'signing' ? 'On signing' :
   m.triggerType === 'final'   ? 'Final works' :
+  m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}` :
   `at ${m.triggerPct}%`;
 
 const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -434,9 +435,11 @@ const projectJson = JSON.stringify(data);
                       <select class="sal-trigger-type-input" style="padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:var(--sans);background:#fff">
                         <option value="signing" selected={m.triggerType === 'signing'}>On signing</option>
                         <option value="percent" selected={m.triggerType === 'percent'}>At %</option>
-                        <option value="final" selected={m.triggerType === 'final'}>Final</option>
+                        <option value="date"    selected={m.triggerType === 'date'}>Alla data</option>
+                        <option value="final"   selected={m.triggerType === 'final'}>Final</option>
                       </select>
                       <input class="sal-trigger-pct-input" type="number" min="1" max="99" value={m.triggerPct ?? ''} placeholder="%" style={`width:38px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType !== 'percent' ? 'display:none' : ''}`} />
+                      <input class="sal-trigger-date-input" type="date" value={m.triggerDate ?? ''} style={`padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType !== 'date' ? 'display:none' : ''}`} />
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>
@@ -668,12 +671,17 @@ const projectJson = JSON.stringify(data);
         <select id="ms-trigger-type" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff">
           <option value="signing">On signing (contract signature)</option>
           <option value="percent">At % completion</option>
+          <option value="date">Alla data del</option>
           <option value="final">Final works / testing</option>
         </select>
       </div>
       <div id="ms-pct-row">
         <label>Completion % trigger</label>
         <input id="ms-trigger-pct" type="number" min="1" max="99" placeholder="e.g. 30" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div id="ms-date-row" style="display:none">
+        <label>Data di scadenza</label>
+        <input id="ms-trigger-date" type="date" style="width:180px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
       </div>
       <div>
         <label>Payment amount</label>
@@ -1015,8 +1023,8 @@ const projectJson = JSON.stringify(data);
   // ── SAL milestone helpers ─────────────────────────────────────────────────
   function buildSalRowHtml(m, budget) {
     const inp = 'padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-family:var(--sans)';
-    const triggerOpts = ['signing','percent','final'].map(v =>
-      `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':'Final'}</option>`
+    const triggerOpts = ['signing','percent','date','final'].map(v =>
+      `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':v==='date'?'Alla data':'Final'}</option>`
     ).join('');
     const amtVal = budget > 0 ? (budget * m.pct / 100).toFixed(2) : (0).toFixed(2);
     return [
@@ -1025,6 +1033,7 @@ const projectJson = JSON.stringify(data);
       `<td style="white-space:nowrap">`,
         `<select class="sal-trigger-type-input" style="${inp};font-size:.72rem;background:#fff">${triggerOpts}</select>`,
         `<input class="sal-trigger-pct-input" type="number" min="1" max="99" value="${m.triggerPct??''}" placeholder="%" style="width:38px;${inp};font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType!=='percent'?'display:none':''}" />`,
+        `<input class="sal-trigger-date-input" type="date" value="${m.triggerDate??''}" style="${inp};font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType!=='date'?'display:none':''}" />`,
       `</td>`,
       `<td style="text-align:right;white-space:nowrap">`,
         `<span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>`,
@@ -1064,6 +1073,9 @@ const projectJson = JSON.stringify(data);
       triggerPct:  row.querySelector('.sal-trigger-type-input')?.value === 'percent'
                      ? (parseFloat(row.querySelector('.sal-trigger-pct-input')?.value) || null)
                      : null,
+      triggerDate: row.querySelector('.sal-trigger-type-input')?.value === 'date'
+                     ? (row.querySelector('.sal-trigger-date-input')?.value || null)
+                     : null,
       pct:         parseFloat(row.querySelector('.sal-pct-input')?.value) || 0,
     }));
   }
@@ -1075,8 +1087,10 @@ const projectJson = JSON.stringify(data);
     const card = row.closest('.ctr-card');
     if (!card) return;
     if (e.target.classList.contains('sal-trigger-type-input')) {
-      const pctInput = row.querySelector('.sal-trigger-pct-input');
-      if (pctInput) pctInput.style.display = e.target.value === 'percent' ? '' : 'none';
+      const pctInput  = row.querySelector('.sal-trigger-pct-input');
+      const dateInput = row.querySelector('.sal-trigger-date-input');
+      if (pctInput)  pctInput.style.display  = e.target.value === 'percent' ? '' : 'none';
+      if (dateInput) dateInput.style.display = e.target.value === 'date'    ? '' : 'none';
     }
     if (e.target.classList.contains('sal-amt-input')) {
       const budget = parseFloat(card.dataset.budget ?? '0') || 0;
@@ -1112,6 +1126,8 @@ const projectJson = JSON.stringify(data);
   const msTriggerPct     = document.getElementById('ms-trigger-pct');
   const msPct            = document.getElementById('ms-pct');
   const msPctRow         = document.getElementById('ms-pct-row');
+  const msDateRow        = document.getElementById('ms-date-row');
+  const msTriggerDate    = document.getElementById('ms-trigger-date');
   const msModeBtn        = document.getElementById('ms-mode-pct');
   const msModeBtnEur     = document.getElementById('ms-mode-eur');
   const msPctAmountRow   = document.getElementById('ms-pct-amount-row');
@@ -1152,14 +1168,17 @@ const projectJson = JSON.stringify(data);
   msModeBtnEur.addEventListener('click', () => setMsAmountMode('eur'));
   msEurInput.addEventListener('input', updateEurHint);
 
-  msTriggerType.addEventListener('change', () => { msPctRow.style.display = msTriggerType.value === 'percent' ? '' : 'none'; });
+  msTriggerType.addEventListener('change', () => {
+    msPctRow.style.display  = msTriggerType.value === 'percent' ? '' : 'none';
+    msDateRow.style.display = msTriggerType.value === 'date'    ? '' : 'none';
+  });
   msPctRow.style.display = 'none';
 
   function openMsModal(card) {
     msTargetCard = card;
     msCtrName.textContent = card.querySelector('.ctr-name')?.textContent ?? '';
-    msRef.value = ''; msLabel.value = ''; msPct.value = ''; msTriggerPct.value = ''; msEurInput.value = '';
-    msTriggerType.value = 'signing'; msPctRow.style.display = 'none';
+    msRef.value = ''; msLabel.value = ''; msPct.value = ''; msTriggerPct.value = ''; msEurInput.value = ''; msTriggerDate.value = '';
+    msTriggerType.value = 'signing'; msPctRow.style.display = 'none'; msDateRow.style.display = 'none';
     setMsAmountMode('pct');
     msModal.classList.add('is-open'); msRef.focus();
   }
@@ -1175,6 +1194,7 @@ const projectJson = JSON.stringify(data);
     const label  = msLabel.value.trim() || 'New Milestone';
     const ttype  = msTriggerType.value;
     const tpct   = parseFloat(msTriggerPct.value) || null;
+    const tdate  = ttype === 'date' ? (msTriggerDate.value || null) : null;
     const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
     let pct;
     if (msAmountMode === 'eur') {
@@ -1186,7 +1206,7 @@ const projectJson = JSON.stringify(data);
     const tbody   = msTargetCard.querySelector('tbody');
     const totalRow = tbody.querySelector('.sal-total');
     const tr = document.createElement('tr');
-    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, pct }, budget);
+    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct }, budget);
     tbody.insertBefore(tr, totalRow);
     recalcCard(msTargetCard);
     syncSalFromCard(msTargetCard);

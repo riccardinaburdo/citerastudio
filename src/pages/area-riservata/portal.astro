@@ -44,10 +44,19 @@ const contractorSchedules = contractors.flatMap(c => {
   let nextFoundC = false;
   const milestones = c.sal.map(m => {
     const amount      = (m.pct / 100) * cBudget;
-    const triggerAt   = m.triggerType === 'signing' ? 0 : m.triggerType === 'final' ? 100 : (m.triggerPct ?? 100);
-    const triggerNote = m.triggerType === 'signing' ? 'On contract signing' : m.triggerType === 'final' ? 'On practical completion' : `At ${m.triggerPct}% completion`;
+    const triggerAt   = m.triggerType === 'signing' ? 0 : m.triggerType === 'final' ? 100 : m.triggerType === 'date' ? -1 : (m.triggerPct ?? 100);
+    const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
+                      : m.triggerType === 'final'   ? 'On practical completion'
+                      : m.triggerType === 'date'    ? `Alla data del ${m.triggerDate ?? '—'}`
+                      : `At ${m.triggerPct}% completion`;
+    const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
+    const dateExpired = dateDue ? dateDue <= new Date() : false;
     let status: 'paid' | 'next' | 'pending';
-    if (cPerc >= triggerAt)  { status = 'paid'; }
+    if (m.triggerType === 'date') {
+      if (dateExpired)        { status = 'paid'; }
+      else if (!nextFoundC)   { status = 'next'; nextFoundC = true; }
+      else                    { status = 'pending'; }
+    } else if (cPerc >= triggerAt) { status = 'paid'; }
     else if (!nextFoundC)    { status = 'next'; nextFoundC = true; }
     else                     { status = 'pending'; }
     return { ...m, amount, triggerAt, triggerNote, status };
@@ -355,7 +364,8 @@ const fmtDate = (d: string) => {
             <div class="pay-sum-label">{nextC ? '&#9654; Next Payment Due' : 'All payments due'}</div>
             <div class="pay-sum-amount">{nextC ? fmt(nextGrossC) : '–'}</div>
             {nextC && <div class="pay-sum-sub">ex. VAT {fmt(nextNetC)} + VAT {fmt(nextVatC)}</div>}
-            {nextC && <div class="pay-sum-trigger">Triggers at {nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
+            {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">Alla data del {nextC.triggerDate ?? '—'}</div>}
+            {nextC && nextC.triggerType !== 'date'    && <div class="pay-sum-trigger">Triggers at {nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class="pay-sum-item pending">
@@ -369,10 +379,10 @@ const fmtDate = (d: string) => {
           <div class="pay-track">
             <div class="pay-track-fill" style={`width:${Math.min(cPerc, 100).toFixed(1)}%`}></div>
             {milestones.map(m => (
-              <div class={`pay-tick ${m.status}`} style={`left:${m.triggerAt}%`}>
+              <div class={`pay-tick ${m.status}`} style={`left:${m.triggerType === 'date' ? (m.status === 'paid' ? 100 : 50) : m.triggerAt}%`}>
                 <div class="pay-tick-id">{m.id}</div>
                 <div class="pay-tick-dot"></div>
-                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerAt + '%'}</div>
+                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : m.triggerAt + '%'}</div>
               </div>
             ))}
             <div class="pay-now" style={`left:${Math.min(cPerc, 100).toFixed(1)}%`}>
