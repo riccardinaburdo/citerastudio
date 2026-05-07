@@ -420,8 +420,8 @@ const projectJson = JSON.stringify(data);
                   <th style="width:62px">Ref.</th>
                   <th>Milestone</th>
                   <th style="width:160px">Trigger</th>
+                  <th class="right" style="width:120px">Amount (net €)</th>
                   <th class="right" style="width:58px">%</th>
-                  <th class="right" style="width:105px">Amount (net) <span class="auto-tag">auto</span></th>
                   <th style="width:36px"></th>
                 </tr>
               </thead>
@@ -439,19 +439,25 @@ const projectJson = JSON.stringify(data);
                       <input class="sal-trigger-pct-input" type="number" min="1" max="99" value={m.triggerPct ?? ''} placeholder="%" style={`width:38px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType !== 'percent' ? 'display:none' : ''}`} />
                     </td>
                     <td style="text-align:right;white-space:nowrap">
-                      <input class="sal-pct-input" type="number" min="0" max="100" value={m.pct} style="width:42px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right" />
+                      <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={(budget * m.pct / 100).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                    </td>
+                    <td style="text-align:right;white-space:nowrap">
+                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={m.pct} style="width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />
                       <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
                     </td>
-                    <td class="sal-amt">{fmt(budget * m.pct / 100)}</td>
                     <td>
                       <button class="btn-icon btn-del-milestone" title="Delete milestone" style="padding:.15rem .35rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button>
                     </td>
                   </tr>
                 ))}
                 <tr class="sal-total">
-                  <td colspan="4" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
-                  <td class="sal-amt sal-total-amt" style={`color:${total === 100 ? 'var(--green)' : 'var(--red)'};font-weight:700`}>
-                    {fmt(budget)} {total === 100 ? '✓' : `⚠ ${total}%`}
+                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
+                  <td class="sal-amt sal-total-amt-eur" style={`text-align:right;font-family:monospace;font-weight:700;color:${total === 100 ? 'var(--green)' : 'var(--red)'}`}>
+                    {fmt(budget * total / 100)}
+                  </td>
+                  <td class="sal-total-amt" style={`text-align:right;font-weight:700;color:${total === 100 ? 'var(--green)' : 'var(--red)'};font-size:.72rem`}>
+                    {total}% {total === 100 ? '✓' : '⚠'}
                   </td>
                   <td></td>
                 </tr>
@@ -994,22 +1000,26 @@ const projectJson = JSON.stringify(data);
 
   // ── SAL milestone helpers ─────────────────────────────────────────────────
   function buildSalRowHtml(m, budget) {
-    const inpStyle = 'padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-family:var(--sans)';
+    const inp = 'padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-family:var(--sans)';
     const triggerOpts = ['signing','percent','final'].map(v =>
       `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':'Final'}</option>`
     ).join('');
+    const amtVal = budget > 0 ? (budget * m.pct / 100).toFixed(2) : (0).toFixed(2);
     return [
-      `<td><input class="sal-ref-input" type="text" value="${m.id}" style="width:52px;${inpStyle};font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>`,
-      `<td><input class="sal-label-input" type="text" value="${m.label}" style="width:100%;${inpStyle};font-size:.75rem" /></td>`,
+      `<td><input class="sal-ref-input" type="text" value="${m.id}" style="width:52px;${inp};font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>`,
+      `<td><input class="sal-label-input" type="text" value="${m.label}" style="width:100%;${inp};font-size:.75rem" /></td>`,
       `<td style="white-space:nowrap">`,
-        `<select class="sal-trigger-type-input" style="${inpStyle};font-size:.72rem;background:#fff">${triggerOpts}</select>`,
-        `<input class="sal-trigger-pct-input" type="number" min="1" max="99" value="${m.triggerPct??''}" placeholder="%" style="width:38px;${inpStyle};font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType!=='percent'?'display:none':''}" />`,
+        `<select class="sal-trigger-type-input" style="${inp};font-size:.72rem;background:#fff">${triggerOpts}</select>`,
+        `<input class="sal-trigger-pct-input" type="number" min="1" max="99" value="${m.triggerPct??''}" placeholder="%" style="width:38px;${inp};font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType!=='percent'?'display:none':''}" />`,
       `</td>`,
       `<td style="text-align:right;white-space:nowrap">`,
-        `<input class="sal-pct-input" type="number" min="0" max="100" value="${m.pct}" style="width:42px;${inpStyle};font-size:.72rem;font-family:monospace;text-align:right" />`,
+        `<span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>`,
+        `<input class="sal-amt-input" type="number" min="0" step="0.01" value="${amtVal}" style="width:88px;${inp};font-size:.75rem;font-family:monospace;text-align:right" />`,
+      `</td>`,
+      `<td style="text-align:right;white-space:nowrap">`,
+        `<input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value="${m.pct}" style="width:48px;${inp};font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />`,
         `<span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>`,
       `</td>`,
-      `<td class="sal-amt">${fmtAmt(budget * m.pct / 100)}</td>`,
       `<td><button class="btn-icon btn-del-milestone" style="padding:.15rem .35rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button></td>`,
     ].join('');
   }
@@ -1020,14 +1030,13 @@ const projectJson = JSON.stringify(data);
     card.querySelectorAll('tbody tr:not(.sal-total)').forEach(row => {
       const pct = parseFloat(row.querySelector('.sal-pct-input')?.value ?? '0') || 0;
       totalPct += pct;
-      const amtCell = row.querySelector('.sal-amt');
-      if (amtCell) amtCell.textContent = fmtAmt(budget * pct / 100);
     });
-    const totalAmtCell = card.querySelector('.sal-total-amt');
-    if (totalAmtCell) {
-      totalAmtCell.textContent = fmtAmt(budget) + ' ' + (totalPct === 100 ? '✓' : `⚠ ${totalPct}%`);
-      totalAmtCell.style.color = totalPct === 100 ? 'var(--green)' : 'var(--red)';
-    }
+    const ok = Math.abs(totalPct - 100) < 0.01;
+    const color = ok ? 'var(--green)' : 'var(--red)';
+    const eurCell = card.querySelector('.sal-total-amt-eur');
+    const pctCell = card.querySelector('.sal-total-amt');
+    if (eurCell) { eurCell.textContent = fmtAmt(budget * totalPct / 100); eurCell.style.color = color; }
+    if (pctCell)  { pctCell.textContent = totalPct.toFixed(2).replace(/\.00$/,'') + '% ' + (ok ? '✓' : '⚠'); pctCell.style.color = color; }
   }
 
   function syncSalFromCard(card) {
@@ -1055,7 +1064,20 @@ const projectJson = JSON.stringify(data);
       const pctInput = row.querySelector('.sal-trigger-pct-input');
       if (pctInput) pctInput.style.display = e.target.value === 'percent' ? '' : 'none';
     }
-    if (e.target.classList.contains('sal-pct-input')) recalcCard(card);
+    if (e.target.classList.contains('sal-amt-input')) {
+      const budget = parseFloat(card.dataset.budget ?? '0') || 0;
+      const amt    = parseFloat(e.target.value) || 0;
+      const pctIn  = row.querySelector('.sal-pct-input');
+      if (pctIn) pctIn.value = budget > 0 ? ((amt / budget) * 100).toFixed(2) : '0';
+      recalcCard(card);
+    }
+    if (e.target.classList.contains('sal-pct-input')) {
+      const budget = parseFloat(card.dataset.budget ?? '0') || 0;
+      const pct    = parseFloat(e.target.value) || 0;
+      const amtIn  = row.querySelector('.sal-amt-input');
+      if (amtIn) amtIn.value = (budget * pct / 100).toFixed(2);
+      recalcCard(card);
+    }
     syncSalFromCard(card);
   });
 
