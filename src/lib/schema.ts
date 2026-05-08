@@ -4,6 +4,8 @@ export interface SalMilestone {
   triggerType: 'signing' | 'percent' | 'final';
   triggerPct: number | null;
   pct: number; // % of contractor budget
+  paid?: boolean;     // manually certified as paid
+  paidDate?: string;  // ISO date of actual payment
 }
 
 export interface Contractor {

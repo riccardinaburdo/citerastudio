@@ -52,7 +52,9 @@ const contractorSchedules = contractors.flatMap(c => {
     const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
     const dateExpired = dateDue ? dateDue <= new Date() : false;
     let status: 'paid' | 'next' | 'pending';
-    if (m.triggerType === 'date') {
+    if (m.paid === true) {
+      status = 'paid';
+    } else if (m.triggerType === 'date') {
       if (dateExpired)        { status = 'paid'; }
       else if (!nextFoundC)   { status = 'next'; nextFoundC = true; }
       else                    { status = 'pending'; }

@@ -423,6 +423,7 @@ const projectJson = JSON.stringify(data);
                   <th style="width:160px">Trigger</th>
                   <th class="right" style="width:120px">Amount (net €)</th>
                   <th class="right" style="width:58px">%</th>
+                  <th style="width:130px;text-align:center">Paid ✓</th>
                   <th style="width:36px"></th>
                 </tr>
               </thead>
@@ -449,6 +450,10 @@ const projectJson = JSON.stringify(data);
                       <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={m.pct} style="width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />
                       <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
                     </td>
+                    <td style="text-align:center;white-space:nowrap">
+                      <input class="sal-paid-check" type="checkbox" checked={m.paid === true} title="Mark as paid" style="width:14px;height:14px;cursor:pointer;accent-color:var(--green)" />
+                      <input class="sal-paid-date-input" type="date" value={m.paidDate ?? ''} style={`margin-left:.3rem;padding:.18rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.68rem;font-family:monospace;${!m.paid ? 'display:none' : ''}`} />
+                    </td>
                     <td>
                       <button class="btn-icon btn-del-milestone" title="Delete milestone" style="padding:.15rem .35rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button>
                     </td>
@@ -462,6 +467,7 @@ const projectJson = JSON.stringify(data);
                   <td class="sal-total-amt" style={`text-align:right;font-weight:700;color:${total === 100 ? 'var(--green)' : 'var(--red)'};font-size:.72rem`}>
                     {total}% {total === 100 ? '✓' : '⚠'}
                   </td>
+                  <td></td>
                   <td></td>
                 </tr>
               </tbody>
@@ -1051,6 +1057,10 @@ const projectJson = JSON.stringify(data);
         `<input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value="${m.pct}" style="width:48px;${inp};font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />`,
         `<span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>`,
       `</td>`,
+      `<td style="text-align:center;white-space:nowrap">`,
+        `<input class="sal-paid-check" type="checkbox"${m.paid?' checked':''} title="Mark as paid" style="width:14px;height:14px;cursor:pointer;accent-color:var(--green)" />`,
+        `<input class="sal-paid-date-input" type="date" value="${m.paidDate??''}" style="${inp};font-size:.68rem;font-family:monospace;margin-left:.3rem;${m.paid?'':'display:none'}" />`,
+      `</td>`,
       `<td><button class="btn-icon btn-del-milestone" style="padding:.15rem .35rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button></td>`,
     ].join('');
   }
@@ -1091,11 +1101,29 @@ const projectJson = JSON.stringify(data);
                        : null,
         pct,
         ...(fixedAmt != null ? { fixedAmt } : {}),
+        paid:     row.querySelector('.sal-paid-check')?.checked ?? false,
+        paidDate: row.querySelector('.sal-paid-check')?.checked
+                    ? (row.querySelector('.sal-paid-date-input')?.value || null)
+                    : null,
       };
     });
   }
 
   // Inline SAL editing
+  document.addEventListener('change', e => {
+    if (!e.target.classList.contains('sal-paid-check')) return;
+    const row = e.target.closest('.sal-table tbody tr:not(.sal-total)');
+    if (!row) return;
+    const dateInp = row.querySelector('.sal-paid-date-input');
+    if (dateInp) {
+      dateInp.style.display = e.target.checked ? '' : 'none';
+      if (e.target.checked && !dateInp.value) {
+        dateInp.value = new Date().toISOString().slice(0, 10);
+      }
+    }
+    syncSalFromCard(row.closest('.ctr-card'));
+  });
+
   document.addEventListener('input', e => {
     const row = e.target.closest('.sal-table tbody tr:not(.sal-total)');
     if (!row) return;
