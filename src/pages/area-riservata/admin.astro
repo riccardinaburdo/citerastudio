@@ -734,9 +734,17 @@ const projectJson = JSON.stringify(data);
   </div>
 </div>
 
-<script define:vars={{ projectJson }}>
+<script define:vars={{ projectJson, projectId }}>
   let state = JSON.parse(projectJson);
   const fmtAmt = n => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+  // Remember last project across sessions
+  if (projectId && projectId !== 'default') {
+    localStorage.setItem('lastProjectId', projectId);
+  } else if (!new URLSearchParams(location.search).has('p')) {
+    const last = localStorage.getItem('lastProjectId');
+    if (last) { location.replace(`?p=${encodeURIComponent(last)}`); }
+  }
 
   function findItem(catId, itemId) {
     const cat = state.categories.find(c => c.id === catId);
