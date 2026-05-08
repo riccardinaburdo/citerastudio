@@ -588,7 +588,7 @@ const projectJson = JSON.stringify(data);
                     </tr>
                   );
                 })}
-                <tr class="subtotal">
+                <tr class="subtotal" data-cat-id={cat.id}>
                   <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
                   <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
                   <td></td>
@@ -1461,7 +1461,7 @@ const projectJson = JSON.stringify(data);
         </span>
       </td>
     </tr>
-    <tr class="subtotal">
+    <tr class="subtotal" data-cat-id="${id}">
       <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category ${id} subtotal</td>
       <td style="text-align:right;font-family:monospace">€ 0.00</td><td></td>
       <td style="text-align:right;font-family:monospace;color:var(--navy)">€ 0.00</td>
