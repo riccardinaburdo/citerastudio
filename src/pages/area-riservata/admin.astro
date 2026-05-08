@@ -443,7 +443,7 @@ const projectJson = JSON.stringify(data);
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>
-                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={(budget * m.pct / 100).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={(budget > 0 ? budget * m.pct / 100 : (m.fixedAmt ?? 0)).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={m.pct} style="width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />
@@ -1026,7 +1026,7 @@ const projectJson = JSON.stringify(data);
     const triggerOpts = ['signing','percent','date','final'].map(v =>
       `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':v==='date'?'On date':'Final'}</option>`
     ).join('');
-    const amtVal = m.fixedAmt != null ? parseFloat(m.fixedAmt).toFixed(2) : (budget > 0 ? (budget * m.pct / 100).toFixed(2) : (0).toFixed(2));
+    const amtVal = budget > 0 ? (budget * m.pct / 100).toFixed(2) : (m.fixedAmt != null ? parseFloat(m.fixedAmt).toFixed(2) : (0).toFixed(2));
     return [
       `<td><input class="sal-ref-input" type="text" value="${m.id}" style="width:52px;${inp};font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>`,
       `<td><input class="sal-label-input" type="text" value="${m.label}" style="width:100%;${inp};font-size:.75rem" /></td>`,
@@ -1063,21 +1063,28 @@ const projectJson = JSON.stringify(data);
   }
 
   function syncSalFromCard(card) {
-    const ctrId = card.dataset.ctrId;
-    const ctr = state.contractors.find(c => c.id === ctrId);
+    const ctrId  = card.dataset.ctrId;
+    const ctr    = state.contractors.find(c => c.id === ctrId);
     if (!ctr) return;
-    ctr.sal = Array.from(card.querySelectorAll('tbody tr:not(.sal-total)')).map(row => ({
-      id:          row.querySelector('.sal-ref-input')?.value.trim() ?? '',
-      label:       row.querySelector('.sal-label-input')?.value.trim() ?? '',
-      triggerType: row.querySelector('.sal-trigger-type-input')?.value ?? 'signing',
-      triggerPct:  row.querySelector('.sal-trigger-type-input')?.value === 'percent'
-                     ? (parseFloat(row.querySelector('.sal-trigger-pct-input')?.value) || null)
-                     : null,
-      triggerDate: row.querySelector('.sal-trigger-type-input')?.value === 'date'
-                     ? (row.querySelector('.sal-trigger-date-input')?.value || null)
-                     : null,
-      pct:         parseFloat(row.querySelector('.sal-pct-input')?.value) || 0,
-    }));
+    const budget = parseFloat(card.dataset.budget ?? '0') || 0;
+    ctr.sal = Array.from(card.querySelectorAll('tbody tr:not(.sal-total)')).map(row => {
+      const pct      = parseFloat(row.querySelector('.sal-pct-input')?.value) || 0;
+      const amtRaw   = parseFloat(row.querySelector('.sal-amt-input')?.value) || 0;
+      const fixedAmt = budget <= 0 && amtRaw > 0 ? amtRaw : null;
+      return {
+        id:          row.querySelector('.sal-ref-input')?.value.trim() ?? '',
+        label:       row.querySelector('.sal-label-input')?.value.trim() ?? '',
+        triggerType: row.querySelector('.sal-trigger-type-input')?.value ?? 'signing',
+        triggerPct:  row.querySelector('.sal-trigger-type-input')?.value === 'percent'
+                       ? (parseFloat(row.querySelector('.sal-trigger-pct-input')?.value) || null)
+                       : null,
+        triggerDate: row.querySelector('.sal-trigger-type-input')?.value === 'date'
+                       ? (row.querySelector('.sal-trigger-date-input')?.value || null)
+                       : null,
+        pct,
+        ...(fixedAmt != null ? { fixedAmt } : {}),
+      };
+    });
   }
 
   // Inline SAL editing
