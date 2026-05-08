@@ -362,16 +362,16 @@ const fmtDate = (d: string) => {
           <div class="pay-sum-arrow">&#8594;</div>
           <div class={`pay-sum-item ${nextC ? 'next' : 'pending'}`}>
             <div class="pay-sum-label">{nextC ? '&#9654; Next Payment Due' : 'All payments due'}</div>
-            <div class="pay-sum-amount">{nextC ? fmt(nextGrossC) : '–'}</div>
-            {nextC && <div class="pay-sum-sub">ex. VAT {fmt(nextNetC)} + VAT {fmt(nextVatC)}</div>}
+            <div class="pay-sum-amount">{nextC ? fmt(nextNetC) : '–'}</div>
+            {nextC && <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(nextGrossC)}</div>}
             {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
             {nextC && nextC.triggerType !== 'date'    && <div class="pay-sum-trigger">Triggers at {nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class="pay-sum-item pending">
             <div class="pay-sum-label">Remaining After</div>
-            <div class="pay-sum-amount">{fmt(pendingC * 1.10)}</div>
-            <div class="pay-sum-sub">ex. VAT {fmt(pendingC)}</div>
+            <div class="pay-sum-amount">{fmt(pendingC)}</div>
+            <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(pendingC * 1.10)}</div>
           </div>
         </div>
         <div class="pay-timeline-wrap">
