@@ -60,18 +60,21 @@ const contractorSchedules = contractors.flatMap(c => {
     const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
     const dateExpired = dateDue ? dateDue <= new Date() : false;
     let status: 'paid' | 'next' | 'pending';
+    let isDue = false;
     if (m.paid === true) {
       status = 'paid';
     } else if (m.triggerType === 'date') {
       if (dateExpired)        { status = 'paid'; }
-      else if (!nextFoundC)   { status = 'next'; nextFoundC = true; }
+      else if (!nextFoundC)   { status = 'next'; nextFoundC = true; isDue = false; }
       else                    { status = 'pending'; }
     } else {
       // pct / signing / final: never auto-paid — only m.paid===true certifies payment
-      if (!nextFoundC)        { status = 'next'; nextFoundC = true; }
-      else                    { status = 'pending'; }
+      if (!nextFoundC) {
+        status = 'next'; nextFoundC = true;
+        isDue = m.triggerType === 'signing' || cPerc >= triggerAt;
+      } else { status = 'pending'; }
     }
-    return { ...m, amount, triggerAt, triggerNote, status, tickPos };
+    return { ...m, amount, triggerAt, triggerNote, status, isDue, tickPos };
   });
 
   // Collapsed "Remaining" block for unquantified date milestones
@@ -399,11 +402,12 @@ const fmtDate = (d: string) => {
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class={`pay-sum-item ${nextC ? 'next' : 'pending'}`}>
-            <div class="pay-sum-label">{nextC ? '&#9654; Next Payment Due' : 'All payments due'}</div>
+            <div class="pay-sum-label">{nextC ? (nextC.isDue ? '&#9654; Payment Due' : '&#9654; Upcoming Payment') : 'All payments due'}</div>
             <div class="pay-sum-amount">{nextC ? fmt(nextNetC) : '–'}</div>
             {nextC && <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(nextGrossC)}</div>}
             {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
-            {nextC && nextC.triggerType !== 'date'    && <div class="pay-sum-trigger">Triggers at {nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
+            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {nextC.triggerAt}% completion</div>}
+            {nextC && nextC.triggerType !== 'date' && !nextC.isDue && <div class="pay-sum-trigger">Triggers at {nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class="pay-sum-item pending">
