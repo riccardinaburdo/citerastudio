@@ -43,6 +43,7 @@ const contractorSchedules = contractors.flatMap(c => {
   const cPerc    = (cDone / cBudget) * 100;
   let nextFoundC = false;
   let cumPct = 0;
+  let cumTriggerPct = 0;
 
   // Separate milestones into quantified (have an amount) and unquantified date ones
   const quantified   = c.sal.filter(m => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
@@ -50,13 +51,17 @@ const contractorSchedules = contractors.flatMap(c => {
 
   const milestones = quantified.map(m => {
     cumPct += m.pct;
-    const tickPos     = Math.min(cumPct, 100);
-    const amount      = cBudget > 0 ? (m.pct / 100) * cBudget : ((m as any).fixedAmt ?? 0);
-    const triggerAt   = m.triggerType === 'signing' ? 0 : m.triggerType === 'final' ? 100 : m.triggerType === 'date' ? -1 : (m.triggerPct ?? 100);
+    const tickPos  = Math.min(cumPct, 100);
+    const amount   = cBudget > 0 ? (m.pct / 100) * cBudget : ((m as any).fixedAmt ?? 0);
+    let triggerAt: number;
+    if      (m.triggerType === 'signing') { triggerAt = 0; }
+    else if (m.triggerType === 'final')   { triggerAt = 100; }
+    else if (m.triggerType === 'date')    { triggerAt = -1; }
+    else { cumTriggerPct += (m.triggerPct ?? 0); triggerAt = cumTriggerPct; }
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
                       : m.triggerType === 'final'   ? 'On practical completion'
                       : m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}`
-                      : `At ${m.triggerPct}% completion`;
+                      : `At ${triggerAt}% completion`;
     const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
     const dateExpired = dateDue ? dateDue <= new Date() : false;
     let status: 'paid' | 'next' | 'pending';
