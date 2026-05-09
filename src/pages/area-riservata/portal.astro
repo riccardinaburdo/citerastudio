@@ -43,10 +43,15 @@ const contractorSchedules = contractors.flatMap(c => {
   const cPerc    = (cDone / cBudget) * 100;
   let nextFoundC = false;
   let cumPct = 0;
-  const milestones = c.sal.map(m => {
+
+  // Separate milestones into quantified (have an amount) and unquantified date ones
+  const quantified   = c.sal.filter(m => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
+  const unquantified = c.sal.filter(m => m.pct === 0 && !((m as any).fixedAmt) && m.triggerType === 'date');
+
+  const milestones = quantified.map(m => {
     cumPct += m.pct;
     const tickPos     = Math.min(cumPct, 100);
-    const amount      = (m.pct / 100) * cBudget;
+    const amount      = cBudget > 0 ? (m.pct / 100) * cBudget : ((m as any).fixedAmt ?? 0);
     const triggerAt   = m.triggerType === 'signing' ? 0 : m.triggerType === 'final' ? 100 : m.triggerType === 'date' ? -1 : (m.triggerPct ?? 100);
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
                       : m.triggerType === 'final'   ? 'On practical completion'
@@ -66,10 +71,30 @@ const contractorSchedules = contractors.flatMap(c => {
     else                     { status = 'pending'; }
     return { ...m, amount, triggerAt, triggerNote, status, tickPos };
   });
+
+  // Collapsed "Remaining" block for unquantified date milestones
+  const remainingPct = Math.max(0, 100 - cumPct);
+  if (unquantified.length > 0 && remainingPct > 0.01) {
+    const remStatus = nextFoundC ? 'pending' : 'next';
+    if (!nextFoundC && remStatus === 'next') nextFoundC = true;
+    milestones.push({
+      id: '…', label: `Remaining (${unquantified.length} milestone${unquantified.length > 1 ? 's' : ''})`,
+      triggerType: 'date', triggerPct: null, triggerDate: null,
+      pct: remainingPct, amount: (remainingPct / 100) * cBudget,
+      triggerAt: -1, triggerNote: 'To be quantified', status: remStatus as any, tickPos: 100,
+    } as any);
+  }
+
   const paidC    = milestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.amount, 0);
+  const paidPct  = milestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.pct,    0);
   const nextC    = milestones.find(m => m.status === 'next') ?? null;
   const pendingC = milestones.filter(m => m.status === 'pending').reduce((s, m) => s + m.amount, 0);
-  return [{ c, cBudget, cPerc, milestones, paidC, nextC, pendingC }];
+
+  // Last paid milestone → replaces "now" on the bar
+  const lastPaid     = [...milestones].filter(m => m.status === 'paid').slice(-1)[0] ?? null;
+  const lastPaidDate = lastPaid ? ((lastPaid as any).paidDate ?? (lastPaid as any).triggerDate ?? null) : null;
+  const lastPaidPos  = lastPaid?.tickPos ?? 0;
+  return [{ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos }];
 });
 
 const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -340,7 +365,7 @@ const fmtDate = (d: string) => {
       No payment schedules defined. Assign SAL milestones to contractors in the admin panel.
     </div>
   )}
-  {contractorSchedules.map(({ c, cBudget, cPerc, milestones, paidC, nextC, pendingC }) => {
+  {contractorSchedules.map(({ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos }) => {
     const nextNetC   = nextC?.amount ?? 0;
     const nextVatC   = nextNetC * 0.10;
     const nextGrossC = nextNetC + nextVatC;
@@ -382,7 +407,7 @@ const fmtDate = (d: string) => {
         <div class="pay-timeline-wrap">
           <div class="pay-track-spacer"></div>
           <div class="pay-track">
-            <div class="pay-track-fill" style={`width:${Math.min(cPerc, 100).toFixed(1)}%`}></div>
+            <div class="pay-track-fill" style={`width:${Math.min(paidPct, 100).toFixed(1)}%`}></div>
             {milestones.map(m => (
               <div class={`pay-tick ${m.status}`} style={`left:${m.tickPos}%`}>
                 <div class="pay-tick-id">{m.id}</div>
@@ -390,17 +415,13 @@ const fmtDate = (d: string) => {
                 <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : m.triggerAt + '%'}</div>
               </div>
             ))}
-            {milestones.reduce((s, m) => s + m.pct, 0) < 99.9 && (
-              <div class="pay-tick pending" style="left:100%">
-                <div class="pay-tick-dot"></div>
-                <div class="pay-tick-lbl">100%</div>
+            {lastPaidDate && (
+              <div class="pay-now" style={`left:${lastPaidPos}%`}>
+                <div class="pay-now-lbl">{lastPaidDate}</div>
+                <div class="pay-now-line"></div>
+                <div class="pay-now-dot"></div>
               </div>
             )}
-            <div class="pay-now" style={`left:${Math.min(cPerc, 100).toFixed(1)}%`}>
-              <div class="pay-now-lbl">now</div>
-              <div class="pay-now-line"></div>
-              <div class="pay-now-dot"></div>
-            </div>
           </div>
           <div class="pay-track-labels">
             <span class="pay-track-edge">0% — Contract signed</span>
