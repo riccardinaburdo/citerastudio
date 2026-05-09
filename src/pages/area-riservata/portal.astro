@@ -66,9 +66,11 @@ const contractorSchedules = contractors.flatMap(c => {
       if (dateExpired)        { status = 'paid'; }
       else if (!nextFoundC)   { status = 'next'; nextFoundC = true; }
       else                    { status = 'pending'; }
-    } else if (cPerc >= triggerAt) { status = 'paid'; }
-    else if (!nextFoundC)    { status = 'next'; nextFoundC = true; }
-    else                     { status = 'pending'; }
+    } else {
+      // pct / signing / final: never auto-paid — only m.paid===true certifies payment
+      if (!nextFoundC)        { status = 'next'; nextFoundC = true; }
+      else                    { status = 'pending'; }
+    }
     return { ...m, amount, triggerAt, triggerNote, status, tickPos };
   });
 
