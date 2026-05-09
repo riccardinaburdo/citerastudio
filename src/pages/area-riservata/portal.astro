@@ -253,8 +253,13 @@ const fmtDate = (d: string) => {
     table.works { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
     table.works thead th { background: var(--navy); color: rgba(255,255,255,.85); padding: .55rem .75rem; text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; white-space: nowrap; }
     table.works thead th.right { text-align: right; }
-    tr.works-cat td { background: #f0f6ff; color: var(--navy); padding: .4rem .75rem; font-weight: 700; font-size: 0.72rem; border-top: 2px solid var(--grey-2); border-bottom: 1px solid #c7d9f0; }
+    tr.works-cat td { background: #f0f6ff; color: var(--navy); padding: .4rem .75rem; font-weight: 700; font-size: 0.72rem; border-top: 2px solid var(--grey-2); border-bottom: 1px solid #c7d9f0; cursor: pointer; user-select: none; }
+    tr.works-cat td:hover { background: #e4eeff; }
     tr.works-cat .cat-letter { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 0.65rem; font-weight: 700; margin-right: .5rem; }
+    tr.works-cat .cat-chevron { display: inline-block; margin-left: .4rem; font-size: .7rem; transition: transform .2s; vertical-align: middle; }
+    tr.works-cat.collapsed .cat-chevron { transform: rotate(-90deg); }
+    tr.works-cat.collapsed + * { /* handled by JS */ }
+    [data-cat-member].cat-hidden { display: none; }
     table.works tbody tr.item td { padding: .45rem .75rem; border-bottom: 1px solid var(--grey-2); vertical-align: middle; }
     table.works tbody tr.item:last-child td { border-bottom: none; }
     table.works tbody tr.item:hover td { background: #f8fafc; }
@@ -517,7 +522,7 @@ const fmtDate = (d: string) => {
         <tbody>
           {enrichedCats.map(cat => (
             <>
-              <tr class="works-cat">
+              <tr class="works-cat" data-cat-toggle={cat.id}>
                 <td colspan="10">
                   <span class="cat-letter">{cat.id}</span>
                   {cat.label}
@@ -525,10 +530,11 @@ const fmtDate = (d: string) => {
                     Budget: {fmt(cat.catBudget)} &nbsp;|&nbsp; Contracted done: {fmt(cat.catDoneContr)} ({cat.catPerc.toFixed(0)}%)
                     {cat.catDoneExtra > 0 && <> &nbsp;|&nbsp; <span style="color:var(--amber)">Extra: {fmt(cat.catDoneExtra)}</span></>}
                   </span>
+                  <span class="cat-chevron">▾</span>
                 </td>
               </tr>
               {cat.items.map(item => (
-                <tr class={`item${item.extra ? ' extra-item' : ''}`}>
+                <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id}>
                   <td class="item-id">{item.id}</td>
                   <td class="item-desc">
                     {item.extra && <span class="extra-badge">Extra</span>}
@@ -578,7 +584,7 @@ const fmtDate = (d: string) => {
                   </td>
                 </tr>
               ))}
-              <tr class="subtotal">
+              <tr class="subtotal" data-cat-member={cat.id}>
                 <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
                 <td class="item-money">{fmt(cat.catBudget)}</td>
                 <td></td>
@@ -638,6 +644,17 @@ const fmtDate = (d: string) => {
   This document is confidential and intended solely for {project.clientName}.
 </div>
 
+<script>
+  document.querySelectorAll('tr[data-cat-toggle]').forEach(header => {
+    header.addEventListener('click', () => {
+      const catId = header.dataset.catToggle;
+      const collapsed = header.classList.toggle('collapsed');
+      document.querySelectorAll(`[data-cat-member="${catId}"]`).forEach(row => {
+        row.classList.toggle('cat-hidden', collapsed);
+      });
+    });
+  });
+</script>
 </body>
 </html>
 ENDOFFILEwc -l src/pages/area-riservata/portal.astro
