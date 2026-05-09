@@ -644,19 +644,19 @@ const fmtDate = (d: string) => {
   This document is confidential and intended solely for {project.clientName}.
 </div>
 
-<script>
-  document.querySelectorAll('tr[data-cat-toggle]').forEach(header => {
-    header.addEventListener('click', () => {
-      const catId = header.dataset.catToggle;
-      const collapsed = header.classList.toggle('collapsed');
-      document.querySelectorAll(`[data-cat-member="${catId}"]`).forEach(row => {
-        row.classList.toggle('cat-hidden', collapsed);
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('tr[data-cat-toggle]').forEach(header => {
+      header.addEventListener('click', () => {
+        const catId = header.dataset.catToggle;
+        const collapsed = header.classList.toggle('collapsed');
+        document.querySelectorAll(`[data-cat-member="${catId}"]`).forEach(row => {
+          row.classList.toggle('cat-hidden', collapsed);
+        });
       });
     });
   });
 </script>
 </body>
 </html>
-ENDOFFILEwc -l src/pages/area-riservata/portal.astro
-wc -l src/pages/area-riservata/portal.astro
 
