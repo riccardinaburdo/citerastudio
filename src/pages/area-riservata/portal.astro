@@ -158,7 +158,7 @@ const fmtDate = (d: string) => {
     .pay-track-spacer { height: 44px; }
     .pay-track { position: relative; height: 8px; background: var(--grey-2); border-radius: 4px; margin: 0 1rem; overflow: visible; }
     .pay-track-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(to right, #16a34a, #22c55e); border-radius: 4px; }
-    .pay-tick { position: absolute; top: 50%; transform: translate(-50%,-50%); z-index: 2; }
+    .pay-tick { position: absolute; top: 50%; transform: translate(-50%,-50%); z-index: 4; }
     .pay-tick-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; }
     .pay-tick.paid .pay-tick-dot  { background: #22c55e; box-shadow: 0 0 0 1.5px #16a34a; }
     .pay-tick.next .pay-tick-dot  { background: var(--orange); border-color: var(--orange); box-shadow: 0 0 0 3px rgba(251,133,3,.25); width: 16px; height: 16px; animation: pulse-tick 2s infinite; }
@@ -384,9 +384,15 @@ const fmtDate = (d: string) => {
               <div class={`pay-tick ${m.status}`} style={`left:${m.triggerType === 'date' ? (m.status === 'paid' ? 100 : 50) : m.triggerAt}%`}>
                 <div class="pay-tick-id">{m.id}</div>
                 <div class="pay-tick-dot"></div>
-                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : m.triggerAt + '%'}</div>
+                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : m.triggerAt + '%'}</div>
               </div>
             ))}
+            {!milestones.some(m => m.triggerType === 'final' || m.triggerAt === 100) && (
+              <div class="pay-tick pending" style="left:100%">
+                <div class="pay-tick-dot"></div>
+                <div class="pay-tick-lbl">100%</div>
+              </div>
+            )}
             <div class="pay-now" style={`left:${Math.min(cPerc, 100).toFixed(1)}%`}>
               <div class="pay-now-lbl">now</div>
               <div class="pay-now-line"></div>
