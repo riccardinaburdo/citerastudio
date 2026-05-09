@@ -417,7 +417,7 @@ const fmtDate = (d: string) => {
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class={`pay-sum-item ${nextC ? (nextC.isDue ? 'next' : 'upcoming') : 'pending'}`}>
-            <div class="pay-sum-label">{nextC ? (nextC.isDue ? '&#9654; Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
+            <div class="pay-sum-label">{nextC ? (nextC.isDue ? '▶ Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
             <div class="pay-sum-amount">{nextC ? fmt(nextNetC) : '–'}</div>
             {nextC && <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(nextGrossC)}</div>}
             {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
