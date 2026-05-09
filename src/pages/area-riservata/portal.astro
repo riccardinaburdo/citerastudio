@@ -42,7 +42,10 @@ const contractorSchedules = contractors.flatMap(c => {
   const cDone    = allItems.reduce((s, i) => s + i.done,   0);
   const cPerc    = (cDone / cBudget) * 100;
   let nextFoundC = false;
+  let cumPct = 0;
   const milestones = c.sal.map(m => {
+    cumPct += m.pct;
+    const tickPos     = Math.min(cumPct, 100);
     const amount      = (m.pct / 100) * cBudget;
     const triggerAt   = m.triggerType === 'signing' ? 0 : m.triggerType === 'final' ? 100 : m.triggerType === 'date' ? -1 : (m.triggerPct ?? 100);
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
@@ -61,7 +64,7 @@ const contractorSchedules = contractors.flatMap(c => {
     } else if (cPerc >= triggerAt) { status = 'paid'; }
     else if (!nextFoundC)    { status = 'next'; nextFoundC = true; }
     else                     { status = 'pending'; }
-    return { ...m, amount, triggerAt, triggerNote, status };
+    return { ...m, amount, triggerAt, triggerNote, status, tickPos };
   });
   const paidC    = milestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.amount, 0);
   const nextC    = milestones.find(m => m.status === 'next') ?? null;
@@ -381,13 +384,13 @@ const fmtDate = (d: string) => {
           <div class="pay-track">
             <div class="pay-track-fill" style={`width:${Math.min(cPerc, 100).toFixed(1)}%`}></div>
             {milestones.map(m => (
-              <div class={`pay-tick ${m.status}`} style={`left:${m.triggerType === 'date' ? (m.status === 'paid' ? 100 : 50) : m.triggerAt}%`}>
+              <div class={`pay-tick ${m.status}`} style={`left:${m.tickPos}%`}>
                 <div class="pay-tick-id">{m.id}</div>
                 <div class="pay-tick-dot"></div>
                 <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : m.triggerAt + '%'}</div>
               </div>
             ))}
-            {!milestones.some(m => m.triggerType === 'final' || m.triggerAt === 100) && (
+            {milestones.reduce((s, m) => s + m.pct, 0) < 99.9 && (
               <div class="pay-tick pending" style="left:100%">
                 <div class="pay-tick-dot"></div>
                 <div class="pay-tick-lbl">100%</div>
