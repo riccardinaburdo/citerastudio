@@ -462,7 +462,7 @@ const fmtDate = (d: string) => {
                   <td class="pay-col-money">{fmt(m.amount)}</td>
                   <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * 0.10)}</td>
                   <td class="pay-col-gross">{fmt(m.amount * 1.10)}</td>
-                  <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? 'Next Due' : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
+                  <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? (m.isDue ? 'Due' : 'Upcoming') : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
                 </tr>
               ))}
               <tr style="background:var(--grey-1)">
