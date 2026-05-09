@@ -645,17 +645,20 @@ const fmtDate = (d: string) => {
 </div>
 
 <script is:inline>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('tr[data-cat-toggle]').forEach(header => {
-      header.addEventListener('click', () => {
-        const catId = header.dataset.catToggle;
-        const collapsed = header.classList.toggle('collapsed');
-        document.querySelectorAll(`[data-cat-member="${catId}"]`).forEach(row => {
-          row.classList.toggle('cat-hidden', collapsed);
+  (function () {
+    var headers = document.querySelectorAll('tr[data-cat-toggle]');
+    headers.forEach(function (header) {
+      header.style.cursor = 'pointer';
+      header.addEventListener('click', function () {
+        var catId = header.getAttribute('data-cat-toggle');
+        var collapsed = header.classList.toggle('collapsed');
+        var members = document.querySelectorAll('[data-cat-member="' + catId + '"]');
+        members.forEach(function (row) {
+          row.style.display = collapsed ? 'none' : '';
         });
       });
     });
-  });
+  })();
 </script>
 </body>
 </html>
