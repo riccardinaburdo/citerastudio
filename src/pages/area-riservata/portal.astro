@@ -85,10 +85,11 @@ const contractorSchedules = contractors.flatMap(c => {
     } as any);
   }
 
-  const paidC    = milestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.amount, 0);
-  const paidPct  = milestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.pct,    0);
-  const nextC    = milestones.find(m => m.status === 'next') ?? null;
-  const pendingC = milestones.filter(m => m.status === 'pending').reduce((s, m) => s + m.amount, 0);
+  const paidC      = milestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.amount, 0);
+  const paidPct    = milestones.filter(m => m.status === 'paid').reduce((s, m) => s + m.pct,    0);
+  const nextC      = milestones.find(m => m.status === 'next') ?? null;
+  const remainingC = cBudget - paidC - (nextC?.amount ?? 0);
+  const pendingC   = remainingC; // kept for template compatibility
 
   // Last paid milestone → replaces "now" on the bar
   const lastPaid     = [...milestones].filter(m => m.status === 'paid').slice(-1)[0] ?? null;
