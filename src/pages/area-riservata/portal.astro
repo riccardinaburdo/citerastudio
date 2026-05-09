@@ -189,6 +189,13 @@ const fmtDate = (d: string) => {
     .pay-sum-trigger { display: inline-block; margin-top: .6rem; font-size: 0.72rem; font-weight: 600; color: var(--orange); background: rgba(251,133,3,.1); border-radius: 4px; padding: .2rem .5rem; }
     .pay-sum-paid-note { display: inline-block; margin-top: .4rem; font-size: 0.68rem; color: #16a34a; font-weight: 600; }
     .pay-timeline-wrap { position: relative; margin: 0 .5rem 1.5rem; overflow: visible; }
+    .pay-bars-legend { display: flex; gap: 1.4rem; margin: 0 1rem .6rem; }
+    .pay-bars-legend-item { display: flex; align-items: center; gap: .4rem; font-size: 0.62rem; color: var(--slate); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    .pay-bars-legend-swatch { width: 22px; height: 6px; border-radius: 3px; }
+    .pay-bars-legend-swatch.work { background: linear-gradient(to right, #4f46e5, #818cf8); }
+    .pay-bars-legend-swatch.pay  { background: linear-gradient(to right, #16a34a, #22c55e); }
+    .pay-work-track { position: relative; height: 6px; background: var(--grey-2); border-radius: 4px; margin: 0 1rem .55rem; overflow: hidden; }
+    .pay-work-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(to right, #4f46e5, #818cf8); border-radius: 4px; }
     .pay-track-spacer { height: 44px; }
     .pay-track { position: relative; height: 8px; background: var(--grey-2); border-radius: 4px; margin: 0 1rem; overflow: visible; }
     .pay-track-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(to right, #16a34a, #22c55e); border-radius: 4px; }
@@ -417,6 +424,13 @@ const fmtDate = (d: string) => {
           </div>
         </div>
         <div class="pay-timeline-wrap">
+          <div class="pay-bars-legend">
+            <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch work"></div>Work progress ({cPerc.toFixed(1)}%)</div>
+            <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch pay"></div>Payments certified ({paidPct.toFixed(1)}%)</div>
+          </div>
+          <div class="pay-work-track">
+            <div class="pay-work-fill" style={`width:${Math.min(cPerc, 100).toFixed(1)}%`}></div>
+          </div>
           <div class="pay-track-spacer"></div>
           <div class="pay-track">
             <div class="pay-track-fill" style={`width:${Math.min(paidPct, 100).toFixed(1)}%`}></div>
