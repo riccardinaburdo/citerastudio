@@ -465,7 +465,7 @@ const projectJson = JSON.stringify(data);
                     {fmt(budget * total / 100)}
                   </td>
                   <td class="sal-total-amt" style={`text-align:right;font-weight:700;color:${total === 100 ? 'var(--green)' : 'var(--red)'};font-size:.72rem`}>
-                    {total}% {total === 100 ? '✓' : '⚠'}
+                    {parseFloat(total.toFixed(2))}% {total === 100 ? '✓' : '⚠'}
                   </td>
                   <td></td>
                   <td></td>
