@@ -153,7 +153,9 @@ const projectJson = JSON.stringify(data);
       text-align:left; font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; white-space:nowrap; }
     table.works thead th.right { text-align:right; }
     tr.cat-row td { background:#f0f6ff; color:var(--navy); padding:.4rem .65rem;
-      font-weight:700; font-size:.72rem; border-top:2px solid var(--g2); border-bottom:1px solid #c7d9f0; }
+      font-weight:700; font-size:.72rem; border-top:2px solid var(--g2); border-bottom:1px solid #c7d9f0;
+      cursor:pointer; user-select:none; }
+    tr.cat-row td:hover { background:#e4eeff; }
     .brief-link { font-size:.72rem; color:var(--slate); cursor:pointer; display:block;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;
       text-decoration:underline dotted; text-underline-offset:2px; }
@@ -522,6 +524,7 @@ const projectJson = JSON.stringify(data);
                 <tr class="cat-row" data-cat-id={cat.id}>
                   <td colspan="12">
                     <span class="cat-badge">{cat.id}</span>
+                    <span class="cat-chevron" style="display:inline-block;margin-right:.3rem;font-size:.65rem;transition:transform .2s;vertical-align:middle">▾</span>
                     {cat.label}
                     <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">
                       Budget: {fmt(catBudget)} &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
@@ -743,6 +746,23 @@ const projectJson = JSON.stringify(data);
 <script define:vars={{ projectJson, projectId }}>
   let state = JSON.parse(projectJson);
   const fmtAmt = n => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+  // Collapsible category rows
+  document.querySelectorAll('tr.cat-row').forEach(catRow => {
+    catRow.addEventListener('click', e => {
+      // Don't collapse when clicking buttons inside the row
+      if (e.target.closest('button')) return;
+      const catId = catRow.getAttribute('data-cat-id');
+      const chevron = catRow.querySelector('.cat-chevron');
+      const collapsed = catRow.dataset.collapsed === 'true';
+      const newState = !collapsed;
+      catRow.dataset.collapsed = newState;
+      if (chevron) chevron.style.transform = newState ? 'rotate(-90deg)' : '';
+      document.querySelectorAll(`tr.item[data-cat-id="${catId}"], tr.subtotal[data-cat-id="${catId}"]`).forEach(row => {
+        row.style.display = newState ? 'none' : '';
+      });
+    });
+  });
 
   // Remember last project across sessions
   if (projectId && projectId !== 'default') {
