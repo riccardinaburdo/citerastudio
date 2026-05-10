@@ -290,6 +290,17 @@ const fmtDate = (d: string) => {
     .item-num   { text-align: right; white-space: nowrap; }
     .item-money { text-align: right; font-family: monospace; font-size: 0.75rem; white-space: nowrap; }
     .item-done-qty { text-align: right; font-size: 0.78rem; }
+    .brief-trigger { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; color: inherit; }
+    .brief-trigger:hover { color: var(--navy); }
+    #desc-dialog { border: none; border-radius: 12px; padding: 0; max-width: 560px; width: 90vw; box-shadow: 0 8px 40px rgba(0,0,0,.18); }
+    #desc-dialog::backdrop { background: rgba(15,23,42,.35); backdrop-filter: blur(2px); }
+    .desc-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.2rem 1.4rem .8rem; border-bottom: 1px solid var(--grey-2); }
+    .desc-dialog-id { font-size: .65rem; font-family: monospace; font-weight: 700; color: var(--navy); background: #e8eef8; border-radius: 4px; padding: .15rem .45rem; flex-shrink: 0; }
+    .desc-dialog-brief { font-size: .88rem; font-weight: 600; color: var(--navy); flex: 1; line-height: 1.35; }
+    .desc-dialog-close { background: none; border: none; cursor: pointer; color: var(--grey-3); font-size: 1.1rem; line-height: 1; padding: .1rem; flex-shrink: 0; }
+    .desc-dialog-close:hover { color: var(--navy); }
+    .desc-dialog-body { padding: 1.2rem 1.4rem 1.4rem; font-size: .84rem; color: var(--text); line-height: 1.65; white-space: pre-wrap; max-height: 60vh; overflow-y: auto; }
+    .desc-dialog-empty { color: var(--grey-3); font-style: italic; font-size: .8rem; }
     .perc-cell { min-width: 90px; }
     .perc-wrap { display: flex; align-items: center; gap: .4rem; }
     .perc-mini { flex: 1; height: 5px; background: var(--grey-2); border-radius: 3px; overflow: hidden; }
@@ -568,7 +579,13 @@ const fmtDate = (d: string) => {
                   <td class="item-id">{item.id}</td>
                   <td class="item-desc">
                     {item.extra && <span class="extra-badge">Extra</span>}
-                    {item.brief}
+                    <span
+                      class="brief-trigger"
+                      data-id={item.id}
+                      data-brief={item.brief ?? ''}
+                      data-fulldesc={item.fullDesc ?? ''}
+                      title={item.fullDesc ? 'Click for full description' : undefined}
+                    >{item.brief}</span>
                   </td>
                   <td style="color:var(--slate); font-size:0.72rem">{item.unit}</td>
                   <td class="item-num" style={item.extra ? 'color:var(--grey-3)' : ''}>
@@ -668,6 +685,17 @@ const fmtDate = (d: string) => {
 
 </div>
 
+<dialog id="desc-dialog">
+  <div class="desc-dialog-head">
+    <div style="display:flex;flex-direction:column;gap:.35rem;flex:1;min-width:0">
+      <span id="desc-dialog-id" class="desc-dialog-id"></span>
+      <span id="desc-dialog-brief" class="desc-dialog-brief"></span>
+    </div>
+    <button class="desc-dialog-close" id="desc-dialog-close" aria-label="Close">✕</button>
+  </div>
+  <div class="desc-dialog-body" id="desc-dialog-body"></div>
+</dialog>
+
 <div class="page-footer">
   <strong>CiteraStudio</strong> — Landscape Architecture &amp; Project Management &nbsp;|&nbsp;
   Arch. Vito Depalo &nbsp;|&nbsp; {project.location} &nbsp;|&nbsp;
@@ -676,6 +704,31 @@ const fmtDate = (d: string) => {
 
 <script is:inline>
   (function () {
+    // Description dialog
+    var dialog  = document.getElementById('desc-dialog');
+    var dId     = document.getElementById('desc-dialog-id');
+    var dBrief  = document.getElementById('desc-dialog-brief');
+    var dBody   = document.getElementById('desc-dialog-body');
+    var dClose  = document.getElementById('desc-dialog-close');
+
+    document.querySelectorAll('.brief-trigger').forEach(function (el) {
+      var fullDesc = el.getAttribute('data-fulldesc');
+      if (!fullDesc) return; // no full desc → plain text, no click
+      el.addEventListener('click', function () {
+        dId.textContent    = el.getAttribute('data-id');
+        dBrief.textContent = el.getAttribute('data-brief');
+        dBody.textContent  = fullDesc;
+        dialog.showModal();
+      });
+    });
+
+    dClose.addEventListener('click', function () { dialog.close(); });
+    dialog.addEventListener('click', function (e) {
+      // close on backdrop click
+      if (e.target === dialog) dialog.close();
+    });
+
+    // Collapsible category rows
     var headers = document.querySelectorAll('tr[data-cat-toggle]');
     headers.forEach(function (header) {
       header.style.cursor = 'pointer';
