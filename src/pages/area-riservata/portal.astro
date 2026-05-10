@@ -11,17 +11,17 @@ const { info: project, contractors, categories: rawCategories } = projectData;
 const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 
 const enrich = (item: typeof rawCategories[0]['items'][0]) => {
-  const budget  = item.extra ? 0 : item.qty * item.price;
-  const done    = item.done * item.price;
-  const perc    = (!item.extra && budget > 0) ? (done / budget) * 100 : null;
-  const overrun = !item.extra && item.done > item.qty;
-  return { ...item, budget, done, perc, overrun };
+  const budget    = item.extra ? 0 : item.qty * item.price;
+  const valueDone = item.done * item.price;
+  const perc      = (!item.extra && budget > 0) ? (valueDone / budget) * 100 : null;
+  const overrun   = !item.extra && item.done > item.qty;
+  return { ...item, budget, valueDone, perc, overrun };
 };
 const enrichedCats = rawCategories.map(cat => {
   const items        = cat.items.map(enrich);
   const catBudget    = items.filter(i => !i.extra).reduce((s, i) => s + i.budget, 0);
-  const catDoneContr = items.filter(i => !i.extra).reduce((s, i) => s + i.done,   0);
-  const catDoneExtra = items.filter(i =>  i.extra).reduce((s, i) => s + i.done,   0);
+  const catDoneContr = items.filter(i => !i.extra).reduce((s, i) => s + i.valueDone, 0);
+  const catDoneExtra = items.filter(i =>  i.extra).reduce((s, i) => s + i.valueDone, 0);
   const catDone      = catDoneContr + catDoneExtra;
   const catPerc      = catBudget > 0 ? (catDoneContr / catBudget) * 100 : 0;
   return { ...cat, items, catBudget, catDoneContr, catDoneExtra, catDone, catPerc };
@@ -39,7 +39,7 @@ const contractorSchedules = contractors.flatMap(c => {
   const allItems = enrichedCats.flatMap(cat => cat.items).filter(i => i.contractor === c.id && !i.extra);
   const cBudget  = allItems.reduce((s, i) => s + i.budget, 0);
   if (cBudget === 0 || !c.sal || c.sal.length === 0) return [];
-  const cDone    = allItems.reduce((s, i) => s + i.done,   0);
+  const cDone    = allItems.reduce((s, i) => s + i.valueDone, 0);
   const cPerc    = (cDone / cBudget) * 100;
   let nextFoundC = false;
   let cumPct = 0;
@@ -583,7 +583,7 @@ const fmtDate = (d: string) => {
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
                   <td class="item-money" style={`color:${item.extra ? 'var(--amber)' : catColor(item.perc)}; font-weight:500`}>
-                    {item.done > 0 ? fmt(item.done * item.price) : '–'}
+                    {item.done > 0 ? fmt(item.valueDone) : '–'}
                   </td>
                   <td class="perc-cell">
                     {item.extra ? (
