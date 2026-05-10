@@ -46,6 +46,7 @@ export interface ProjectInfo {
   end: string;
   updated: string;
   updateNum: number;
+  template?: boolean;
 }
 
 export interface ProgressUpdate {

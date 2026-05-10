@@ -354,6 +354,12 @@ const projectJson = JSON.stringify(data);
           <label>Update Number</label>
           <input type="number" id="update-num-field" value={project.updateNum} data-info="updateNum" style="width:80px" />
         </div>
+        <div class="field" style="grid-column:1/-1">
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;text-transform:none;font-size:.78rem;font-weight:600;color:var(--slate)">
+            <input type="checkbox" data-info="template" checked={project.template ?? false} style="width:15px;height:15px;cursor:pointer" />
+            Template project — hidden from client portal
+          </label>
+        </div>
       </div>
     </div>
 
@@ -883,7 +889,9 @@ const projectJson = JSON.stringify(data);
   document.querySelectorAll('[data-info]').forEach(el => {
     el.addEventListener('input', () => {
       const field = el.dataset.info;
-      state.info[field] = el.type === 'number' ? parseFloat(el.value) || 0 : el.value;
+      if (el.type === 'checkbox')     state.info[field] = el.checked;
+      else if (el.type === 'number')  state.info[field] = parseFloat(el.value) || 0;
+      else                            state.info[field] = el.value;
     });
   });
 

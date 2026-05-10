@@ -85,6 +85,7 @@ export async function saveProject(data: ProjectData): Promise<void> {
       clientName: data.info.clientName || '',
       location: data.info.location || '',
       updated: data.info.updated || '',
+      template: data.info.template ?? false,
     };
     const updated = idx.some(p => p.id === id)
       ? idx.map(p => p.id === id ? entry : p)
@@ -105,6 +106,7 @@ export async function saveProject(data: ProjectData): Promise<void> {
       clientName: data.info.clientName || '',
       location: data.info.location || '',
       updated: data.info.updated || '',
+      template: data.info.template ?? false,
     };
     const updated = idx.some(p => p.id === id) ? idx.map(p => p.id === id ? entry : p) : [...idx, entry];
     await devWrite('_index', updated);
