@@ -887,12 +887,14 @@ const projectJson = JSON.stringify(data);
   });
 
   document.querySelectorAll('[data-info]').forEach(el => {
-    el.addEventListener('input', () => {
+    const handler = () => {
       const field = el.dataset.info;
       if (el.type === 'checkbox')     state.info[field] = el.checked;
       else if (el.type === 'number')  state.info[field] = parseFloat(el.value) || 0;
       else                            state.info[field] = el.value;
-    });
+    };
+    el.addEventListener('input', handler);
+    if (el.type === 'checkbox') el.addEventListener('change', handler);
   });
 
   // ── Progress Updates ─────────────────────────────────────────────────────
