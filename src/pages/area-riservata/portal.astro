@@ -50,6 +50,7 @@ const contractorSchedules = contractors.flatMap(c => {
   const cPerc    = (cDone / cBudget) * 100;
   let nextFoundC = false;
   let cumPct = 0;
+  let cumTriggerPct = 0; // separate accumulator for work-progress trigger axis
 
   // Separate milestones into quantified (have an amount) and unquantified date ones
   const quantified   = c.sal.filter(m => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
@@ -59,17 +60,18 @@ const contractorSchedules = contractors.flatMap(c => {
     cumPct += m.pct;
     const tickPos  = Math.min(cumPct, 100);
     const amount   = cBudget > 0 ? (m.pct / 100) * cBudget : ((m as any).fixedAmt ?? 0);
-    // triggerAt = tickPos so both bars share the same 0-100% axis:
-    // when work progress reaches a tick mark, that payment becomes due
+    // triggerAt (bar position) = tickPos for pct milestones
+    // workTriggerAt (isDue check) uses cumTriggerPct so pct ≠ triggerPct doesn't cause false dues
     let triggerAt: number;
-    if      (m.triggerType === 'signing') { triggerAt = 0; }
-    else if (m.triggerType === 'final')   { triggerAt = 100; }
-    else if (m.triggerType === 'date')    { triggerAt = -1; }
-    else                                  { triggerAt = tickPos; }
+    let workTriggerAt: number;
+    if      (m.triggerType === 'signing') { triggerAt = 0;       workTriggerAt = 0; }
+    else if (m.triggerType === 'final')   { triggerAt = 100;     workTriggerAt = 100; }
+    else if (m.triggerType === 'date')    { triggerAt = -1;      workTriggerAt = -1; }
+    else { triggerAt = tickPos; cumTriggerPct += (m.triggerPct ?? 0); workTriggerAt = cumTriggerPct; }
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
                       : m.triggerType === 'final'   ? 'On practical completion'
                       : m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}`
-                      : `At ${triggerAt}% completion`;
+                      : `At ${workTriggerAt}% completion`;
     const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
     const dateExpired = dateDue ? dateDue <= new Date() : false;
     let status: 'paid' | 'next' | 'pending';
@@ -84,10 +86,10 @@ const contractorSchedules = contractors.flatMap(c => {
       // pct / signing / final: never auto-paid — only m.paid===true certifies payment
       if (!nextFoundC) {
         status = 'next'; nextFoundC = true;
-        isDue = m.triggerType === 'signing' || cPerc >= triggerAt;
+        isDue = m.triggerType === 'signing' || cPerc >= workTriggerAt;
       } else { status = 'pending'; }
     }
-    return { ...m, amount, triggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   // Collapsed "Remaining" block for unquantified date milestones
@@ -427,7 +429,7 @@ const fmtDate = (d: string) => {
     const nextNetC   = nextC?.amount ?? 0;
     const nextVatC   = nextNetC * 0.10;
     const nextGrossC = nextNetC + nextVatC;
-    const progNdC    = nextC ? Math.max(0, nextC.triggerAt - cPerc) : 0;
+    const progNdC    = nextC ? Math.max(0, (nextC.workTriggerAt ?? nextC.triggerAt) - cPerc) : 0;
     return (
       <div class="payment-card">
         <div class="pay-contractor-header">
@@ -453,8 +455,8 @@ const fmtDate = (d: string) => {
             <div class="pay-sum-amount">{nextC ? fmt(nextNetC) : '–'}</div>
             {nextC && <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(nextGrossC)}</div>}
             {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
-            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {nextC.triggerAt}% completion</div>}
-            {nextC && nextC.triggerType !== 'date' && !nextC.isDue && <div class="pay-sum-trigger">Triggers at {nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
+            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {nextC.workTriggerAt ?? nextC.triggerAt}% work done</div>}
+            {nextC && nextC.triggerType !== 'date' && !nextC.isDue && <div class="pay-sum-trigger">Triggers at {nextC.workTriggerAt ?? nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class="pay-sum-item pending">
