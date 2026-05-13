@@ -455,8 +455,11 @@ const fmtDate = (d: string) => {
             <div class="pay-sum-amount">{nextC ? fmt(nextNetC) : '–'}</div>
             {nextC && <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(nextGrossC)}</div>}
             {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
-            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {nextC.workTriggerAt ?? nextC.triggerAt}% work done</div>}
-            {nextC && nextC.triggerType !== 'date' && !nextC.isDue && <div class="pay-sum-trigger">Triggers at {nextC.workTriggerAt ?? nextC.triggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
+            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'signing' && <div class="pay-sum-trigger">On contract signing</div>}
+            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'final'   && <div class="pay-sum-trigger">On practical completion</div>}
+            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'percent'  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {cPerc.toFixed(1)}% work done</div>}
+            {nextC && nextC.triggerType !== 'date' && !nextC.isDue && nextC.triggerType === 'final'    && <div class="pay-sum-trigger">Triggers on practical completion</div>}
+            {nextC && nextC.triggerType !== 'date' && !nextC.isDue && nextC.triggerType === 'percent'  && <div class="pay-sum-trigger">Triggers at {nextC.workTriggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class="pay-sum-item pending">
