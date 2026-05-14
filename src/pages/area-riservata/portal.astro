@@ -86,7 +86,7 @@ const contractorSchedules = contractors.flatMap(c => {
       // pct / signing / final: never auto-paid — only m.paid===true certifies payment
       if (!nextFoundC) {
         status = 'next'; nextFoundC = true;
-        isDue = m.triggerType === 'signing' || (workTriggerAt > 0 && cPerc >= workTriggerAt);
+        isDue = (m.triggerType === 'signing' && cPerc > 0) || (workTriggerAt > 0 && cPerc >= workTriggerAt);
       } else { status = 'pending'; }
     }
     return { ...m, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
