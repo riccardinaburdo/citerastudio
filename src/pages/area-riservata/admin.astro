@@ -27,6 +27,7 @@ for (const cat of categories) {
 
 const triggerLabel = (m: any) =>
   m.triggerType === 'signing' ? 'On signing' :
+  m.triggerType === 'start'   ? 'At start of works' :
   m.triggerType === 'final'   ? 'Final works' :
   m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}` :
   `at ${m.triggerPct}%`;
@@ -443,6 +444,7 @@ const projectJson = JSON.stringify(data);
                     <td style="white-space:nowrap">
                       <select class="sal-trigger-type-input" style="padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:var(--sans);background:#fff">
                         <option value="signing" selected={m.triggerType === 'signing'}>On signing</option>
+                        <option value="start"   selected={m.triggerType === 'start'}>At start of works</option>
                         <option value="percent" selected={m.triggerType === 'percent'}>At %</option>
                         <option value="date"    selected={m.triggerType === 'date'}>On date</option>
                         <option value="final"   selected={m.triggerType === 'final'}>Final</option>
@@ -685,6 +687,7 @@ const projectJson = JSON.stringify(data);
         <label>Trigger</label>
         <select id="ms-trigger-type" style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff">
           <option value="signing">On signing (contract signature)</option>
+          <option value="start">At start of works</option>
           <option value="percent">At % completion</option>
           <option value="date">On date</option>
           <option value="final">Final works / testing</option>
@@ -1069,8 +1072,8 @@ const projectJson = JSON.stringify(data);
   // ── SAL milestone helpers ─────────────────────────────────────────────────
   function buildSalRowHtml(m, budget) {
     const inp = 'padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-family:var(--sans)';
-    const triggerOpts = ['signing','percent','date','final'].map(v =>
-      `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='percent'?'At %':v==='date'?'On date':'Final'}</option>`
+    const triggerOpts = ['signing','start','percent','date','final'].map(v =>
+      `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='start'?'At start of works':v==='percent'?'At %':v==='date'?'On date':'Final'}</option>`
     ).join('');
     const amtVal = budget > 0 ? (budget * m.pct / 100).toFixed(2) : (m.fixedAmt != null ? parseFloat(m.fixedAmt).toFixed(2) : (0).toFixed(2));
     return [
