@@ -4,10 +4,18 @@ export const prerender = false;
 import { getProject, listProjects } from '../../lib/store';
 
 const role = Astro.locals.role;
-const projectId = Astro.url.searchParams.get('p') ?? 'default';
-
-const [projectData, allProjects] = await Promise.all([getProject(projectId), listProjects()]);
+const allProjects = await listProjects();
 const clientProjects = (allProjects as any[]).filter((p: any) => !p.template);
+
+// If no ?p= param, redirect to the first non-template project
+const rawId = Astro.url.searchParams.get('p');
+if (!rawId) {
+  const first = clientProjects[0] ?? allProjects[0];
+  if (first) return Astro.redirect(`/area-riservata/portal?p=${first.id}`);
+}
+
+const projectId = rawId ?? 'default';
+const projectData = await getProject(projectId);
 
 // Block clients from accessing template projects
 if (role === 'client' && (projectData.info as any).template) {

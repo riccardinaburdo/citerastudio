@@ -3,8 +3,15 @@ export const prerender = false;
 import { getProject, listProjects } from '../../lib/store';
 import type { ProjectData } from '../../lib/schema';
 
-const projectId = Astro.url.searchParams.get('p') ?? 'default';
-const [data, allProjects] = await Promise.all([getProject(projectId), listProjects()]);
+const allProjects = await listProjects();
+const nonTemplates = (allProjects as any[]).filter((p: any) => !p.template);
+const rawId = Astro.url.searchParams.get('p');
+if (!rawId) {
+  const first = nonTemplates[0] ?? allProjects[0];
+  if (first) return Astro.redirect(`/area-riservata/admin?p=${first.id}`);
+}
+const projectId = rawId ?? 'default';
+const data = await getProject(projectId);
 const { info: project, contractors, technicians, categories } = data;
 
 const enrich = (item: any) => {
