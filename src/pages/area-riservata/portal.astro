@@ -632,8 +632,7 @@ const fmtDate = (d: string) => {
     <>
       <div class="section-title">Technical Fees — by Technician</div>
       {technicianSchedules.map(({ t, tFee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT }: any) => {
-        const nextNetT   = nextT?.amount ?? 0;
-        const nextGrossT = nextNetT * 1.22; // professional fee VAT 22%
+        const nextNetT = nextT?.amount ?? 0;
         return (
           <div class="payment-card">
             <div class="pay-contractor-header">
@@ -650,14 +649,14 @@ const fmtDate = (d: string) => {
               <div class="pay-sum-item paid">
                 <div class="pay-sum-label">Paid to Date</div>
                 <div class="pay-sum-amount">{fmt(paidT)}</div>
-                <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT 22%: {fmt(paidT * 1.22)}</div>
+                <div class="pay-sum-sub">net ex. VAT</div>
                 {paidT > 0 && <div class="pay-sum-paid-note">&#10003; payments certified</div>}
               </div>
               <div class="pay-sum-arrow">&#8594;</div>
               <div class={`pay-sum-item ${nextT ? (nextT.isDue ? 'next' : 'upcoming') : 'pending'}`}>
                 <div class="pay-sum-label">{nextT ? (nextT.isDue ? '▶ Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
                 <div class="pay-sum-amount">{nextT ? fmt(nextNetT) : '–'}</div>
-                {nextT && <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT 22%: {fmt(nextGrossT)}</div>}
+                {nextT && <div class="pay-sum-sub">net ex. VAT</div>}
                 {nextT && nextT.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextT.triggerDate ?? '—'}</div>}
                 {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'signing'  && <div class="pay-sum-trigger">On contract signing</div>}
                 {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'start'    && <div class="pay-sum-trigger">At start of works</div>}
@@ -670,7 +669,7 @@ const fmtDate = (d: string) => {
               <div class="pay-sum-item pending">
                 <div class="pay-sum-label">Remaining After</div>
                 <div class="pay-sum-amount">{fmt(pendingT)}</div>
-                <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT 22%: {fmt(pendingT * 1.22)}</div>
+                <div class="pay-sum-sub">net ex. VAT</div>
               </div>
             </div>
             <div class="pay-timeline-wrap">
@@ -711,9 +710,7 @@ const fmtDate = (d: string) => {
                     <th style="width:55px">Ref.</th>
                     <th>Milestone</th>
                     <th>Trigger</th>
-                    <th class="right">Net (ex. VAT)</th>
-                    <th class="right">VAT 22%</th>
-                    <th class="right">Total inc. VAT</th>
+                    <th class="right">Amount <span style="font-size:.6em;font-weight:400;opacity:.7">(net ex. VAT)</span></th>
                     <th style="width:100px">Status</th>
                   </tr>
                 </thead>
@@ -724,16 +721,12 @@ const fmtDate = (d: string) => {
                       <td class="pay-col-label">{m.label}</td>
                       <td class="pay-col-trigger">{m.triggerNote}</td>
                       <td class="pay-col-money">{fmt(m.amount)}</td>
-                      <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * 0.22)}</td>
-                      <td class="pay-col-gross">{fmt(m.amount * 1.22)}</td>
                       <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? (m.isDue ? 'Due' : 'Upcoming') : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
                     </tr>
                   ))}
                   <tr style="background:var(--grey-1)">
-                    <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">TECHNICIAN TOTAL</td>
+                    <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">TOTAL FEE (net ex. VAT)</td>
                     <td class="pay-col-money" style="font-weight:700; color:var(--navy)">{fmt(tFee)}</td>
-                    <td class="pay-col-money" style="font-weight:700; color:var(--slate)">{fmt(tFee * 0.22)}</td>
-                    <td class="pay-col-gross">{fmt(tFee * 1.22)}</td>
                     <td></td>
                   </tr>
                 </tbody>
