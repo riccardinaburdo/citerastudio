@@ -930,6 +930,11 @@ const projectJson = JSON.stringify(data);
   const saveStatus = document.getElementById('save-status');
 
   async function saveAll() {
+    // Stamp updated date to today
+    const today = new Date().toISOString().slice(0, 10);
+    state.info.updated = today;
+    const updatedField = document.querySelector('[data-info="updated"]');
+    if (updatedField) updatedField.value = today;
     // Flush any in-progress DOM edits into state before serialising
     document.querySelectorAll('.ctr-card, .tec-card').forEach(card => syncSalFromCard(card));
     saveAllBtn.disabled = true;
