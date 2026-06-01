@@ -14,7 +14,8 @@ if (role === 'client' && (projectData.info as any).template) {
   const first = clientProjects[0];
   return Astro.redirect(first ? `/area-riservata/portal?p=${first.id}` : '/area-riservata/portal');
 }
-const { info: project, contractors, categories: rawCategories } = projectData;
+const { info: project, contractors, technicians: rawTechnicians, categories: rawCategories } = projectData;
+const technicians = rawTechnicians ?? [];
 const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 
 const enrich = (item: typeof rawCategories[0]['items'][0]) => {
@@ -118,6 +119,64 @@ const contractorSchedules = contractors.flatMap(c => {
   const lastPaidDate = lastPaid ? ((lastPaid as any).paidDate ?? (lastPaid as any).triggerDate ?? null) : null;
   const lastPaidPos  = lastPaid?.tickPos ?? 0;
   return [{ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos }];
+});
+
+// Per-technician payment schedules — triggered by OVERALL project progress (totalPerc)
+const technicianSchedules = technicians.flatMap((t: any) => {
+  if (!t.fee || !t.sal || t.sal.length === 0) return [];
+  let nextFoundT = false;
+  let cumPctT = 0;
+
+  const quantified = t.sal.filter((m: any) => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
+
+  const milestones = quantified.map((m: any) => {
+    cumPctT += m.pct;
+    const tickPos = cumPctT;
+    const amount  = t.fee > 0 ? t.fee * m.pct / 100 : ((m.fixedAmt ?? 0) as number);
+
+    let triggerAt: number;
+    if      (m.triggerType === 'signing') { triggerAt = 0; }
+    else if (m.triggerType === 'start')   { triggerAt = 0; }
+    else if (m.triggerType === 'final')   { triggerAt = 100; }
+    else if (m.triggerType === 'date')    { triggerAt = -1; }
+    else { triggerAt = tickPos; }
+
+    const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
+                      : m.triggerType === 'start'   ? 'At start of works'
+                      : m.triggerType === 'final'   ? 'On practical completion'
+                      : m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}`
+                      : `At ${triggerAt}% overall works`;
+
+    const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
+    const dateExpired = dateDue ? dateDue <= new Date() : false;
+    let status: 'paid' | 'next' | 'pending';
+    let isDue = false;
+
+    if (m.paid === true) {
+      status = 'paid';
+    } else if (m.triggerType === 'date') {
+      if (dateExpired)      { status = 'paid'; }
+      else if (!nextFoundT) { status = 'next'; nextFoundT = true; isDue = false; }
+      else                  { status = 'pending'; }
+    } else {
+      if (!nextFoundT) {
+        status = 'next'; nextFoundT = true;
+        isDue = m.triggerType === 'signing'
+             || m.triggerType === 'start'
+             || (m.triggerType === 'final' && totalPerc >= 100)
+             || (m.triggerType === 'percent' && totalPerc >= (m.triggerPct ?? 0));
+      } else { status = 'pending'; }
+    }
+    return { ...m, amount, triggerAt, triggerNote, status, isDue, tickPos };
+  });
+
+  const paidT    = milestones.filter((m: any) => m.status === 'paid').reduce((s: number, m: any) => s + m.amount, 0);
+  const paidPctT = milestones.filter((m: any) => m.status === 'paid').reduce((s: number, m: any) => s + m.pct,    0);
+  const nextT    = milestones.find((m: any) => m.status === 'next') ?? null;
+  const pendingT = milestones.filter((m: any) => m.status !== 'paid').slice(1).reduce((s: number, m: any) => s + m.amount, 0);
+  const lastPaidT     = [...milestones].filter((m: any) => m.status === 'paid').slice(-1)[0] ?? null;
+  const lastPaidDateT = lastPaidT ? (lastPaidT.paidDate ?? lastPaidT.triggerDate ?? null) : null;
+  return [{ t, tFee: t.fee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT }];
 });
 
 const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -568,6 +627,123 @@ const fmtDate = (d: string) => {
       ))}
     </div>
   </div>
+
+  {technicianSchedules.length > 0 && (
+    <>
+      <div class="section-title">Technical Fees — by Technician</div>
+      {technicianSchedules.map(({ t, tFee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT }: any) => {
+        const nextNetT   = nextT?.amount ?? 0;
+        const nextGrossT = nextNetT * 1.22; // professional fee VAT 22%
+        return (
+          <div class="payment-card">
+            <div class="pay-contractor-header">
+              <div>
+                <span class="pay-contractor-name">{t.name}</span>
+                <span class="pay-contractor-trade">{t.role}</span>
+              </div>
+              <div class="pay-contractor-stats">
+                Total Fee: <strong>{fmt(tFee)}</strong>
+                &nbsp;|&nbsp; Overall Works: <strong style={`color:${totalPerc >= 100 ? 'var(--green)' : totalPerc > 0 ? 'var(--orange)' : 'var(--slate)'}`}>{totalPerc.toFixed(1)}%</strong>
+              </div>
+            </div>
+            <div class="pay-summary">
+              <div class="pay-sum-item paid">
+                <div class="pay-sum-label">Paid to Date</div>
+                <div class="pay-sum-amount">{fmt(paidT)}</div>
+                <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT 22%: {fmt(paidT * 1.22)}</div>
+                {paidT > 0 && <div class="pay-sum-paid-note">&#10003; payments certified</div>}
+              </div>
+              <div class="pay-sum-arrow">&#8594;</div>
+              <div class={`pay-sum-item ${nextT ? (nextT.isDue ? 'next' : 'upcoming') : 'pending'}`}>
+                <div class="pay-sum-label">{nextT ? (nextT.isDue ? '▶ Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
+                <div class="pay-sum-amount">{nextT ? fmt(nextNetT) : '–'}</div>
+                {nextT && <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT 22%: {fmt(nextGrossT)}</div>}
+                {nextT && nextT.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextT.triggerDate ?? '—'}</div>}
+                {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'signing'  && <div class="pay-sum-trigger">On contract signing</div>}
+                {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'start'    && <div class="pay-sum-trigger">At start of works</div>}
+                {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'final'    && <div class="pay-sum-trigger">On practical completion</div>}
+                {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {totalPerc.toFixed(1)}% overall</div>}
+                {nextT && nextT.triggerType !== 'date' && !nextT.isDue && nextT.triggerType === 'final'    && <div class="pay-sum-trigger">Triggers on practical completion</div>}
+                {nextT && nextT.triggerType !== 'date' && !nextT.isDue && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Triggers at {nextT.triggerAt}% overall works</div>}
+              </div>
+              <div class="pay-sum-arrow">&#8594;</div>
+              <div class="pay-sum-item pending">
+                <div class="pay-sum-label">Remaining After</div>
+                <div class="pay-sum-amount">{fmt(pendingT)}</div>
+                <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT 22%: {fmt(pendingT * 1.22)}</div>
+              </div>
+            </div>
+            <div class="pay-timeline-wrap">
+              <div class="pay-bars-legend">
+                <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch work"></div>Overall works progress ({totalPerc.toFixed(1)}%)</div>
+                <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch pay"></div>Fees certified ({paidPctT.toFixed(1)}%)</div>
+              </div>
+              <div class="pay-work-track">
+                <div class="pay-work-fill" style={`width:${Math.min(totalPerc, 100).toFixed(1)}%`}></div>
+              </div>
+              <div class="pay-track-spacer"></div>
+              <div class="pay-track">
+                <div class="pay-track-fill" style={`width:${Math.min(paidPctT, 100).toFixed(1)}%`}></div>
+                {milestones.map((m: any) => (
+                  <div class={`pay-tick ${m.status}`} style={`left:${m.tickPos}%`}>
+                    <div class="pay-tick-id">{m.id}</div>
+                    <div class="pay-tick-dot"></div>
+                    <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : m.triggerAt + '%'}</div>
+                  </div>
+                ))}
+                {lastPaidDateT && (
+                  <div class="pay-now" style="left:0%">
+                    <div class="pay-now-lbl">{lastPaidDateT}</div>
+                    <div class="pay-now-line"></div>
+                    <div class="pay-now-dot"></div>
+                  </div>
+                )}
+              </div>
+              <div class="pay-track-labels">
+                <span class="pay-track-edge">0% — Contract signed</span>
+                <span class="pay-track-edge">100% — Practical completion</span>
+              </div>
+            </div>
+            <div class="pay-table-wrap">
+              <table class="pay-table">
+                <thead>
+                  <tr>
+                    <th style="width:55px">Ref.</th>
+                    <th>Milestone</th>
+                    <th>Trigger</th>
+                    <th class="right">Net (ex. VAT)</th>
+                    <th class="right">VAT 22%</th>
+                    <th class="right">Total inc. VAT</th>
+                    <th style="width:100px">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {milestones.map((m: any) => (
+                    <tr class={`pay-row-${m.status}`}>
+                      <td class="pay-col-id">{m.id}</td>
+                      <td class="pay-col-label">{m.label}</td>
+                      <td class="pay-col-trigger">{m.triggerNote}</td>
+                      <td class="pay-col-money">{fmt(m.amount)}</td>
+                      <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * 0.22)}</td>
+                      <td class="pay-col-gross">{fmt(m.amount * 1.22)}</td>
+                      <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? (m.isDue ? 'Due' : 'Upcoming') : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
+                    </tr>
+                  ))}
+                  <tr style="background:var(--grey-1)">
+                    <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">TECHNICIAN TOTAL</td>
+                    <td class="pay-col-money" style="font-weight:700; color:var(--navy)">{fmt(tFee)}</td>
+                    <td class="pay-col-money" style="font-weight:700; color:var(--slate)">{fmt(tFee * 0.22)}</td>
+                    <td class="pay-col-gross">{fmt(tFee * 1.22)}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  )}
 
   <div class="section-title">Works Breakdown</div>
   <div class="works-card">

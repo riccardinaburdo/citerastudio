@@ -161,6 +161,7 @@ export async function createProject(name: string): Promise<string> {
       updated: new Date().toISOString().slice(0, 10), updateNum: 1,
     },
     contractors: [],
+    technicians: [],
     categories: [],
     updates: [],
   });

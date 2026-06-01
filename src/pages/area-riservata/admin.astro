@@ -5,7 +5,7 @@ import type { ProjectData } from '../../lib/schema';
 
 const projectId = Astro.url.searchParams.get('p') ?? 'default';
 const [data, allProjects] = await Promise.all([getProject(projectId), listProjects()]);
-const { info: project, contractors, categories } = data;
+const { info: project, contractors, technicians, categories } = data;
 
 const enrich = (item: any) => {
   const budget = item.extra ? 0 : item.qty * item.price;
@@ -269,6 +269,7 @@ const projectJson = JSON.stringify(data);
   <button class="tab-btn" data-tab="projects">Projects</button>
   <button class="tab-btn active" data-tab="project">Project Info</button>
   <button class="tab-btn" data-tab="contractors">Contractors &amp; Payments</button>
+  <button class="tab-btn" data-tab="technicians">Technical Fees</button>
   <button class="tab-btn" data-tab="works">Bill of Works</button>
 </div>
 
@@ -490,6 +491,100 @@ const projectJson = JSON.stringify(data);
     </div>
   </div>
 
+  <div id="tab-technicians" hidden>
+    <div class="section-head">
+      <span class="section-title">Technical Fees &amp; Payment Schedules</span>
+      <button class="btn btn-add" id="btn-add-tec">+ Add Technician</button>
+    </div>
+    <div class="contractor-grid" id="technician-grid">
+      {(technicians ?? []).map(t => {
+        const total = t.sal.reduce((s: number, m: any) => s + m.pct, 0);
+        return (
+          <div class="card tec-card" data-budget={t.fee.toFixed(2)} data-tec-id={t.id}>
+            <div class="ctr-header">
+              <div>
+                <div class="ctr-name">{t.name}</div>
+                <div class="ctr-trade">{t.role}</div>
+                <div class="ctr-contact">{t.contact}</div>
+                <div class="ctr-budget">
+                  Fee: <strong class="ctr-budget-val">{fmt(t.fee)}</strong>
+                  <span style="font-size:.6rem;color:var(--g3)"> · manually entered · net ex. VAT</span>
+                </div>
+              </div>
+              <div class="ctr-actions">
+                <button class="btn-icon btn-edit-tec" title="Edit">✎</button>
+                <button class="btn-icon btn-del-tec" title="Delete">🗑</button>
+              </div>
+            </div>
+            <div style="overflow-x:auto">
+            <table class="sal-table">
+              <thead>
+                <tr>
+                  <th style="width:62px">Ref.</th>
+                  <th>Milestone</th>
+                  <th style="width:160px">Trigger <span style="font-size:.55rem;font-weight:400;color:var(--g3)">(overall works %)</span></th>
+                  <th class="right" style="width:120px">Amount (net €)</th>
+                  <th class="right" style="width:58px">%</th>
+                  <th style="width:130px;text-align:center">Paid ✓</th>
+                  <th style="width:36px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {t.sal.map((m: any) => (
+                  <tr>
+                    <td><input class="sal-ref-input" type="text" value={m.id} style="width:52px;padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>
+                    <td><input class="sal-label-input" type="text" value={m.label} style="width:100%;padding:.22rem .4rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:var(--sans)" /></td>
+                    <td style="white-space:nowrap">
+                      <select class="sal-trigger-type-input" style="padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:var(--sans);background:#fff">
+                        <option value="signing" selected={m.triggerType === 'signing'}>On signing</option>
+                        <option value="start"   selected={m.triggerType === 'start'}>At start of works</option>
+                        <option value="percent" selected={m.triggerType === 'percent'}>At %</option>
+                        <option value="date"    selected={m.triggerType === 'date'}>On date</option>
+                        <option value="final"   selected={m.triggerType === 'final'}>Final</option>
+                      </select>
+                      <input class="sal-trigger-pct-input" type="number" min="1" max="99" value={m.triggerPct ?? ''} placeholder="%" style={`width:38px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType !== 'percent' ? 'display:none' : ''}`} />
+                      <input class="sal-trigger-date-input" type="date" value={m.triggerDate ?? ''} style={`padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;margin-left:.3rem;${m.triggerType !== 'date' ? 'display:none' : ''}`} />
+                    </td>
+                    <td style="text-align:right;white-space:nowrap">
+                      <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={(t.fee > 0 ? t.fee * m.pct / 100 : (m.fixedAmt ?? 0)).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                    </td>
+                    <td style="text-align:right;white-space:nowrap">
+                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={m.pct} style="width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />
+                      <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
+                    </td>
+                    <td style="text-align:center;white-space:nowrap">
+                      <input class="sal-paid-check" type="checkbox" checked={m.paid === true} title="Mark as paid" style="width:14px;height:14px;cursor:pointer;accent-color:var(--green)" />
+                      <input class="sal-paid-date-input" type="date" value={m.paidDate ?? ''} style={`margin-left:.3rem;padding:.18rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.68rem;font-family:monospace;${!m.paid ? 'display:none' : ''}`} />
+                    </td>
+                    <td>
+                      <button class="btn-icon btn-del-milestone" title="Delete milestone" style="padding:.15rem .35rem;font-size:.7rem;color:var(--red);border-color:#fca5a5">🗑</button>
+                    </td>
+                  </tr>
+                ))}
+                <tr class="sal-total">
+                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
+                  <td class="sal-amt sal-total-amt-eur" style={`text-align:right;font-family:monospace;font-weight:700;color:${total === 100 ? 'var(--green)' : 'var(--red)'}`}>
+                    {fmt(t.fee * total / 100)}
+                  </td>
+                  <td class="sal-total-amt" style={`text-align:right;font-weight:700;color:${total === 100 ? 'var(--green)' : 'var(--red)'};font-size:.72rem`}>
+                    {parseFloat(total.toFixed(2))}% {total === 100 ? '✓' : '⚠'}
+                  </td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+            <div class="sal-add-row">
+              <button class="btn btn-add btn-add-milestone" style="font-size:.7rem;padding:.3rem .7rem">+ Add milestone</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
   <div id="tab-works" hidden>
     <div class="section-head">
       <span class="section-title">Bill of Works</span>
@@ -663,6 +758,46 @@ const projectJson = JSON.stringify(data);
   </div>
 </div>
 
+<div id="tec-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <span id="tec-modal-title" style="font-size:.8rem;font-weight:700">Add Technician</span>
+      <button class="modal-close" id="tec-modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:.9rem">
+      <div>
+        <label>ID <span style="font-size:.6rem;font-weight:400;color:var(--g3)">(short code, e.g. T1)</span></label>
+        <input id="tec-id-inp" type="text" placeholder="T1"
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Name / Studio</label>
+        <input id="tec-name-inp" type="text" placeholder="Studio Arch. Mario Rossi"
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Role</label>
+        <input id="tec-role-inp" type="text" placeholder="Architect"
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Contact</label>
+        <input id="tec-contact-inp" type="text" placeholder="arch.rossi@example.com"
+          style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
+      </div>
+      <div>
+        <label>Total Fee <span style="font-size:.6rem;font-weight:400;color:var(--g3)">(net ex. VAT, €)</span></label>
+        <input id="tec-fee-inp" type="number" min="0" step="0.01" placeholder="e.g. 12000"
+          style="width:180px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:monospace" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="tec-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="tec-save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="milestone-modal" class="modal-overlay">
   <div class="modal-box" style="max-width:420px">
     <div class="modal-header">
@@ -789,7 +924,7 @@ const projectJson = JSON.stringify(data);
 
   async function saveAll() {
     // Flush any in-progress DOM edits into state before serialising
-    document.querySelectorAll('.ctr-card').forEach(card => syncSalFromCard(card));
+    document.querySelectorAll('.ctr-card, .tec-card').forEach(card => syncSalFromCard(card));
     saveAllBtn.disabled = true;
     saveStatus.textContent = 'Saving…';
     saveStatus.style.color = 'rgba(255,255,255,.7)';
@@ -877,6 +1012,7 @@ const projectJson = JSON.stringify(data);
     projects:    document.getElementById('tab-projects'),
     project:     document.getElementById('tab-project'),
     contractors: document.getElementById('tab-contractors'),
+    technicians: document.getElementById('tab-technicians'),
     works:       document.getElementById('tab-works'),
   };
   tabs.forEach(btn => {
@@ -917,8 +1053,9 @@ const projectJson = JSON.stringify(data);
     if (el.type === 'checkbox') el.addEventListener('change', handler);
   });
 
-  // ── Progress Updates ─────────────────────────────────────────────────────
-  if (!state.updates) state.updates = [];
+  // ── Init optional arrays ─────────────────────────────────────────────────
+  if (!state.updates)     state.updates = [];
+  if (!state.technicians) state.technicians = [];
 
   function syncUpdatesFromDOM() {
     const rows = document.querySelectorAll('#updates-admin-tbody tr[data-update-num]');
@@ -1131,11 +1268,14 @@ const projectJson = JSON.stringify(data);
   }
 
   function syncSalFromCard(card) {
-    const ctrId  = card.dataset.ctrId;
-    const ctr    = state.contractors.find(c => c.id === ctrId);
-    if (!ctr) return;
+    const isTec  = card.classList.contains('tec-card');
+    const ctrId  = isTec ? card.dataset.tecId : card.dataset.ctrId;
+    const entity = isTec
+      ? state.technicians.find(t => t.id === ctrId)
+      : state.contractors.find(c => c.id === ctrId);
+    if (!entity) return;
     const budget = parseFloat(card.dataset.budget ?? '0') || 0;
-    ctr.sal = Array.from(card.querySelectorAll('tbody tr:not(.sal-total)')).map(row => {
+    entity.sal = Array.from(card.querySelectorAll('tbody tr:not(.sal-total)')).map(row => {
       const pct      = parseFloat(row.querySelector('.sal-pct-input')?.value) || 0;
       const amtRaw   = parseFloat(row.querySelector('.sal-amt-input')?.value) || 0;
       const fixedAmt = budget <= 0 && amtRaw > 0 ? amtRaw : null;
@@ -1171,13 +1311,13 @@ const projectJson = JSON.stringify(data);
         dateInp.value = new Date().toISOString().slice(0, 10);
       }
     }
-    syncSalFromCard(row.closest('.ctr-card'));
+    syncSalFromCard(row.closest('.ctr-card') ?? row.closest('.tec-card'));
   });
 
   document.addEventListener('input', e => {
     const row = e.target.closest('.sal-table tbody tr:not(.sal-total)');
     if (!row) return;
-    const card = row.closest('.ctr-card');
+    const card = row.closest('.ctr-card') ?? row.closest('.tec-card');
     if (!card) return;
     if (e.target.classList.contains('sal-trigger-type-input')) {
       const pctInput  = row.querySelector('.sal-trigger-pct-input');
@@ -1206,7 +1346,7 @@ const projectJson = JSON.stringify(data);
     const btn = e.target.closest('.btn-del-milestone');
     if (!btn) return;
     const row = btn.closest('tr');
-    const card = btn.closest('.ctr-card');
+    const card = btn.closest('.ctr-card') ?? btn.closest('.tec-card');
     row?.remove();
     if (card) { recalcCard(card); syncSalFromCard(card); }
   });
@@ -1311,7 +1451,7 @@ const projectJson = JSON.stringify(data);
   document.addEventListener('click', e => {
     const btn = e.target.closest('.btn-add-milestone');
     if (!btn) return;
-    const card = btn.closest('.ctr-card');
+    const card = btn.closest('.ctr-card') ?? btn.closest('.tec-card');
     if (card) openMsModal(card);
   });
 
@@ -1455,6 +1595,128 @@ const projectJson = JSON.stringify(data);
     state.contractors = state.contractors.filter(c => c.id !== ctrId);
     card.remove();
   });
+
+  // ── Technician modal ─────────────────────────────────────────────────────
+  const tecModal      = document.getElementById('tec-modal');
+  const tecModalTitle = document.getElementById('tec-modal-title');
+  const tecIdInp      = document.getElementById('tec-id-inp');
+  const tecNameInp    = document.getElementById('tec-name-inp');
+  const tecRoleInp    = document.getElementById('tec-role-inp');
+  const tecContactInp = document.getElementById('tec-contact-inp');
+  const tecFeeInp     = document.getElementById('tec-fee-inp');
+  let   tecEditId     = null;
+
+  function openTecModal(tec) {
+    tecEditId = tec?.id ?? null;
+    tecModalTitle.textContent = tec ? 'Edit Technician' : 'Add Technician';
+    tecIdInp.value      = tec?.id      ?? '';
+    tecNameInp.value    = tec?.name    ?? '';
+    tecRoleInp.value    = tec?.role    ?? '';
+    tecContactInp.value = tec?.contact ?? '';
+    tecFeeInp.value     = tec?.fee     ?? '';
+    tecIdInp.disabled   = !!tec;
+    tecModal.classList.add('is-open');
+    tecNameInp.focus();
+  }
+  function closeTecModal() { tecModal.classList.remove('is-open'); tecEditId = null; }
+
+  document.getElementById('tec-modal-close').addEventListener('click', closeTecModal);
+  document.getElementById('tec-cancel-btn').addEventListener('click', closeTecModal);
+  tecModal.addEventListener('click', e => { if (e.target === tecModal) closeTecModal(); });
+
+  document.getElementById('tec-save-btn').addEventListener('click', () => {
+    const id      = tecIdInp.value.trim();
+    const name    = tecNameInp.value.trim();
+    const role    = tecRoleInp.value.trim();
+    const contact = tecContactInp.value.trim();
+    const fee     = parseFloat(tecFeeInp.value) || 0;
+    if (!id || !name) { alert('ID and Name are required.'); return; }
+
+    if (tecEditId) {
+      const tec = state.technicians.find(t => t.id === tecEditId);
+      if (tec) { tec.name = name; tec.role = role; tec.contact = contact; tec.fee = fee; }
+      const card = document.querySelector(`.tec-card[data-tec-id="${tecEditId}"]`);
+      if (card) {
+        card.dataset.budget = fee.toFixed(2);
+        card.querySelector('.ctr-name').textContent    = name;
+        card.querySelector('.ctr-trade').textContent   = role;
+        card.querySelector('.ctr-contact').textContent = contact;
+        card.querySelector('.ctr-budget-val').textContent = fmtAmt(fee);
+        recalcCard(card);
+      }
+    } else {
+      if (state.technicians.find(t => t.id === id)) { alert('Technician ID already exists.'); return; }
+      const newTec = { id, name, role, contact, fee, sal: [] };
+      state.technicians.push(newTec);
+      const grid = document.getElementById('technician-grid');
+      const div = document.createElement('div');
+      div.className = 'card tec-card';
+      div.dataset.budget = fee.toFixed(2);
+      div.dataset.tecId  = id;
+      div.innerHTML = `
+        <div class="ctr-header">
+          <div>
+            <div class="ctr-name">${name}</div>
+            <div class="ctr-trade">${role}</div>
+            <div class="ctr-contact">${contact}</div>
+            <div class="ctr-budget">Fee: <strong class="ctr-budget-val">${fmtAmt(fee)}</strong> <span style="font-size:.6rem;color:var(--g3)"> · manually entered · net ex. VAT</span></div>
+          </div>
+          <div class="ctr-actions">
+            <button class="btn-icon btn-edit-tec" title="Edit">✎</button>
+            <button class="btn-icon btn-del-tec" title="Delete">🗑</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+        <table class="sal-table"><thead><tr>
+          <th style="width:62px">Ref.</th><th>Milestone</th>
+          <th style="width:160px">Trigger <span style="font-size:.55rem;font-weight:400;color:var(--g3)">(overall works %)</span></th>
+          <th class="right" style="width:120px">Amount (net €)</th>
+          <th class="right" style="width:58px">%</th>
+          <th style="width:130px;text-align:center">Paid ✓</th>
+          <th style="width:36px"></th>
+        </tr></thead>
+        <tbody>
+          <tr class="sal-total">
+            <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
+            <td class="sal-amt sal-total-amt-eur" style="text-align:right;font-family:monospace;font-weight:700;color:var(--red)">€ 0.00</td>
+            <td class="sal-total-amt" style="text-align:right;font-weight:700;color:var(--red);font-size:.72rem">0% ⚠</td>
+            <td></td><td></td>
+          </tr>
+        </tbody></table>
+        </div>
+        <div class="sal-add-row"><button class="btn btn-add btn-add-milestone" style="font-size:.7rem;padding:.3rem .7rem">+ Add milestone</button></div>`;
+      grid.appendChild(div);
+    }
+    closeTecModal();
+  });
+
+  // Add technician button
+  document.getElementById('btn-add-tec')?.addEventListener('click', () => openTecModal(null));
+
+  // Edit technician
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-edit-tec');
+    if (!btn) return;
+    const tecId = btn.closest('.tec-card')?.dataset.tecId;
+    const tec   = state.technicians.find(t => t.id === tecId);
+    if (tec) openTecModal(tec);
+  });
+
+  // Delete technician
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-del-tec');
+    if (!btn) return;
+    const card  = btn.closest('.tec-card');
+    const tecId = card?.dataset.tecId;
+    if (!tecId || !confirm(`Delete technician "${tecId}"?`)) return;
+    state.technicians = state.technicians.filter(t => t.id !== tecId);
+    card.remove();
+  });
+
+  // Escape closes tec modal too
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && tecModal.classList.contains('is-open')) closeTecModal();
+  }, { capture: true });
 
   // ── Brief description click ───────────────────────────────────────────────
   document.addEventListener('click', e => {

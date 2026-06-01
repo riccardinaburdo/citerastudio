@@ -1,11 +1,22 @@
 export interface SalMilestone {
   id: string;
   label: string;
-  triggerType: 'signing' | 'percent' | 'final';
+  triggerType: 'signing' | 'start' | 'percent' | 'date' | 'final';
   triggerPct: number | null;
-  pct: number; // % of contractor budget
+  triggerDate?: string;
+  pct: number; // % of budget/fee
+  fixedAmt?: number;
   paid?: boolean;     // manually certified as paid
   paidDate?: string;  // ISO date of actual payment
+}
+
+export interface Technician {
+  id: string;
+  name: string;
+  role: string;    // e.g. "Architect", "Structural Engineer"
+  contact: string;
+  fee: number;     // total technical fee (net ex. VAT), manually entered
+  sal: SalMilestone[];
 }
 
 export interface Contractor {
@@ -58,6 +69,7 @@ export interface ProgressUpdate {
 export interface ProjectData {
   info: ProjectInfo;
   contractors: Contractor[];
+  technicians: Technician[];
   categories: Category[];
   updates: ProgressUpdate[];
 }
