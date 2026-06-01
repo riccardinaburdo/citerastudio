@@ -296,11 +296,9 @@ const projectJson = JSON.stringify(data);
           <div class="proj-card-footer">
             {p.id === projectId
               ? <><span class="proj-badge">Current</span><span class="proj-active-label">Now editing</span></>
-              : <>
-                  <button class="btn btn-primary" data-goto={`/area-riservata/admin?p=${p.id}`} style="font-size:.78rem">Open project →</button>
-                  <button class="btn btn-danger btn-del-project" data-proj-id={p.id} data-proj-name={p.name} style="font-size:.72rem;padding:.3rem .7rem">Delete</button>
-                </>
+              : <button class="btn btn-primary" data-goto={`/area-riservata/admin?p=${p.id}`} style="font-size:.78rem">Open project →</button>
             }
+            <button class="btn btn-danger btn-del-project" data-proj-id={p.id} data-proj-name={p.name} data-is-current={p.id === projectId ? 'true' : 'false'} data-total-projects={allProjects.length} style="font-size:.72rem;padding:.3rem .7rem">Delete</button>
           </div>
         </div>
       ))}
@@ -835,14 +833,31 @@ const projectJson = JSON.stringify(data);
   document.addEventListener('click', async e => {
     const btn = e.target.closest('.btn-del-project');
     if (!btn) return;
-    const id   = btn.dataset.projId;
-    const name = btn.dataset.projName;
-    if (!confirm(`Delete project "${name}"?\n\nThis cannot be undone.`)) return;
+    const id          = btn.dataset.projId;
+    const name        = btn.dataset.projName;
+    const isCurrent   = btn.dataset.isCurrent === 'true';
+    const totalProjects = parseInt(btn.dataset.totalProjects ?? '1', 10);
+    let warning = `Delete project "${name}"?\n\nThis cannot be undone.`;
+    if (totalProjects === 1) {
+      warning = `⚠️ WARNING: "${name}" is the only project.\n\nDeleting it will leave the dashboard empty.\n\nThis cannot be undone. Are you sure?`;
+    } else if (isCurrent) {
+      warning = `⚠️ WARNING: "${name}" is currently open.\n\nDeleting it will redirect you to another project.\n\nThis cannot be undone. Are you sure?`;
+    }
+    if (!confirm(warning)) return;
     btn.disabled = true; btn.textContent = 'Deleting…';
     const res  = await fetch(`/api/area-riservata/projects?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     const json = await res.json();
-    if (json.ok) { btn.closest('.proj-card').remove(); }
-    else { alert('Error: ' + json.error); btn.disabled = false; btn.textContent = 'Delete'; }
+    if (json.ok) {
+      if (isCurrent) {
+        window.location.href = '/area-riservata/admin';
+      } else {
+        btn.closest('.proj-card').remove();
+      }
+    } else {
+      alert('Error: ' + json.error);
+      btn.disabled = false;
+      btn.textContent = 'Delete';
+    }
   });
 
   document.getElementById('proj-drop-new').addEventListener('click', async () => {
