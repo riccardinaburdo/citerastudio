@@ -261,13 +261,23 @@ const fmtDate = (d: string) => {
     .pay-contractor-trade { font-size: 0.72rem; color: var(--slate); text-transform: uppercase; letter-spacing: .06em; }
     .pay-contractor-stats { font-size: 0.75rem; color: var(--slate); }
     .pay-summary { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 0; margin-bottom: 1.6rem; }
-    .pay-sum-item { padding: 1.1rem 1.4rem; border-radius: var(--radius); background: #fff7ed; border: 2px solid var(--orange); box-shadow: 0 4px 20px rgba(251,133,3,.18); }
+    .pay-sum-item { padding: 1.1rem 1.4rem; border-radius: var(--radius); }
+    .pay-sum-item.paid     { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .pay-sum-item.next     { background: #fff7ed; border: 2px solid var(--orange); box-shadow: 0 4px 20px rgba(251,133,3,.18); }
+    .pay-sum-item.upcoming { background: #f8fafc; border: 1px solid var(--grey-2); }
+    .pay-sum-item.pending  { background: #f8fafc; border: 1px solid var(--grey-2); }
     .pay-sum-arrow { display: flex; align-items: center; padding: 0 .5rem; color: var(--grey-3); font-size: 1.1rem; }
-    .pay-sum-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: .08em; color: var(--orange); font-weight: 700; margin-bottom: .5rem; }
-    .pay-sum-amount { font-size: 1.55rem; font-weight: 700; line-height: 1; margin-bottom: .3rem; color: var(--orange); }
+    .pay-sum-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-3); font-weight: 700; margin-bottom: .5rem; }
+    .pay-sum-item.next .pay-sum-label { color: var(--orange); }
+    .pay-sum-amount { font-size: 1.55rem; font-weight: 700; line-height: 1; margin-bottom: .3rem; }
+    .pay-sum-item.paid     .pay-sum-amount { color: #16a34a; }
+    .pay-sum-item.next     .pay-sum-amount { color: var(--orange); }
+    .pay-sum-item.upcoming .pay-sum-amount { color: var(--slate); }
+    .pay-sum-item.pending  .pay-sum-amount { color: var(--slate); }
     .pay-sum-sub { font-size: 0.72rem; color: var(--slate); line-height: 1.5; }
     .pay-sum-trigger { display: inline-block; margin-top: .6rem; font-size: 0.72rem; font-weight: 600; color: var(--orange); background: rgba(251,133,3,.1); border-radius: 4px; padding: .2rem .5rem; }
-    .pay-sum-paid-note { display: inline-block; margin-top: .4rem; font-size: 0.68rem; color: var(--orange); font-weight: 600; }
+    .pay-sum-item.upcoming .pay-sum-trigger { color: var(--slate); background: var(--grey-2); }
+    .pay-sum-paid-note { display: inline-block; margin-top: .4rem; font-size: 0.68rem; color: #16a34a; font-weight: 600; }
     .pay-timeline-wrap { position: relative; margin: 0 .5rem 1.5rem; overflow: visible; }
     .pay-bars-legend { display: flex; gap: 1.4rem; margin: 0 1rem .6rem; }
     .pay-bars-legend-item { display: flex; align-items: center; gap: .4rem; font-size: 0.62rem; color: var(--slate); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
