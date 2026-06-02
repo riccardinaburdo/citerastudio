@@ -27,22 +27,28 @@ const technicians = rawTechnicians ?? [];
 const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 
 const enrich = (item: typeof rawCategories[0]['items'][0]) => {
-  const budget    = item.extra ? 0 : item.qty * item.price;
-  const valueDone = item.done * item.price;
-  const perc      = (!item.extra && budget > 0) ? (valueDone / budget) * 100 : null;
-  const overrun   = !item.extra && item.done > item.qty;
-  return { ...item, budget, valueDone, perc, overrun };
+  const budget        = item.extra ? 0 : item.qty * item.price;
+  const variation     = item.extra ? 0 : ((item as any).variation ?? 0);
+  const revisedBudget = budget + variation;
+  const valueDone     = item.done * item.price;
+  const perc          = (!item.extra && revisedBudget > 0) ? (valueDone / revisedBudget) * 100 : null;
+  const overrun       = !item.extra && item.done > item.qty;
+  return { ...item, budget, variation, revisedBudget, valueDone, perc, overrun };
 };
 const enrichedCats = rawCategories.map(cat => {
-  const items        = cat.items.map(enrich);
-  const catBudget    = items.filter(i => !i.extra).reduce((s, i) => s + i.budget, 0);
-  const catDoneContr = items.filter(i => !i.extra).reduce((s, i) => s + i.valueDone, 0);
-  const catDoneExtra = items.filter(i =>  i.extra).reduce((s, i) => s + i.valueDone, 0);
-  const catDone      = catDoneContr + catDoneExtra;
-  const catPerc      = catBudget > 0 ? (catDoneContr / catBudget) * 100 : 0;
-  return { ...cat, items, catBudget, catDoneContr, catDoneExtra, catDone, catPerc };
+  const items           = cat.items.map(enrich);
+  const catOriginal     = items.filter(i => !i.extra).reduce((s, i) => s + i.budget,        0);
+  const catVariation    = items.filter(i => !i.extra).reduce((s, i) => s + i.variation,     0);
+  const catBudget       = catOriginal + catVariation; // revised budget
+  const catDoneContr    = items.filter(i => !i.extra).reduce((s, i) => s + i.valueDone,     0);
+  const catDoneExtra    = items.filter(i =>  i.extra).reduce((s, i) => s + i.valueDone,     0);
+  const catDone         = catDoneContr + catDoneExtra;
+  const catPerc         = catBudget > 0 ? (catDoneContr / catBudget) * 100 : 0;
+  return { ...cat, items, catOriginal, catVariation, catBudget, catDoneContr, catDoneExtra, catDone, catPerc };
 });
-const totalBudget    = enrichedCats.reduce((s, c) => s + c.catBudget,    0);
+const totalOriginal  = enrichedCats.reduce((s, c) => s + c.catOriginal,  0);
+const totalVariation = enrichedCats.reduce((s, c) => s + c.catVariation, 0);
+const totalBudget    = totalOriginal + totalVariation; // revised
 const totalDoneContr = enrichedCats.reduce((s, c) => s + c.catDoneContr, 0);
 const totalDoneExtra = enrichedCats.reduce((s, c) => s + c.catDoneExtra, 0);
 const totalDone      = totalDoneContr + totalDoneExtra;
@@ -53,7 +59,7 @@ const totalLeft      = totalBudget - totalDoneContr;
 // Per-contractor payment schedules (uses each contractor's sal milestones and their own budget)
 const contractorSchedules = contractors.flatMap(c => {
   const allItems = enrichedCats.flatMap(cat => cat.items).filter(i => i.contractor === c.id && !i.extra);
-  const cBudget  = allItems.reduce((s, i) => s + i.budget, 0);
+  const cBudget  = allItems.reduce((s, i) => s + i.revisedBudget, 0);
   if (cBudget === 0 || !c.sal || c.sal.length === 0) return [];
   const cDone    = allItems.reduce((s, i) => s + i.valueDone, 0);
   const cPerc    = (cDone / cBudget) * 100;
@@ -471,7 +477,15 @@ const fmtDate = (d: string) => {
     <div class="metric-card">
       <div class="metric-label">Contract Budget <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
       <div class="metric-value">{fmt(totalBudget)}</div>
-      <div class="metric-sub">inc. VAT 10%: {fmt(totalBudget * 1.10)}</div>
+      <div class="metric-sub">
+        inc. VAT 10%: {fmt(totalBudget * 1.10)}
+        {totalVariation !== 0 && (
+          <div style={`margin-top:.25rem;font-size:.7rem;font-weight:600;color:${totalVariation < 0 ? '#16a34a' : '#f59e0b'}`}>
+            {totalVariation < 0 ? '▼ Savings' : '▲ Increases'}: {totalVariation > 0 ? '+' : ''}{fmt(totalVariation)}
+            <span style="font-weight:400;color:var(--slate)"> (orig. {fmt(totalOriginal)})</span>
+          </div>
+        )}
+      </div>
     </div>
     <div class="metric-card highlight">
       <div class="metric-label">Works Completed <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>

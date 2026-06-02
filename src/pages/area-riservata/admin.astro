@@ -15,10 +15,12 @@ const data = await getProject(projectId);
 const { info: project, contractors, technicians, categories } = data;
 
 const enrich = (item: any) => {
-  const budget = item.extra ? 0 : item.qty * item.price;
-  const done   = item.done * item.price;
-  const perc   = (!item.extra && budget > 0) ? (done / budget) * 100 : null;
-  return { ...item, budget, valueDone: done, perc };
+  const budget        = item.extra ? 0 : item.qty * item.price;
+  const variation     = item.extra ? 0 : (item.variation ?? 0);
+  const revisedBudget = budget + variation;
+  const done          = item.done * item.price;
+  const perc          = (!item.extra && revisedBudget > 0) ? (done / revisedBudget) * 100 : null;
+  return { ...item, budget, variation, revisedBudget, valueDone: done, perc };
 };
 const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
 
@@ -615,6 +617,8 @@ const projectJson = JSON.stringify(data);
               <th class="right" style="width:90px">Contracted Qty</th>
               <th class="right" style="width:100px">Unit Price<br/><span style="font-size:.5rem;opacity:.65">net ex. VAT</span></th>
               <th class="right" style="width:105px">Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+              <th class="right" style="width:90px">Variation<br/><span style="font-size:.5rem;opacity:.65">+ / – €</span></th>
+              <th class="right" style="width:105px">Revised Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
               <th class="right" style="width:80px">Done Qty</th>
               <th class="right" style="width:105px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
               <th style="width:105px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
@@ -625,17 +629,22 @@ const projectJson = JSON.stringify(data);
           </thead>
           <tbody>
             {enrichedCats.map(cat => {
-              const catBudget = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
-              const catDone   = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);
-              const catPerc   = catBudget > 0 ? catDone/catBudget*100 : 0;
+              const catBudget   = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
+              const catVariation= cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+(i.variation??0),0);
+              const catRevised  = catBudget + catVariation;
+              const catDone     = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);
+              const catPerc     = catRevised > 0 ? catDone/catRevised*100 : 0;
               return (<>
                 <tr class="cat-row" data-cat-id={cat.id}>
-                  <td colspan="12">
+                  <td colspan="14">
                     <span class="cat-badge">{cat.id}</span>
                     <span class="cat-chevron" style="display:inline-block;margin-right:.3rem;font-size:.65rem;transition:transform .2s;vertical-align:middle">▾</span>
                     {cat.label}
                     <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">
-                      Budget: {fmt(catBudget)} &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
+                      Budget: {fmt(catBudget)}
+                      {catVariation !== 0 && <span style={catVariation < 0 ? 'color:#16a34a' : 'color:var(--amber)'}> {catVariation > 0 ? '+' : ''}{fmt(catVariation)}</span>}
+                      {catVariation !== 0 && <> → <strong>{fmt(catRevised)}</strong></>}
+                      &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
                     </span>
                     <span style="float:right;display:flex;gap:.3rem;margin-top:-.1rem">
                       <button class="btn btn-add btn-add-item" data-cat-id={cat.id} style="font-size:.62rem;padding:.2rem .55rem">+ Add item</button>
@@ -668,6 +677,13 @@ const projectJson = JSON.stringify(data);
                         <input type="number" value={item.price} step="0.01" data-cat-id={cat.id} data-item-id={item.id} data-field="price" />
                       </td>
                       <td class="auto-cell auto-cell-budget">{item.extra ? '–' : fmt(item.budget)}</td>
+                      <td class="editable-cell">
+                        {!item.extra && <input type="number" step="0.01" value={item.variation || ''} placeholder="0"
+                          data-cat-id={cat.id} data-item-id={item.id} data-field="variation"
+                          style={`text-align:right;width:80px;${(item.variation ?? 0) < 0 ? 'color:#16a34a;font-weight:600' : (item.variation ?? 0) > 0 ? 'color:var(--amber);font-weight:600' : 'color:var(--g3)'}`} />}
+                        {item.extra && <span style="color:var(--g3)">–</span>}
+                      </td>
+                      <td class="auto-cell auto-cell-revised" style={(item.variation ?? 0) < 0 ? 'color:#16a34a' : (item.variation ?? 0) > 0 ? 'color:var(--amber)' : ''}>{item.extra ? '–' : fmt(item.revisedBudget)}</td>
                       <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
                         <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} data-cat-id={cat.id} data-item-id={item.id} data-field="done" />
                         {overrun && <span class="overrun-badge">↑</span>}
@@ -708,19 +724,33 @@ const projectJson = JSON.stringify(data);
                 <tr class="subtotal" data-cat-id={cat.id}>
                   <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
                   <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
+                  <td style={`text-align:right;font-family:monospace;${catVariation < 0 ? 'color:#16a34a' : catVariation > 0 ? 'color:var(--amber)' : 'color:var(--g3)'}`}>{catVariation !== 0 ? (catVariation > 0 ? '+' : '') + fmt(catVariation) : '–'}</td>
+                  <td style="text-align:right;font-family:monospace;font-weight:700">{fmt(catRevised)}</td>
                   <td></td>
                   <td style="text-align:right;font-family:monospace;color:var(--navy)">{fmt(catDone)}</td>
                   <td colspan="4"></td>
                 </tr>
               </>);
             })}
-            <tr class="grand-total">
-              <td colspan="5" style="text-align:right;padding-right:.75rem;letter-spacing:.04em;font-size:.72rem">TOTAL <span style="opacity:.55;font-weight:400">(net ex. VAT — contracted only)</span></td>
-              <td style="text-align:right;font-family:monospace">{fmt(enrichedCats.flatMap((c:any)=>c.items).filter((i:any)=>!i.extra).reduce((s:number,i:any)=>s+i.budget,0))}</td>
-              <td></td>
-              <td style="text-align:right;font-family:monospace">{fmt(enrichedCats.flatMap((c:any)=>c.items).reduce((s:number,i:any)=>s+i.valueDone,0))}</td>
-              <td colspan="4"></td>
-            </tr>
+            {(() => {
+              const allItems     = enrichedCats.flatMap((c:any)=>c.items);
+              const contracted   = allItems.filter((i:any)=>!i.extra);
+              const gtOriginal   = contracted.reduce((s:number,i:any)=>s+i.budget,0);
+              const gtVariation  = contracted.reduce((s:number,i:any)=>s+(i.variation??0),0);
+              const gtRevised    = gtOriginal + gtVariation;
+              const gtDone       = allItems.reduce((s:number,i:any)=>s+i.valueDone,0);
+              return (
+                <tr class="grand-total">
+                  <td colspan="5" style="text-align:right;padding-right:.75rem;letter-spacing:.04em;font-size:.72rem">TOTAL <span style="opacity:.55;font-weight:400">(net ex. VAT — contracted only)</span></td>
+                  <td style="text-align:right;font-family:monospace">{fmt(gtOriginal)}</td>
+                  <td style={`text-align:right;font-family:monospace;${gtVariation < 0 ? 'color:#86efac' : gtVariation > 0 ? 'color:#fcd34d' : 'opacity:.5'}`}>{gtVariation !== 0 ? (gtVariation > 0 ? '+' : '') + fmt(gtVariation) : '–'}</td>
+                  <td style="text-align:right;font-family:monospace;font-weight:700">{fmt(gtRevised)}</td>
+                  <td></td>
+                  <td style="text-align:right;font-family:monospace">{fmt(gtDone)}</td>
+                  <td colspan="4"></td>
+                </tr>
+              );
+            })()}
           </tbody>
         </table>
       </div>
@@ -1134,20 +1164,24 @@ const projectJson = JSON.stringify(data);
     const newVal = el.type === 'number' ? (parseFloat(el.value) || 0) : el.type === 'checkbox' ? el.checked : el.value;
     item[field] = newVal;
     const row = el.closest('tr');
-    if (!row || !(field === 'qty' || field === 'price' || field === 'done')) return;
+    if (!row || !(field === 'qty' || field === 'price' || field === 'done' || field === 'variation')) return;
 
-    const budget   = item.extra ? 0 : (item.qty || 0) * (item.price || 0);
-    const valDone  = (item.done || 0) * (item.price || 0);
+    const budget      = item.extra ? 0 : (item.qty || 0) * (item.price || 0);
+    const variation   = item.extra ? 0 : (item.variation ?? 0);
+    const revised     = budget + variation;
+    const valDone     = (item.done || 0) * (item.price || 0);
     const overrun       = !item.extra && (item.done || 0) > (item.qty || 0);
     const forceComplete = !!item.complete && !overrun && !item.extra;
-    const percActual    = (!item.extra && budget > 0) ? (valDone / budget) * 100 : 0;
+    const percActual    = (!item.extra && revised > 0) ? (valDone / revised) * 100 : 0;
     const barW          = Math.min(percActual, 100);
     const pColor        = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
 
     // Auto cells
     const bCell = row.querySelector('.auto-cell-budget');
+    const rCell = row.querySelector('.auto-cell-revised');
     const dCell = row.querySelector('.auto-cell-done');
     if (bCell) bCell.textContent = item.extra ? '–' : fmtAmt(budget);
+    if (rCell) { rCell.textContent = item.extra ? '–' : fmtAmt(revised); rCell.style.color = variation < 0 ? '#16a34a' : variation > 0 ? '#f59e0b' : ''; }
     if (dCell) dCell.textContent = fmtAmt(valDone);
 
     // Done cell — overrun color + badge
@@ -1760,6 +1794,8 @@ const projectJson = JSON.stringify(data);
       `<td class="editable-cell"><input type="number" value="${isX?'':0}" placeholder="${qtyPh}"${qtyDisabled}${qtyStyle} data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" /></td>`,
       `<td class="editable-cell"><input type="number" value="0" step="0.01" data-cat-id="${catId}" data-item-id="${item.id}" data-field="price" /></td>`,
       `<td class="auto-cell auto-cell-budget">${isX?'–':'€ 0.00'}</td>`,
+      `<td class="editable-cell">${isX?'<span style="color:var(--g3)">–</span>':`<input type="number" step="0.01" value="" placeholder="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="variation" style="text-align:right;width:80px;color:var(--g3)" />`}</td>`,
+      `<td class="auto-cell auto-cell-revised">${isX?'–':'€ 0.00'}</td>`,
       `<td class="editable-cell"><input type="number" value="${item.done||0}" data-cat-id="${catId}" data-item-id="${item.id}" data-field="done" /></td>`,
       `<td class="auto-cell auto-cell-done">€ 0.00</td>`,
       `<td class="auto-bg" style="min-width:90px">${percHtml}</td>`,
@@ -1803,7 +1839,7 @@ const projectJson = JSON.stringify(data);
     state.categories.push({ id, label, items: [] });
     const grandTotal = document.querySelector('table.works tbody tr.grand-total');
     grandTotal.insertAdjacentHTML('beforebegin', `<tr class="cat-row" data-cat-id="${id}">
-      <td colspan="12">
+      <td colspan="14">
         <span class="cat-badge">${id}</span> ${label}
         <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">Budget: € 0.00 &nbsp;|&nbsp; Done: € 0.00 &nbsp;|&nbsp; 0%</span>
         <span style="float:right;display:flex;gap:.3rem;margin-top:-.1rem">
@@ -1815,7 +1851,10 @@ const projectJson = JSON.stringify(data);
     </tr>
     <tr class="subtotal" data-cat-id="${id}">
       <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category ${id} subtotal</td>
-      <td style="text-align:right;font-family:monospace">€ 0.00</td><td></td>
+      <td style="text-align:right;font-family:monospace">€ 0.00</td>
+      <td style="text-align:right;font-family:monospace;color:var(--g3)">–</td>
+      <td style="text-align:right;font-family:monospace;font-weight:700">€ 0.00</td>
+      <td></td>
       <td style="text-align:right;font-family:monospace;color:var(--navy)">€ 0.00</td>
       <td colspan="4"></td>
     </tr>`);
