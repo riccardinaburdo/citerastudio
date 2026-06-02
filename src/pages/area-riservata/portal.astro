@@ -36,7 +36,7 @@ const enrich = (item: typeof rawCategories[0]['items'][0]) => {
   const valueDone     = item.done * price;
   const perc          = (!item.extra && revisedBudget > 0) ? (valueDone / revisedBudget) * 100 : null;
   const overrun       = !item.extra && item.done > item.qty;
-  return { ...item, budget, variationAmt, revisedBudget, valueDone, perc, overrun };
+  return { ...item, budget, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun };
 };
 const enrichedCats = rawCategories.map(cat => {
   const items           = cat.items.map(enrich);
@@ -821,8 +821,23 @@ const fmtDate = (d: string) => {
                   <span class="cat-chevron">▾</span>
                 </td>
               </tr>
-              {cat.items.map(item => (
-                <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id}>
+              {cat.items.map(item => {
+                const fc        = !!item.complete && !item.overrun && !item.extra;
+                const notExec   = isNotExecuted(item);
+                const dispPerc  = fc || notExec ? 100 : (item.perc ?? 0);
+                const barColor  = item.overrun ? '#dc2626' : (fc || notExec || dispPerc >= 100) ? '#22c55e' : dispPerc > 0 ? '#f59e0b' : '#cbd5e1';
+                // Done qty: for force-complete show revised qty; for not-executed show 0; else actual done
+                const dispDoneQty = fc ? (item.qty + (item as any).variationQty) : item.done;
+                // Value done: for force-complete show revisedBudget
+                const dispValue = fc ? item.revisedBudget : (item.done > 0 ? item.valueDone : null);
+                // Row background tint based on variationAmt
+                const rowBg = !item.extra && (item as any).variationAmt < 0
+                  ? 'background:rgba(22,163,74,.05)'
+                  : !item.extra && (item as any).variationAmt > 0
+                    ? 'background:rgba(220,38,38,.05)'
+                    : '';
+                return (
+                <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id} style={rowBg}>
                   <td class="item-id">{item.id}</td>
                   <td class="item-desc">
                     {item.extra && <span class="extra-badge">Extra</span>}
@@ -843,33 +858,26 @@ const fmtDate = (d: string) => {
                     {item.extra ? '–' : fmt(item.budget)}
                   </td>
                   <td class="item-done-qty" style={`color:${doneColor(item)}; font-weight:600`}>
-                    {fmtQ(item.done, item.unit)}
+                    {item.extra ? fmtQ(item.done, item.unit) : fmtQ(dispDoneQty, item.unit)}
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
-                  <td class="item-money" style={`color:${item.extra ? 'var(--amber)' : catColor(item.perc)}; font-weight:500`}>
-                    {item.extra
-                      ? (item.done > 0 ? fmt(item.valueDone) : '–')
-                      : (() => {
-                          const fc = !!item.complete && !item.overrun;
-                          if (fc) return fmt(item.revisedBudget);
-                          return item.done > 0 ? fmt(item.valueDone) : '–';
-                        })()
-                    }
+                  <td class="item-money" style={`color:${item.extra ? 'var(--amber)' : barColor}; font-weight:500`}>
+                    {dispValue !== null ? fmt(dispValue) : '–'}
                   </td>
                   <td class="perc-cell">
                     {item.extra ? (
                       <span style="font-size:0.7rem; color:var(--amber); font-weight:600">Extra works</span>
-                    ) : item.perc !== null ? (
+                    ) : notExec ? (
+                      <span style="color:var(--grey-3); font-size:0.72rem">–</span>
+                    ) : (
                       <div class="perc-wrap">
                         <div class="perc-mini">
-                          <div class="perc-mini-fill" style={`width:${Math.min(item.perc, 100).toFixed(0)}%; background:${item.overrun ? '#dc2626' : catColor(item.perc)}`}></div>
+                          <div class="perc-mini-fill" style={`width:${Math.min(dispPerc, 100).toFixed(0)}%; background:${barColor}`}></div>
                         </div>
-                        <span class={item.overrun ? 'perc-num overrun-num' : 'perc-num'} style={`color:${item.overrun ? 'var(--amber)' : catColor(item.perc)}`}>
-                          {item.perc.toFixed(0)}%
+                        <span class={item.overrun ? 'perc-num overrun-num' : 'perc-num'} style={`color:${barColor}`}>
+                          {Math.min(Math.round(dispPerc), 100)}%
                         </span>
                       </div>
-                    ) : (
-                      <span style="color:var(--grey-3)">–</span>
                     )}
                   </td>
                   <td>
@@ -882,7 +890,7 @@ const fmtDate = (d: string) => {
                     )}
                   </td>
                 </tr>
-              ))}
+              );})}
               <tr class="subtotal" data-cat-member={cat.id}>
                 <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
                 <td class="item-money">{fmt(cat.catBudget)}</td>
