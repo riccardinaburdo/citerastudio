@@ -847,7 +847,14 @@ const fmtDate = (d: string) => {
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
                   <td class="item-money" style={`color:${item.extra ? 'var(--amber)' : catColor(item.perc)}; font-weight:500`}>
-                    {item.done > 0 ? fmt(item.valueDone) : '–'}
+                    {item.extra
+                      ? (item.done > 0 ? fmt(item.valueDone) : '–')
+                      : (() => {
+                          const fc = !!item.complete && !item.overrun;
+                          if (fc) return fmt(item.revisedBudget);
+                          return item.done > 0 ? fmt(item.valueDone) : '–';
+                        })()
+                    }
                   </td>
                   <td class="perc-cell">
                     {item.extra ? (
