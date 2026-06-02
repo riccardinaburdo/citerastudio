@@ -33,9 +33,11 @@ const enrich = (item: typeof rawCategories[0]['items'][0]) => {
   const budget        = item.extra ? 0 : qty * price;
   const variationAmt  = item.extra ? 0 : variationQty * price;
   const revisedBudget = item.extra ? 0 : (qty + variationQty) * price;
-  const valueDone     = item.done * price;
-  const perc          = (!item.extra && revisedBudget > 0) ? (valueDone / revisedBudget) * 100 : null;
+  const rawDone       = item.done * price;
   const overrun       = !item.extra && item.done > item.qty;
+  const forceComplete = !!item.complete && !overrun && !item.extra;
+  const valueDone     = forceComplete ? revisedBudget : rawDone;
+  const perc          = (!item.extra && revisedBudget > 0) ? (rawDone / revisedBudget) * 100 : null;
   return { ...item, budget, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun };
 };
 const enrichedCats = rawCategories.map(cat => {
@@ -828,8 +830,8 @@ const fmtDate = (d: string) => {
                 const barColor  = item.overrun ? '#dc2626' : (fc || notExec || dispPerc >= 100) ? '#22c55e' : dispPerc > 0 ? '#f59e0b' : '#cbd5e1';
                 // Done qty: for force-complete show revised qty; for not-executed show 0; else actual done
                 const dispDoneQty = fc ? (item.qty + (item as any).variationQty) : item.done;
-                // Value done: for force-complete show revisedBudget
-                const dispValue = fc ? item.revisedBudget : (item.done > 0 ? item.valueDone : null);
+                // Value done: valueDone already accounts for forceComplete in enrich
+                const dispValue = (item.valueDone > 0 || fc) ? item.valueDone : null;
                 // Row background tint based on variationAmt
                 const rowBg = !item.extra && (item as any).variationAmt < 0
                   ? 'background:rgba(22,163,74,.05)'
