@@ -1161,13 +1161,13 @@ const projectJson = JSON.stringify(data);
     if (!catId || !itemId || !field) return;
     const item = findItem(catId, itemId);
     if (!item) return;
-    const newVal = el.type === 'number' ? (parseFloat(el.value) || 0) : el.type === 'checkbox' ? el.checked : el.value;
+    const newVal = el.type === 'number' ? (parseFloat(el.value) ?? 0) || 0 : el.type === 'checkbox' ? el.checked : el.value;
     item[field] = newVal;
     const row = el.closest('tr');
     if (!row || !(field === 'qty' || field === 'price' || field === 'done' || field === 'variation')) return;
 
-    const budget      = item.extra ? 0 : (item.qty || 0) * (item.price || 0);
-    const variation   = item.extra ? 0 : (item.variation ?? 0);
+    const budget      = item.extra ? 0 : (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+    const variation   = item.extra ? 0 : (field === 'variation' ? (parseFloat(newVal) || 0) : (parseFloat(item.variation) || 0));
     const revised     = budget + variation;
     const valDone     = (item.done || 0) * (item.price || 0);
     const overrun       = !item.extra && (item.done || 0) > (item.qty || 0);
@@ -1183,6 +1183,10 @@ const projectJson = JSON.stringify(data);
     if (bCell) bCell.textContent = item.extra ? '–' : fmtAmt(budget);
     if (rCell) { rCell.textContent = item.extra ? '–' : fmtAmt(revised); rCell.style.color = variation < 0 ? '#16a34a' : variation > 0 ? '#f59e0b' : ''; }
     if (dCell) dCell.textContent = fmtAmt(valDone);
+    if (field === 'variation') {
+      el.style.color = variation < 0 ? '#16a34a' : variation > 0 ? 'var(--amber)' : 'var(--g3)';
+      el.style.fontWeight = variation !== 0 ? '600' : '';
+    }
 
     // Done cell — overrun color + badge
     const doneTd  = row.querySelector('[data-field="done"]')?.closest('td');
