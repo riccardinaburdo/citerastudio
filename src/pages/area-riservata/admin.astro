@@ -664,7 +664,8 @@ const projectJson = JSON.stringify(data);
                   const overrun       = !item.extra && item.done > item.qty;
                   const forceComplete = !!item.complete && !overrun && !item.extra;
                   const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
-                  const barW    = item.perc !== null ? Math.min(item.perc,100) : 0;
+                  const dispPerc = forceComplete ? 100 : (item.perc ?? 0);
+                  const barW    = Math.min(dispPerc, 100);
                   return (
                     <tr class={`item${item.extra ? ' extra-row' : ''}`} data-cat-id={cat.id} data-item-id={item.id}>
                       <td class="item-id">{item.id}</td>
@@ -697,12 +698,12 @@ const projectJson = JSON.stringify(data);
                       </td>
                       <td class="auto-cell auto-cell-done">{fmt(item.valueDone)}</td>
                       <td class="auto-bg" style="min-width:90px">
-                        {item.extra ? '–' : item.perc !== null ? (
+                        {item.extra ? '–' : (
                           <div class="perc-wrap">
                             <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
-                            <span class="perc-num" style={`color:${pColor}`}>{item.perc.toFixed(0)}%</span>
+                            <span class="perc-num" style={`color:${pColor}`}>{Math.round(dispPerc)}%</span>
                           </div>
-                        ) : '–'}
+                        )}
                       </td>
                       <td class="auto-bg">
                         {overrun
@@ -1186,7 +1187,8 @@ const projectJson = JSON.stringify(data);
     const forceComplete = !!item.complete && !overrun && !item.extra;
     const valDone       = forceComplete ? revised : rawDone;
     const percActual    = (!item.extra && revised > 0) ? (rawDone / revised) * 100 : 0;
-    const barW          = Math.min(percActual, 100);
+    const dispPerc      = forceComplete ? 100 : percActual;
+    const barW          = Math.min(dispPerc, 100);
     const pColor        = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
 
     // Auto cells
@@ -1219,7 +1221,7 @@ const projectJson = JSON.stringify(data);
       const fill = percWrap.querySelector('.perc-fill');
       const num  = percWrap.querySelector('.perc-num');
       if (fill) { fill.style.width = `${barW}%`; fill.style.background = pColor; }
-      if (num)  { num.textContent = `${Math.round(percActual)}%`; num.style.color = pColor; }
+      if (num)  { num.textContent = `${Math.round(dispPerc)}%`; num.style.color = pColor; }
     }
 
     // Status badge
