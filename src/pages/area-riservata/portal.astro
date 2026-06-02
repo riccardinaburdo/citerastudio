@@ -857,7 +857,7 @@ const fmtDate = (d: string) => {
                   <td class="item-money" style={`font-weight:500; ${item.extra ? 'color:var(--grey-3)' : ''}`}>
                     {item.extra ? '–' : fmt(item.budget)}
                   </td>
-                  <td class="item-done-qty" style={`color:${doneColor(item)}; font-weight:600`}>
+                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : !item.extra && dispDoneQty <= item.qty ? '#16a34a' : 'var(--navy)'}; font-weight:600`}>
                     {item.extra ? fmtQ(item.done, item.unit) : fmtQ(dispDoneQty, item.unit)}
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
