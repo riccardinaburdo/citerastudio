@@ -27,18 +27,21 @@ const technicians = rawTechnicians ?? [];
 const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 
 const enrich = (item: typeof rawCategories[0]['items'][0]) => {
-  const budget        = item.extra ? 0 : item.qty * item.price;
-  const variation     = item.extra ? 0 : ((item as any).variation ?? 0);
-  const revisedBudget = budget + variation;
-  const valueDone     = item.done * item.price;
+  const qty           = item.extra ? 0 : (item.qty ?? 0);
+  const price         = (item.price ?? 0);
+  const variationQty  = item.extra ? 0 : ((item as any).variation ?? 0);
+  const budget        = item.extra ? 0 : qty * price;
+  const variationAmt  = item.extra ? 0 : variationQty * price;
+  const revisedBudget = item.extra ? 0 : (qty + variationQty) * price;
+  const valueDone     = item.done * price;
   const perc          = (!item.extra && revisedBudget > 0) ? (valueDone / revisedBudget) * 100 : null;
   const overrun       = !item.extra && item.done > item.qty;
-  return { ...item, budget, variation, revisedBudget, valueDone, perc, overrun };
+  return { ...item, budget, variationAmt, revisedBudget, valueDone, perc, overrun };
 };
 const enrichedCats = rawCategories.map(cat => {
   const items           = cat.items.map(enrich);
-  const catOriginal     = items.filter(i => !i.extra).reduce((s, i) => s + i.budget,        0);
-  const catVariation    = items.filter(i => !i.extra).reduce((s, i) => s + i.variation,     0);
+  const catOriginal     = items.filter(i => !i.extra).reduce((s, i) => s + i.budget,           0);
+  const catVariation    = items.filter(i => !i.extra).reduce((s, i) => s + (i as any).variationAmt, 0);
   const catBudget       = catOriginal + catVariation; // revised budget
   const catDoneContr    = items.filter(i => !i.extra).reduce((s, i) => s + i.valueDone,     0);
   const catDoneExtra    = items.filter(i =>  i.extra).reduce((s, i) => s + i.valueDone,     0);
