@@ -21,9 +21,12 @@ const enrich = (item: any) => {
   const budget        = item.extra ? 0 : qty * price;
   const variationAmt  = item.extra ? 0 : variationQty * price;    // euro impact
   const revisedBudget = item.extra ? 0 : (qty + variationQty) * price;
-  const done          = item.done * price;
-  const perc          = (!item.extra && revisedBudget > 0) ? (done / revisedBudget) * 100 : null;
-  return { ...item, budget, variationAmt, revisedBudget, valueDone: done, perc };
+  const rawDone       = item.done * price;
+  const overrun       = !item.extra && item.done > item.qty;
+  const forceComplete = !!item.complete && !overrun && !item.extra;
+  const valueDone     = forceComplete ? revisedBudget : rawDone;
+  const perc          = (!item.extra && revisedBudget > 0) ? (rawDone / revisedBudget) * 100 : null;
+  return { ...item, budget, variationAmt, revisedBudget, valueDone, perc };
 };
 const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
 
@@ -1178,10 +1181,11 @@ const projectJson = JSON.stringify(data);
     const budget       = qty * price;
     const variationAmt = variationQty * price;
     const revised      = (qty + variationQty) * price;
-    const valDone     = (item.done || 0) * (item.price || 0);
+    const rawDone       = (item.done || 0) * price;
     const overrun       = !item.extra && (item.done || 0) > (item.qty || 0);
     const forceComplete = !!item.complete && !overrun && !item.extra;
-    const percActual    = (!item.extra && revised > 0) ? (valDone / revised) * 100 : 0;
+    const valDone       = forceComplete ? revised : rawDone;
+    const percActual    = (!item.extra && revised > 0) ? (rawDone / revised) * 100 : 0;
     const barW          = Math.min(percActual, 100);
     const pColor        = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
 
