@@ -511,9 +511,16 @@ const fmtDate = (d: string) => {
       <div class="metric-sub">
         inc. VAT 10%: {fmt(totalBudget * 1.10)}
         {totalVariation !== 0 && (
-          <div style={`margin-top:.25rem;font-size:.7rem;font-weight:600;color:${totalVariation < 0 ? '#16a34a' : '#f59e0b'}`}>
-            {totalVariation < 0 ? '▼ Savings' : '▲ Increases'}: {totalVariation > 0 ? '+' : ''}{fmt(totalVariation)}
-            <span style="font-weight:400;color:var(--slate)"> (orig. {fmt(totalOriginal)})</span>
+          <div style={`margin-top:.5rem;padding:.5rem .65rem;border-radius:6px;background:${totalVariation < 0 ? '#f0fdf4' : '#fff7ed'};border:1px solid ${totalVariation < 0 ? '#bbf7d0' : '#fed7aa'}`}>
+            <div style={`font-size:.68rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:${totalVariation < 0 ? '#15803d' : '#c2410c'};margin-bottom:.2rem`}>
+              {totalVariation < 0 ? '▼ Savings' : '▲ Cost increase'}
+            </div>
+            <div style={`font-size:1rem;font-weight:700;color:${totalVariation < 0 ? '#16a34a' : '#f59e0b'}`}>
+              {totalVariation > 0 ? '+' : ''}{fmt(totalVariation)}
+            </div>
+            <div style="font-size:.65rem;color:var(--slate);margin-top:.2rem">
+              Original budget: <strong style="color:var(--navy)">{fmt(totalOriginal)}</strong>
+            </div>
           </div>
         )}
       </div>
