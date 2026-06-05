@@ -1109,7 +1109,7 @@ main {
 
 /* Nav top row (toggle + portal icon) — desktop: toggle only, portal icon hidden */
 .nav-top-row { display: flex; align-items: center; justify-content: space-between; }
-.portal-icon--nav { display: none; }
+.portal-icon.portal-icon--nav { display: none; }
 
 @media (max-width: 768px) {
   .site-header {
@@ -1123,7 +1123,7 @@ main {
   .nav-top-row { padding: .5rem 1rem; }
 
   /* Show portal icon in nav top row on mobile */
-  .portal-icon--nav {
+  .portal-icon.portal-icon--nav {
     display: flex;
     position: static;
     font-size: .72rem;
