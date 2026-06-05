@@ -399,7 +399,7 @@ const fmtDate = (d: string) => {
     tr.works-cat.collapsed .cat-chevron { transform: rotate(-90deg); }
     tr.works-cat.collapsed + * { /* handled by JS */ }
     [data-cat-member].cat-hidden { display: none; }
-    table.works tbody tr.item td { padding: .45rem .75rem; border-bottom: 1px solid var(--grey-2); vertical-align: middle; }
+    table.works tbody tr.item td { padding: .45rem .75rem; border-bottom: 1px solid var(--grey-2); vertical-align: middle; font-weight: 400; }
     table.works tbody tr.item:last-child td { border-bottom: none; }
     table.works tbody tr.item:hover td { background: #f8fafc; }
     .item-id    { color: var(--grey-3); font-size: 0.68rem; font-family: monospace; white-space: nowrap; }
@@ -422,7 +422,7 @@ const fmtDate = (d: string) => {
     .perc-wrap { display: flex; align-items: center; gap: .4rem; }
     .perc-mini { flex: 1; height: 5px; background: var(--grey-2); border-radius: 3px; overflow: hidden; }
     .perc-mini-fill { height: 100%; border-radius: 3px; }
-    .perc-num  { font-size: 0.72rem; font-weight: 600; width: 35px; text-align: right; white-space: nowrap; }
+    .perc-num  { font-size: 0.72rem; font-weight: 400; width: 35px; text-align: right; white-space: nowrap; }
     .badge { display: inline-block; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: .2rem .6rem; border-radius: 20px; white-space: nowrap; }
     .badge.complete     { background: #dcfce7; color: #15803d; }
     .badge.progress     { background: #f1f5f9; color: #475569; }
@@ -659,17 +659,17 @@ const fmtDate = (d: string) => {
                   <td class="item-money" style={item.extra ? 'color:var(--grey-3)' : ''}>
                     {item.extra ? '–' : fmt(item.budget)}
                   </td>
-                  <td class="item-money" style={`font-weight:600; color:${variationNeg ? '#16a34a' : variationPos ? 'var(--amber)' : 'var(--grey-3)'}`}>
+                  <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? 'var(--amber)' : 'var(--grey-3)'}`}>
                     {item.variationQty !== 0 ? item.variationQty : '–'}
                   </td>
                   <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? 'var(--amber)' : ''}`}>
                     {revisedPos ? fmt(item.revisedBudget) : <span style="color:var(--grey-3)">–</span>}
                   </td>
-                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : '#16a34a'}; font-weight:600`}>
+                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : '#16a34a'}`}>
                     {fmtQ(item.done, item.unit)}
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
-                  <td class="item-money" style={`color:${barColor}; font-weight:500`}>
+                  <td class="item-money" style={`color:${barColor}`}>
                     {item.valueDone > 0 ? fmt(item.valueDone) : '–'}
                   </td>
                   <td class="perc-cell">
