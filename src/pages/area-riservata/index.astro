@@ -128,18 +128,18 @@ const error = Astro.url.searchParams.get('error') === '1';
 <body>
   <div class="login-wrap">
 
-    <div class="brand">
+    <a href="/" class="brand" style="text-decoration:none">
       <div class="brand-name">citerastudio</div>
       <div class="brand-sub">Landscape Architecture</div>
-    </div>
+    </a>
 
     <div class="card">
       <div class="card-icon">🔒</div>
-      <div class="card-title">Area Riservata</div>
-      <div class="card-sub">Accesso riservato ai clienti del progetto</div>
+      <div class="card-title">Private Area</div>
+      <div class="card-sub">Access reserved for project clients</div>
 
       <form method="POST" action="/api/area-riservata/login">
-        <label for="password">Codice di accesso</label>
+        <label for="password">Access code</label>
         <input
           type="password"
           id="password"
@@ -150,15 +150,15 @@ const error = Astro.url.searchParams.get('error') === '1';
         />
         {error && (
           <div class="error-msg">
-            <span>⚠</span> Codice non valido. Riprova.
+            <span>⚠</span> Invalid code. Please try again.
           </div>
         )}
-        <button type="submit">Accedi</button>
+        <button type="submit">Sign in</button>
       </form>
     </div>
 
     <p class="footer-note">
-      Hai problemi di accesso? Contatta lo studio.
+      Having trouble accessing? Contact the studio.
     </p>
   </div>
 </body>
