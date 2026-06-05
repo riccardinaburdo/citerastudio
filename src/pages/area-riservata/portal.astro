@@ -453,6 +453,36 @@ const fmtDate = (d: string) => {
     @media (max-width: 900px) { .cat-bar-track { width: 100px; } }
     @media (max-width: 900px) { .metrics { grid-template-columns: repeat(2,1fr); } .updates-grid { grid-template-columns: 1fr; } .hero-top { flex-direction: column; } .pay-summary { grid-template-columns: 1fr; } .pay-sum-arrow { display: none; } .pay-timeline-wrap { display: none; } }
     @media (max-width: 600px) { .metrics { grid-template-columns: 1fr; } .topbar-project { display: none; } .main { padding: 1rem; } }
+    @media (max-width: 768px) {
+      /* Topbar */
+      .topbar { padding: .5rem .85rem; gap: .5rem; flex-wrap: wrap; }
+      .topbar-lock, .btn-top, .btn-logout { font-size: .65rem; padding: .22rem .55rem; }
+      .role-badge { font-size: .6rem; }
+      .topbar-project-select { max-width: 180px; font-size: .75rem; }
+
+      /* Hero */
+      .hero { padding: 1.5rem 1rem 1.2rem; }
+      .hero-inner h1 { font-size: 1.3rem; }
+
+      /* Progress overview: stack donut above categories */
+      .progress-overview { grid-template-columns: 1fr !important; }
+      .progress-overview > .donut-card { width: 100% !important; }
+
+      /* Section titles */
+      .section-title { font-size: .82rem; padding: .55rem .9rem; }
+
+      /* Works table already has .works-scroll with overflow-x:auto */
+
+      /* Payment cards */
+      .payment-card { padding: 1rem; }
+      .pay-contractor-header { flex-direction: column; gap: .4rem; }
+
+      /* Update cards */
+      .update-card { padding: 1rem; }
+
+      /* Metric cards */
+      .metric-card { padding: 1rem 1.2rem; }
+    }
   </style>
 </head>
 <body>
