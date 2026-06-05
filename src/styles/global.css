@@ -61,15 +61,25 @@ h1, h2, h3, h4, h5, h6 {
 
 .portal-icon {
   position: absolute;
-  top: 2rem;
+  top: 1.4rem;
   right: 2rem;
-  font-size: 1.2rem;
-  opacity: 0.45;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   text-decoration: none;
-  transition: opacity 0.2s;
-  line-height: 1;
+  color: #fff;
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.35);
+  padding: .45rem .9rem .45rem .7rem;
+  border-radius: 20px;
+  transition: background .2s, border-color .2s;
 }
-.portal-icon:hover { opacity: 0.9; }
+.portal-icon:hover { background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.6); }
+.portal-icon .pi-lock { font-size: 1rem; line-height: 1; }
 
 .site-brand a {
   display: inline-block;
