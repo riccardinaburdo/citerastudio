@@ -258,13 +258,14 @@ const projectJson = JSON.stringify(data);
 
     @media(max-width:768px) {
       /* Topbar */
-      .topbar { padding:.5rem .85rem; gap:.5rem; flex-wrap:wrap; }
-      .topbar-brand { font-size:.85rem; }
+      .topbar { padding:.5rem .85rem; gap:.4rem; flex-wrap:wrap; align-items:center; }
+      .topbar-brand { width:100%; text-align:center; font-size:1.1rem; padding:.3rem 0 .2rem; border-bottom:1px solid rgba(255,255,255,.12); margin-bottom:.1rem; }
       .topbar-sep, .topbar-title { display:none; }
-      .save-status { min-width:auto; font-size:.68rem; }
-      .btn-top { font-size:.68rem; padding:.25rem .6rem; }
-      .btn-save-all { font-size:.68rem; padding:.28rem .7rem; }
-      .proj-switcher-btn { max-width:160px; font-size:.72rem; }
+      .proj-switcher { flex:1; min-width:0; }
+      .proj-switcher-btn { max-width:100%; width:100%; font-size:.72rem; }
+      .save-status { display:none; }
+      .btn-top { font-size:.68rem; padding:.28rem .65rem; }
+      .btn-save-all { font-size:.72rem; padding:.3rem .8rem; flex-shrink:0; }
 
       /* Tabs */
       .tabs { padding:0 .5rem; overflow-x:auto; gap:0; scrollbar-width:none; }
