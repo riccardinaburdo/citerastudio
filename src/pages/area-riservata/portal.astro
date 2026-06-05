@@ -363,7 +363,7 @@ const fmtDate = (d: string) => {
     .pay-badge.pending { background: #f1f5f9; color: #94a3b8; }
     tr.pay-row-next .pay-col-label { font-weight: 700; color: var(--orange); }
     tr.pay-row-next .pay-col-gross { color: var(--orange); }
-    .overview { display: grid; grid-template-columns: 280px 1fr; gap: 2rem; margin-bottom: 2rem; }
+    .overview { display: flex; justify-content: center; margin-bottom: 2rem; }
     .donut-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; text-align: center; }
     .donut-wrap { position: relative; width: 160px; height: 160px; margin-bottom: 1.2rem; }
     .donut-ring { width: 160px; height: 160px; border-radius: 50%; background: conic-gradient(var(--orange) 0% var(--p,0%), var(--grey-2) var(--p,0%) 100%); }
@@ -540,6 +540,21 @@ const fmtDate = (d: string) => {
     </div>
   </div>
 
+  <div class="cat-card" style="margin-bottom:2rem">
+    <div class="cat-card-title">Progress by work category</div>
+    {enrichedCats.map(cat => (
+      <div class="cat-bar-row">
+        <span class="cat-bar-id">{cat.id}</span>
+        <span class="cat-bar-label" title={cat.label}>{cat.label}</span>
+        <div class="cat-bar-track">
+          <div class="cat-bar-fill" style={`width:${cat.catPerc.toFixed(1)}%; background:${catColor(cat.catPerc)}`}></div>
+        </div>
+        <span class="cat-bar-pct" style={`color:${catColor(cat.catPerc)}`}>{cat.catPerc.toFixed(0)}%</span>
+        <span class={`cat-status ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span>
+      </div>
+    ))}
+  </div>
+
   <div class="section-title">Payment Schedule — by Contractor</div>
   {contractorSchedules.length === 0 && (
     <div class="payment-card" style="text-align:center; padding:2rem; color:var(--slate); font-size:0.85rem">
@@ -671,20 +686,6 @@ const fmtDate = (d: string) => {
       </div>
       <div class="donut-title">Overall Progress</div>
       <div class="donut-sub">Progress Update #{project.updateNum}<br/>{fmtDate(project.updated)}</div>
-    </div>
-    <div class="cat-card">
-      <div class="cat-card-title">Progress by work category</div>
-      {enrichedCats.map(cat => (
-        <div class="cat-bar-row">
-          <span class="cat-bar-id">{cat.id}</span>
-          <span class="cat-bar-label" title={cat.label}>{cat.label}</span>
-          <div class="cat-bar-track">
-            <div class="cat-bar-fill" style={`width:${cat.catPerc.toFixed(1)}%; background:${catColor(cat.catPerc)}`}></div>
-          </div>
-          <span class="cat-bar-pct" style={`color:${catColor(cat.catPerc)}`}>{cat.catPerc.toFixed(0)}%</span>
-          <span class={`cat-status ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span>
-        </div>
-      ))}
     </div>
   </div>
 
