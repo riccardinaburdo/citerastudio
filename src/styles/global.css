@@ -1107,16 +1107,37 @@ main {
 /* Mobile nav logo — hidden on desktop */
 .nav-mobile-logo { display: none; }
 
+/* Nav top row (toggle + portal icon) — desktop: toggle only, portal icon hidden */
+.nav-top-row { display: flex; align-items: center; justify-content: space-between; }
+.portal-icon--nav { display: none; }
+
 @media (max-width: 768px) {
   .site-header {
     padding-top: 3.5rem;
   }
 
-  .portal-icon {
-    top: .75rem;
-    right: 1rem;
-    font-size: .62rem;
-    padding: .35rem .7rem .35rem .55rem;
+  /* Hide header portal icon on mobile — shown in nav row instead */
+  .portal-icon:not(.portal-icon--nav) { display: none; }
+
+  /* Nav top row layout on mobile */
+  .nav-top-row { padding: .5rem 1rem; }
+
+  /* Show portal icon in nav top row on mobile */
+  .portal-icon--nav {
+    display: flex;
+    position: static;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: .45rem .9rem .45rem .7rem;
+    background: var(--color-dark);
+    border: none;
+    color: #fff;
+    border-radius: 5px;
+    gap: .4rem;
+    align-items: center;
+    text-decoration: none;
   }
 
   .site-brand .brand-name {

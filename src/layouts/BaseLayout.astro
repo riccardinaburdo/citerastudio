@@ -37,7 +37,12 @@ const { title, currentPath = '' } = Astro.props;
   </header>
 
   <nav class="site-nav closed" id="site-nav">
-    <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">&#9776;</button>
+    <div class="nav-top-row">
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">&#9776;</button>
+      <a href="/area-riservata/" class="portal-icon portal-icon--nav" aria-label="Client Portal" title="Client Portal">
+        <span class="pi-lock">🔒</span> Client Portal
+      </a>
+    </div>
     <div class="nav-mobile-logo">
       <a href="/">
         <div class="nav-mobile-brand">citerastudio</div>
