@@ -706,8 +706,10 @@ const projectJson = JSON.stringify(data);
                 {cat.items.map((item:any) => {
                   const overrun        = item.overrun ?? false;
                   const forceComplete  = item.forceComplete ?? (!!item.complete && !overrun);
-                  const isNotExecuted  = (item.revisedBudget <= 0) && (item.budget > 0);
-                  const hasNoRevised   = (item.revisedBudget <= 0) && (item.budget <= 0);
+                  const revisedIsZero  = item.revisedBudget <= 0;
+                  const isNotExecuted  = revisedIsZero && (item.budget > 0);
+                  const hasNoRevised   = revisedIsZero && (item.budget <= 0);
+                  const extraShowDash  = item.extra && revisedIsZero;
                   const percNull       = item.perc === null;
                   const percVal        = item.perc ?? 0;
                   const isComplete     = forceComplete || percVal >= 100;
@@ -741,7 +743,7 @@ const projectJson = JSON.stringify(data);
                           data-cat-id={cat.id} data-item-id={item.id} data-field="variation"
                           style={`text-align:right;width:80px;${(item.variation ?? 0) < 0 ? 'color:#16a34a;font-weight:600' : (item.variation ?? 0) > 0 ? 'color:var(--amber);font-weight:600' : 'color:var(--g3)'}`} />
                       </td>
-                      <td class="auto-cell auto-cell-revised" style={(item.variationAmt ?? 0) < 0 ? 'color:#16a34a' : (item.variationAmt ?? 0) > 0 ? 'color:var(--amber)' : ''}>{item.extra && item.revisedBudget === 0 ? <span style="color:var(--g3)">–</span> : fmt(item.revisedBudget)}</td>
+                      <td class="auto-cell auto-cell-revised" style={(item.variationAmt ?? 0) < 0 ? 'color:#16a34a' : (item.variationAmt ?? 0) > 0 ? 'color:var(--amber)' : ''}>{extraShowDash ? <span style="color:var(--g3)">–</span> : fmt(item.revisedBudget)}</td>
                       <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
                         <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} data-cat-id={cat.id} data-item-id={item.id} data-field="done" />
                         {overrun && <span class="overrun-badge">↑</span>}
@@ -2004,26 +2006,43 @@ const projectJson = JSON.stringify(data);
     const opts = state.contractors.map(c =>
       `<option value="${c.id}"${item.contractor===c.id?' selected':''}>${c.name}</option>`).join('');
     const isX = item.extra;
-    const qtyDisabled = isX ? ' disabled' : '';
-    const qtyStyle    = isX ? ' style="color:var(--g3)"' : '';
-    const qtyPh       = isX ? '–' : '';
-    const percHtml    = isX ? '–' : '<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:0%;background:#cbd5e1"></div></div><span class="perc-num" style="color:#cbd5e1">0%</span></div>';
-    const statusHtml  = isX
-      ? (item.done > 0 ? '<span class="status-badge status-complete">Complete</span>' : '<span class="status-badge status-pending">Not Started</span>')
-      : item.complete
-        ? `<span class="status-badge status-complete is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to unmark completion">Complete</span>`
-        : `<span class="status-badge status-pending is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to mark as complete">Not Started</span>`;
+    const price       = parseFloat(item.price) || 0;
+    const variationQty= parseFloat(item.variation) || 0;
+    const revised     = isX ? variationQty * price : ((parseFloat(item.qty)||0) + variationQty) * price;
+    const rawDone     = (parseFloat(item.done)||0) * price;
+    const agreedQty   = isX ? variationQty : (parseFloat(item.qty)||0);
+    const doneQty     = parseFloat(item.done)||0;
+    const overrunX    = revised > 0 && doneQty > agreedQty;
+    const fcX         = !!item.complete && !overrunX;
+    const percX       = revised > 0 ? rawDone / revised * 100 : null;
+    const dispPercX   = fcX ? 100 : (percX ?? 0);
+    const barWX       = Math.min(dispPercX, 100);
+    const pColorX     = overrunX ? '#dc2626' : fcX ? '#22c55e' : dispPercX >= 100 ? '#22c55e' : dispPercX > 0 ? '#f59e0b' : '#cbd5e1';
+    const percHtml    = revised > 0
+      ? `<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:${barWX}%;background:${pColorX}"></div></div><span class="perc-num" style="color:${pColorX}">${Math.round(dispPercX)}%</span></div>`
+      : '<span class="perc-null" style="color:var(--g3)">–</span>';
+    const statusHtml  = overrunX
+      ? `<span class="status-badge status-overrun">Overrun</span>`
+      : revised <= 0 && (isX || (parseFloat(item.qty)||0) > 0)
+        ? `<span class="status-badge status-pending is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}">Not Started</span>`
+        : revised <= 0
+          ? `<span style="color:var(--g3)">–</span>`
+          : fcX || dispPercX >= 100
+            ? `<span class="status-badge status-complete is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to unmark completion">Complete</span>`
+            : dispPercX > 0
+              ? `<span class="status-badge status-progress is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to mark as complete">In Progress</span>`
+              : `<span class="status-badge status-pending is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to mark as complete">Not Started</span>`;
     const unitOpts    = ['m²','m³','lm','unit','lump','kg'].map(u=>`<option${item.unit===u?' selected':''}>${u}</option>`).join('');
     return [
       `<tr class="item${isX?' extra-row':''}" data-cat-id="${catId}" data-item-id="${item.id}">`,
       `<td class="item-id">${item.id}</td>`,
       `<td style="max-width:220px">${isX?'<span class="extra-badge">Extra</span>':''}<span class="brief-link" data-id="${item.id}" data-cat-id="${catId}" data-brief="" data-fulldesc="" title="Click to view / edit full description"><em class="brief-empty">+ add description</em></span></td>`,
       `<td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">${unitOpts}</select></td>`,
-      `<td class="editable-cell"><input type="number" value="${isX?'':0}" placeholder="${qtyPh}"${qtyDisabled}${qtyStyle} data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" /></td>`,
+      `<td class="${isX?'auto-cell':'editable-cell'}">${isX?'<span style="color:var(--g3)">–</span>':`<input type="number" value="0" placeholder="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" />`}</td>`,
       `<td class="editable-cell"><input type="number" value="0" step="0.01" data-cat-id="${catId}" data-item-id="${item.id}" data-field="price" /></td>`,
-      `<td class="auto-cell auto-cell-budget">${isX?'–':'€ 0.00'}</td>`,
-      `<td class="editable-cell">${isX?'<span style="color:var(--g3)">–</span>':`<input type="number" step="any" value="" placeholder="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="variation" style="text-align:right;width:80px;color:var(--g3)" />`}</td>`,
-      `<td class="auto-cell auto-cell-revised">${isX?'–':'€ 0.00'}</td>`,
+      `<td class="auto-cell auto-cell-budget">${isX?'<span style="color:var(--g3)">–</span>':'€ 0.00'}</td>`,
+      `<td class="editable-cell"><input type="number" step="any" value="" placeholder="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="variation" style="text-align:right;width:80px;color:var(--g3)" /></td>`,
+      `<td class="auto-cell auto-cell-revised">${isX?'<span style="color:var(--g3)">–</span>':'€ 0.00'}</td>`,
       `<td class="editable-cell"><input type="number" value="${item.done||0}" data-cat-id="${catId}" data-item-id="${item.id}" data-field="done" /></td>`,
       `<td class="auto-cell auto-cell-done">€ 0.00</td>`,
       `<td class="auto-bg" style="min-width:90px">${percHtml}</td>`,
