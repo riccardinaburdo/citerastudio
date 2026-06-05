@@ -312,7 +312,7 @@ const projectJson = JSON.stringify(data);
           </div>
           <div class="proj-card-footer">
             {p.id === projectId
-              ? <><span class="proj-badge">Current</span><span class="proj-active-label">Now editing</span></>
+              ? <span class="proj-badge">Current</span>
               : <button class="btn btn-primary" data-goto={`/area-riservata/admin?p=${p.id}`} style="font-size:.78rem">Open project →</button>
             }
             <button class="btn btn-dup-project" data-proj-id={p.id} data-proj-name={p.name} style="font-size:.72rem;padding:.3rem .7rem;background:#f1f5f9;border:1px solid var(--g2);border-radius:6px;cursor:pointer">⎘ Duplicate</button>
