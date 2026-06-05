@@ -364,6 +364,8 @@ const fmtDate = (d: string) => {
     tr.pay-row-next .pay-col-label { font-weight: 700; color: var(--orange); }
     tr.pay-row-next .pay-col-gross { color: var(--orange); }
     .overview { display: none; }
+    .progress-overview { display: grid; grid-template-columns: 260px 1fr; gap: 2rem; align-items: start; margin-bottom: 2rem; }
+    .progress-overview > .donut-card { width: 260px; flex-shrink: 0; }
     .donut-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; text-align: center; }
     .donut-wrap { position: relative; width: 160px; height: 160px; margin-bottom: 1.2rem; }
     .donut-ring { width: 160px; height: 160px; border-radius: 50%; background: conic-gradient(var(--orange) 0% var(--p,0%), var(--grey-2) var(--p,0%) 100%); }
@@ -540,7 +542,7 @@ const fmtDate = (d: string) => {
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:260px 1fr;gap:2rem;align-items:start;margin-bottom:2rem">
+  <div class="progress-overview">
     <div class="donut-card">
       <div class="donut-wrap">
         <div class="donut-ring" style={`--p:${totalPerc.toFixed(1)}%`}></div>
