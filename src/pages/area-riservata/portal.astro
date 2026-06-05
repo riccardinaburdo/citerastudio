@@ -570,6 +570,141 @@ const fmtDate = (d: string) => {
     </div>
   </div>
 
+  <div class="section-title">Works Breakdown</div>
+  <div class="works-card">
+    <div class="works-scroll">
+      <table class="works">
+        <thead>
+          <tr>
+            <th style="width:50px">#</th>
+            <th>Description</th>
+            <th style="width:55px">Unit</th>
+            <th class="right" style="width:75px">Contracted<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
+            <th class="right" style="width:90px">Unit Price<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+            <th class="right" style="width:105px">Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+            <th class="right" style="width:80px">Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
+            <th class="right" style="width:105px">Value Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+            <th style="width:110px">Progress</th>
+            <th style="width:90px">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {enrichedCats.map(cat => (
+            <>
+              <tr class="works-cat" data-cat-toggle={cat.id}>
+                <td colspan="10">
+                  <span class="cat-letter">{cat.id}</span>
+                  {cat.label}
+                  <span style="margin-left:.5rem; font-weight:400; color:var(--slate); font-size:0.68rem">
+                    Budget: {fmt(cat.catBudget)} &nbsp;|&nbsp; Contracted done: {fmt(cat.catDoneContr)} ({cat.catPerc.toFixed(0)}%)
+                    {cat.catDoneExtra > 0 && <> &nbsp;|&nbsp; <span style="color:var(--amber)">Extra: {fmt(cat.catDoneExtra)}</span></>}
+                  </span>
+                  <span class="cat-chevron">▾</span>
+                </td>
+              </tr>
+              {cat.items.map(item => {
+                const fc        = !!item.complete && !item.overrun && !item.extra;
+                const notExec   = isNotExecuted(item);
+                const dispPerc  = fc || notExec ? 100 : (item.perc ?? 0);
+                const barColor  = item.overrun ? '#dc2626' : (fc || notExec || dispPerc >= 100) ? '#22c55e' : dispPerc > 0 ? '#f59e0b' : '#cbd5e1';
+                const dispDoneQty = fc ? (item.qty + (item as any).variationQty) : item.done;
+                const dispValue = (item.valueDone > 0 || fc) ? item.valueDone : null;
+                const rowBg = !item.extra && (item as any).variationAmt < 0
+                  ? 'background:rgba(22,163,74,.05)'
+                  : !item.extra && (item as any).variationAmt > 0
+                    ? 'background:rgba(220,38,38,.05)'
+                    : '';
+                return (
+                <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id} style={rowBg}>
+                  <td class="item-id">{item.id}</td>
+                  <td class="item-desc">
+                    {item.extra && <span class="extra-badge">Extra</span>}
+                    <span
+                      class="brief-trigger"
+                      data-id={item.id}
+                      data-brief={item.brief ?? ''}
+                      data-fulldesc={item.fullDesc ?? ''}
+                      title={item.fullDesc ? 'Click for full description' : undefined}
+                    >{item.brief}</span>
+                  </td>
+                  <td style="color:var(--slate); font-size:0.72rem">{item.unit}</td>
+                  <td class="item-num" style={item.extra ? 'color:var(--grey-3)' : ''}>
+                    {item.extra ? '–' : fmtQty(item.qty, item.unit)}
+                  </td>
+                  <td class="item-money">{fmt(item.price)}</td>
+                  <td class="item-money" style={`font-weight:500; ${item.extra ? 'color:var(--grey-3)' : ''}`}>
+                    {item.extra ? '–' : fmt(item.budget)}
+                  </td>
+                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : !item.extra && dispDoneQty <= item.qty ? '#16a34a' : 'var(--navy)'}; font-weight:600`}>
+                    {item.extra ? fmtQ(item.done, item.unit) : fmtQ(dispDoneQty, item.unit)}
+                    {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
+                  </td>
+                  <td class="item-money" style={`color:${item.extra ? 'var(--amber)' : barColor}; font-weight:500`}>
+                    {dispValue !== null ? fmt(dispValue) : '–'}
+                  </td>
+                  <td class="perc-cell">
+                    {item.extra ? (
+                      <span style="font-size:0.7rem; color:var(--amber); font-weight:600">Extra works</span>
+                    ) : notExec ? (
+                      <span style="color:var(--grey-3); font-size:0.72rem">–</span>
+                    ) : (
+                      <div class="perc-wrap">
+                        <div class="perc-mini">
+                          <div class="perc-mini-fill" style={`width:${Math.min(dispPerc, 100).toFixed(0)}%; background:${barColor}`}></div>
+                        </div>
+                        <span class={item.overrun ? 'perc-num overrun-num' : 'perc-num'} style={`color:${barColor}`}>
+                          {Math.min(Math.round(dispPerc), 100)}%
+                        </span>
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    {item.extra ? (
+                      <span class="badge extra">Extra</span>
+                    ) : item.overrun ? (
+                      <span class="badge overrun">Overrun</span>
+                    ) : (
+                      <span class={`badge ${statusClass(item.perc, item)}`}>{statusLabel(item)}</span>
+                    )}
+                  </td>
+                </tr>
+              );})}
+              <tr class="subtotal" data-cat-member={cat.id}>
+                <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
+                <td class="item-money">{fmt(cat.catBudget)}</td>
+                <td></td>
+                <td class="item-money" style="color:var(--navy)">
+                  {fmt(cat.catDone)}
+                  {cat.catDoneExtra > 0 && <span style="display:block; font-size:0.62rem; color:var(--amber); font-weight:400">incl. {fmt(cat.catDoneExtra)} extras</span>}
+                </td>
+                <td class="perc-cell">
+                  <div class="perc-wrap">
+                    <div class="perc-mini"><div class="perc-mini-fill" style={`width:${Math.min(cat.catPerc,100).toFixed(0)}%; background:${catColor(cat.catPerc)}`}></div></div>
+                    <span class="perc-num">{cat.catPerc.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td><span class={`badge ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span></td>
+              </tr>
+            </>
+          ))}
+          <tr class="grand-total">
+            <td colspan="5" style="text-align:right; padding-right:1rem; letter-spacing:.04em">TOTAL <span style="font-size:0.65rem; opacity:.65; font-weight:400">(net ex. VAT)</span></td>
+            <td class="item-money">{fmt(totalBudget)}</td>
+            <td></td>
+            <td class="item-money">
+              {fmt(totalDone)}
+              {totalDoneExtra > 0 && <span style="display:block; font-size:0.62rem; opacity:.7; font-weight:400">incl. {fmt(totalDoneExtra)} extras</span>}
+            </td>
+            <td colspan="2" style="padding-left:.75rem; font-size:0.88rem">
+              {totalPerc.toFixed(2)}% contracted complete
+              {totalDoneExtra > 0 && <span style="display:block; font-size:0.7rem; opacity:.7; font-weight:400">+ {fmt(totalDoneExtra)} extra works (net)</span>}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="section-title">Payment Schedule — by Contractor</div>
   {contractorSchedules.length === 0 && (
     <div class="payment-card" style="text-align:center; padding:2rem; color:var(--slate); font-size:0.85rem">
@@ -799,144 +934,6 @@ const fmtDate = (d: string) => {
       })}
     </>
   )}
-
-  <div class="section-title">Works Breakdown</div>
-  <div class="works-card">
-    <div class="works-scroll">
-      <table class="works">
-        <thead>
-          <tr>
-            <th style="width:50px">#</th>
-            <th>Description</th>
-            <th style="width:55px">Unit</th>
-            <th class="right" style="width:75px">Contracted<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
-            <th class="right" style="width:90px">Unit Price<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
-            <th class="right" style="width:105px">Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
-            <th class="right" style="width:80px">Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
-            <th class="right" style="width:105px">Value Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
-            <th style="width:110px">Progress</th>
-            <th style="width:90px">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {enrichedCats.map(cat => (
-            <>
-              <tr class="works-cat" data-cat-toggle={cat.id}>
-                <td colspan="10">
-                  <span class="cat-letter">{cat.id}</span>
-                  {cat.label}
-                  <span style="margin-left:.5rem; font-weight:400; color:var(--slate); font-size:0.68rem">
-                    Budget: {fmt(cat.catBudget)} &nbsp;|&nbsp; Contracted done: {fmt(cat.catDoneContr)} ({cat.catPerc.toFixed(0)}%)
-                    {cat.catDoneExtra > 0 && <> &nbsp;|&nbsp; <span style="color:var(--amber)">Extra: {fmt(cat.catDoneExtra)}</span></>}
-                  </span>
-                  <span class="cat-chevron">▾</span>
-                </td>
-              </tr>
-              {cat.items.map(item => {
-                const fc        = !!item.complete && !item.overrun && !item.extra;
-                const notExec   = isNotExecuted(item);
-                const dispPerc  = fc || notExec ? 100 : (item.perc ?? 0);
-                const barColor  = item.overrun ? '#dc2626' : (fc || notExec || dispPerc >= 100) ? '#22c55e' : dispPerc > 0 ? '#f59e0b' : '#cbd5e1';
-                // Done qty: for force-complete show revised qty; for not-executed show 0; else actual done
-                const dispDoneQty = fc ? (item.qty + (item as any).variationQty) : item.done;
-                // Value done: valueDone already accounts for forceComplete in enrich
-                const dispValue = (item.valueDone > 0 || fc) ? item.valueDone : null;
-                // Row background tint based on variationAmt
-                const rowBg = !item.extra && (item as any).variationAmt < 0
-                  ? 'background:rgba(22,163,74,.05)'
-                  : !item.extra && (item as any).variationAmt > 0
-                    ? 'background:rgba(220,38,38,.05)'
-                    : '';
-                return (
-                <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id} style={rowBg}>
-                  <td class="item-id">{item.id}</td>
-                  <td class="item-desc">
-                    {item.extra && <span class="extra-badge">Extra</span>}
-                    <span
-                      class="brief-trigger"
-                      data-id={item.id}
-                      data-brief={item.brief ?? ''}
-                      data-fulldesc={item.fullDesc ?? ''}
-                      title={item.fullDesc ? 'Click for full description' : undefined}
-                    >{item.brief}</span>
-                  </td>
-                  <td style="color:var(--slate); font-size:0.72rem">{item.unit}</td>
-                  <td class="item-num" style={item.extra ? 'color:var(--grey-3)' : ''}>
-                    {item.extra ? '–' : fmtQty(item.qty, item.unit)}
-                  </td>
-                  <td class="item-money">{fmt(item.price)}</td>
-                  <td class="item-money" style={`font-weight:500; ${item.extra ? 'color:var(--grey-3)' : ''}`}>
-                    {item.extra ? '–' : fmt(item.budget)}
-                  </td>
-                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : !item.extra && dispDoneQty <= item.qty ? '#16a34a' : 'var(--navy)'}; font-weight:600`}>
-                    {item.extra ? fmtQ(item.done, item.unit) : fmtQ(dispDoneQty, item.unit)}
-                    {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
-                  </td>
-                  <td class="item-money" style={`color:${item.extra ? 'var(--amber)' : barColor}; font-weight:500`}>
-                    {dispValue !== null ? fmt(dispValue) : '–'}
-                  </td>
-                  <td class="perc-cell">
-                    {item.extra ? (
-                      <span style="font-size:0.7rem; color:var(--amber); font-weight:600">Extra works</span>
-                    ) : notExec ? (
-                      <span style="color:var(--grey-3); font-size:0.72rem">–</span>
-                    ) : (
-                      <div class="perc-wrap">
-                        <div class="perc-mini">
-                          <div class="perc-mini-fill" style={`width:${Math.min(dispPerc, 100).toFixed(0)}%; background:${barColor}`}></div>
-                        </div>
-                        <span class={item.overrun ? 'perc-num overrun-num' : 'perc-num'} style={`color:${barColor}`}>
-                          {Math.min(Math.round(dispPerc), 100)}%
-                        </span>
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    {item.extra ? (
-                      <span class="badge extra">Extra</span>
-                    ) : item.overrun ? (
-                      <span class="badge overrun">Overrun</span>
-                    ) : (
-                      <span class={`badge ${statusClass(item.perc, item)}`}>{statusLabel(item)}</span>
-                    )}
-                  </td>
-                </tr>
-              );})}
-              <tr class="subtotal" data-cat-member={cat.id}>
-                <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
-                <td class="item-money">{fmt(cat.catBudget)}</td>
-                <td></td>
-                <td class="item-money" style="color:var(--navy)">
-                  {fmt(cat.catDone)}
-                  {cat.catDoneExtra > 0 && <span style="display:block; font-size:0.62rem; color:var(--amber); font-weight:400">incl. {fmt(cat.catDoneExtra)} extras</span>}
-                </td>
-                <td class="perc-cell">
-                  <div class="perc-wrap">
-                    <div class="perc-mini"><div class="perc-mini-fill" style={`width:${Math.min(cat.catPerc,100).toFixed(0)}%; background:${catColor(cat.catPerc)}`}></div></div>
-                    <span class="perc-num">{cat.catPerc.toFixed(0)}%</span>
-                  </div>
-                </td>
-                <td><span class={`badge ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span></td>
-              </tr>
-            </>
-          ))}
-          <tr class="grand-total">
-            <td colspan="5" style="text-align:right; padding-right:1rem; letter-spacing:.04em">TOTAL <span style="font-size:0.65rem; opacity:.65; font-weight:400">(net ex. VAT)</span></td>
-            <td class="item-money">{fmt(totalBudget)}</td>
-            <td></td>
-            <td class="item-money">
-              {fmt(totalDone)}
-              {totalDoneExtra > 0 && <span style="display:block; font-size:0.62rem; opacity:.7; font-weight:400">incl. {fmt(totalDoneExtra)} extras</span>}
-            </td>
-            <td colspan="2" style="padding-left:.75rem; font-size:0.88rem">
-              {totalPerc.toFixed(2)}% contracted complete
-              {totalDoneExtra > 0 && <span style="display:block; font-size:0.7rem; opacity:.7; font-weight:400">+ {fmt(totalDoneExtra)} extra works (net)</span>}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
   {updates.length > 0 && (
     <>
