@@ -742,13 +742,11 @@ const projectJson = JSON.stringify(data);
                       </td>
                       <td class="auto-cell auto-cell-done">{fmt(item.valueDone)}</td>
                       <td class="auto-bg" style="min-width:90px">
-                        {item.perc === null
-                          ? <span style="color:var(--g3)">–</span>
-                          : <div class="perc-wrap">
-                              <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
-                              <span class="perc-num" style={`color:${pColor}`}>{Math.round(dispPerc)}%</span>
-                            </div>
-                        }
+                        <div class="perc-wrap" style={item.perc === null ? 'display:none' : ''}>
+                          <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
+                          <span class="perc-num" style={`color:${pColor}`}>{Math.round(dispPerc)}%</span>
+                        </div>
+                        {item.perc === null && <span class="perc-null" style="color:var(--g3)">–</span>}
                       </td>
                       <td class="auto-bg">
                         {overrun
@@ -1294,13 +1292,30 @@ const projectJson = JSON.stringify(data);
       } else if (!overrun && badge) { badge.remove(); }
     }
 
+    // Auto-reset complete flag if done < agreedQty (stale flag)
+    if (item.complete && doneQty < agreedQty && !overrun && revised > 0) {
+      item.complete = false;
+    }
+    const forceCompleteActual = !!item.complete && !overrun && revised > 0;
+    const dispPercFinal = forceCompleteActual ? 100 : percActual;
+    const barWFinal = Math.min(dispPercFinal, 100);
+    const pColorFinal = overrun ? '#dc2626' : forceCompleteActual ? '#22c55e' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
+
     // Progress bar
     const percWrap = row.querySelector('.perc-wrap');
+    const percNull = row.querySelector('.perc-null');
+    if (revised > 0) {
+      if (percWrap) { percWrap.style.display = ''; }
+      if (percNull) { percNull.style.display = 'none'; }
+    } else {
+      if (percWrap) { percWrap.style.display = 'none'; }
+      if (percNull) { percNull.style.display = ''; }
+    }
     if (percWrap) {
       const fill = percWrap.querySelector('.perc-fill');
       const num  = percWrap.querySelector('.perc-num');
-      if (fill) { fill.style.width = `${barW}%`; fill.style.background = pColor; }
-      if (num)  { num.textContent = `${Math.round(dispPerc)}%`; num.style.color = pColor; }
+      if (fill) { fill.style.width = `${barWFinal}%`; fill.style.background = pColorFinal; }
+      if (num)  { num.textContent = `${Math.round(dispPercFinal)}%`; num.style.color = pColorFinal; }
     }
 
     // Status badge
@@ -1310,10 +1325,10 @@ const projectJson = JSON.stringify(data);
       const noRevised   = revised <= 0 && budget <= 0;
       if (overrun)                          { statusSpan.className = 'status-badge status-overrun';      statusSpan.textContent = 'Overrun'; }
       else if (notExecuted)                 { statusSpan.className = 'status-badge status-not-executed'; statusSpan.textContent = 'Not Executed'; }
-      else if (noRevised)                   { statusSpan.className = ''; statusSpan.textContent = '–'; }
-      else if (forceComplete || percActual >= 100) { statusSpan.className = 'status-badge status-complete is-toggleable'; statusSpan.textContent = 'Complete'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
-      else if (percActual > 0)              { statusSpan.className = 'status-badge status-progress is-toggleable'; statusSpan.textContent = 'In Progress'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
-      else                                  { statusSpan.className = 'status-badge status-pending is-toggleable';  statusSpan.textContent = 'Not Started'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
+      else if (noRevised)                           { statusSpan.className = ''; statusSpan.textContent = '–'; }
+      else if (forceCompleteActual || percActual >= 100) { statusSpan.className = 'status-badge status-complete is-toggleable'; statusSpan.textContent = 'Complete'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
+      else if (percActual > 0)                      { statusSpan.className = 'status-badge status-progress is-toggleable'; statusSpan.textContent = 'In Progress'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
+      else                                          { statusSpan.className = 'status-badge status-pending is-toggleable';  statusSpan.textContent = 'Not Started'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
     }
 
     // Recalculate subtotal row for this category
