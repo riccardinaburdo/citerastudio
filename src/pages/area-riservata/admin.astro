@@ -720,8 +720,10 @@ const projectJson = JSON.stringify(data);
                           {['m²','m³','lm','unit','lump','kg'].map((u:string) => <option selected={item.unit===u}>{u}</option>)}
                         </select>
                       </td>
-                      <td class="editable-cell">
-                        <input type="number" value={item.qty ?? ''} placeholder="0" data-cat-id={cat.id} data-item-id={item.id} data-field="qty" />
+                      <td class={item.extra ? 'auto-cell' : 'editable-cell'}>
+                        {item.extra
+                          ? <span style="color:var(--g3)">–</span>
+                          : <input type="number" value={item.qty ?? ''} placeholder="0" data-cat-id={cat.id} data-item-id={item.id} data-field="qty" />}
                       </td>
                       <td class="editable-cell">
                         <input type="number" value={item.price} step="0.01" data-cat-id={cat.id} data-item-id={item.id} data-field="price" />
