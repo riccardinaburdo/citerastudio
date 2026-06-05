@@ -704,9 +704,12 @@ const projectJson = JSON.stringify(data);
                   </td>
                 </tr>
                 {cat.items.map((item:any) => {
-                  const overrun       = item.overrun ?? false;
-                  const forceComplete = item.forceComplete ?? (!!item.complete && !overrun);
-                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
+                  const overrun        = item.overrun ?? false;
+                  const forceComplete  = item.forceComplete ?? (!!item.complete && !overrun);
+                  const isNotExecuted  = (item.revisedBudget <= 0) && (item.budget > 0);
+                  const hasNoRevised   = (item.revisedBudget <= 0) && (item.budget <= 0);
+                  const percNull       = item.perc === null;
+                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : (item.perc ?? 0) >= 100 ? '#22c55e' : (item.perc ?? 0) > 0 ? '#f59e0b' : '#cbd5e1';
                   const dispPerc = forceComplete ? 100 : (item.perc ?? 0);
                   const barW    = Math.min(dispPerc, 100);
                   return (
@@ -742,22 +745,22 @@ const projectJson = JSON.stringify(data);
                       </td>
                       <td class="auto-cell auto-cell-done">{fmt(item.valueDone)}</td>
                       <td class="auto-bg" style="min-width:90px">
-                        <div class="perc-wrap" style={item.perc === null ? 'display:none' : ''}>
+                        <div class="perc-wrap" style={percNull ? 'display:none' : ''}>
                           <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
                           <span class="perc-num" style={`color:${pColor}`}>{Math.round(dispPerc)}%</span>
                         </div>
-                        {item.perc === null && <span class="perc-null" style="color:var(--g3)">–</span>}
+                        {percNull && <span class="perc-null" style="color:var(--g3)">–</span>}
                       </td>
                       <td class="auto-bg">
                         {overrun
                           ? <span class="status-badge status-overrun">Overrun</span>
-                          : item.revisedBudget <= 0 && item.budget > 0
+                          : isNotExecuted
                             ? <span class="status-badge status-not-executed">Not Executed</span>
-                            : item.perc === null
+                            : hasNoRevised
                               ? <span style="color:var(--g3)">–</span>
-                              : (forceComplete || item.perc >= 100)
+                              : (forceComplete || (item.perc ?? 0) >= 100)
                                 ? <span class="status-badge status-complete is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to unmark completion">Complete</span>
-                                : item.perc > 0
+                                : (item.perc ?? 0) > 0
                                   ? <span class="status-badge status-progress is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to mark as complete">In Progress</span>
                                   : <span class="status-badge status-pending is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to mark as complete">Not Started</span>
                         }
