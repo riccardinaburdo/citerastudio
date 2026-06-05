@@ -17,16 +17,17 @@ const { info: project, contractors, technicians, categories } = data;
 const enrich = (item: any) => {
   const qty           = item.extra ? 0 : (item.qty ?? 0);
   const price         = item.price ?? 0;
-  const variationQty  = item.variation ?? 0;                        // applies to both regular and extra
-  const budget        = item.extra ? 0 : qty * price;              // extras have no contracted budget
-  const variationAmt  = variationQty * price;                       // euro impact of variation
+  const variationQty  = item.variation ?? 0;
+  const budget        = item.extra ? 0 : qty * price;
+  const variationAmt  = variationQty * price;
   const revisedBudget = item.extra ? variationAmt : (qty + variationQty) * price;
   const rawDone       = (item.done ?? 0) * price;
-  const overrun       = !item.extra && (item.done ?? 0) > (item.qty ?? 0);
-  const forceComplete = !!item.complete && !overrun && !item.extra;
+  const agreedQty     = item.extra ? variationQty : (item.qty ?? 0);
+  const overrun       = revisedBudget > 0 && (item.done ?? 0) > agreedQty;
+  const forceComplete = !!item.complete && !overrun;
   const valueDone     = forceComplete ? revisedBudget : rawDone;
-  const perc          = (!item.extra && revisedBudget > 0) ? (rawDone / revisedBudget) * 100 : null;
-  return { ...item, budget, variationQty, variationAmt, revisedBudget, valueDone, perc };
+  const perc          = revisedBudget > 0 ? (rawDone / revisedBudget) * 100 : null;
+  return { ...item, budget, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun, forceComplete };
 };
 const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
 
@@ -703,9 +704,9 @@ const projectJson = JSON.stringify(data);
                   </td>
                 </tr>
                 {cat.items.map((item:any) => {
-                  const overrun       = !item.extra && item.done > item.qty;
-                  const forceComplete = !!item.complete && !overrun && !item.extra;
-                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
+                  const overrun       = item.overrun ?? false;
+                  const forceComplete = item.forceComplete ?? (!!item.complete && !overrun);
+                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.perc >= 100 ? '#22c55e' : item.perc > 0 ? '#f59e0b' : '#cbd5e1';
                   const dispPerc = forceComplete ? 100 : (item.perc ?? 0);
                   const barW    = Math.min(dispPerc, 100);
                   return (
@@ -741,20 +742,21 @@ const projectJson = JSON.stringify(data);
                       </td>
                       <td class="auto-cell auto-cell-done">{fmt(item.valueDone)}</td>
                       <td class="auto-bg" style="min-width:90px">
-                        {item.extra ? '–' : (
-                          <div class="perc-wrap">
-                            <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
-                            <span class="perc-num" style={`color:${pColor}`}>{Math.round(dispPerc)}%</span>
-                          </div>
-                        )}
+                        {item.perc === null
+                          ? <span style="color:var(--g3)">–</span>
+                          : <div class="perc-wrap">
+                              <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
+                              <span class="perc-num" style={`color:${pColor}`}>{Math.round(dispPerc)}%</span>
+                            </div>
+                        }
                       </td>
                       <td class="auto-bg">
                         {overrun
                           ? <span class="status-badge status-overrun">Overrun</span>
-                          : item.extra
-                            ? (item.done > 0 ? <span class="status-badge status-complete">Complete</span> : <span class="status-badge status-pending">Not Started</span>)
-                            : (!item.extra && item.revisedBudget <= 0 && item.budget > 0)
-                              ? <span class="status-badge status-not-executed">Not Executed</span>
+                          : item.revisedBudget <= 0 && item.budget > 0
+                            ? <span class="status-badge status-not-executed">Not Executed</span>
+                            : item.perc === null
+                              ? <span style="color:var(--g3)">–</span>
                               : (forceComplete || item.perc >= 100)
                                 ? <span class="status-badge status-complete is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to unmark completion">Complete</span>
                                 : item.perc > 0
@@ -1254,9 +1256,11 @@ const projectJson = JSON.stringify(data);
     const budget       = item.extra ? 0 : qty * price;
     const variationAmt = variationQty * price;
     const revised      = item.extra ? variationAmt : (qty + variationQty) * price;
-    const rawDone      = (item.done || 0) * price;
-    const overrun      = !item.extra && (item.done || 0) > qty;
-    const forceComplete = !!item.complete && !overrun && !item.extra;
+    const rawDone      = (parseFloat(field === 'done' ? newVal : item.done) || 0) * price;
+    const agreedQty    = item.extra ? variationQty : qty;
+    const doneQty      = parseFloat(field === 'done' ? newVal : item.done) || 0;
+    const overrun      = revised > 0 && doneQty > agreedQty;
+    const forceComplete = !!item.complete && !overrun;
     const valDone      = forceComplete ? revised : rawDone;
     const percActual   = (!item.extra && revised > 0) ? (rawDone / revised) * 100 : 0;
     const dispPerc     = forceComplete ? 100 : percActual;
@@ -1302,15 +1306,14 @@ const projectJson = JSON.stringify(data);
     // Status badge
     const statusSpan = row.querySelector('.status-badge');
     if (statusSpan) {
-      const notExecuted = !item.extra && revised <= 0 && budget > 0;
-      if (item.extra) {
-        if ((item.done || 0) > 0) { statusSpan.className = 'status-badge status-complete'; statusSpan.textContent = 'Complete'; }
-        else                      { statusSpan.className = 'status-badge status-pending';  statusSpan.textContent = 'Not Started'; }
-      } else if (overrun)                         { statusSpan.className = 'status-badge status-overrun';      statusSpan.textContent = 'Overrun'; }
-      else if (notExecuted)                       { statusSpan.className = 'status-badge status-not-executed'; statusSpan.textContent = 'Not Executed'; }
-      else if (forceComplete || percActual >= 100) { statusSpan.className = 'status-badge status-complete is-toggleable'; statusSpan.textContent = 'Complete'; }
-      else if (percActual > 0)                    { statusSpan.className = 'status-badge status-progress is-toggleable'; statusSpan.textContent = 'In Progress'; }
-      else                                        { statusSpan.className = 'status-badge status-pending is-toggleable';  statusSpan.textContent = 'Not Started'; }
+      const notExecuted = revised <= 0 && budget > 0;
+      const noRevised   = revised <= 0 && budget <= 0;
+      if (overrun)                          { statusSpan.className = 'status-badge status-overrun';      statusSpan.textContent = 'Overrun'; }
+      else if (notExecuted)                 { statusSpan.className = 'status-badge status-not-executed'; statusSpan.textContent = 'Not Executed'; }
+      else if (noRevised)                   { statusSpan.className = ''; statusSpan.textContent = '–'; }
+      else if (forceComplete || percActual >= 100) { statusSpan.className = 'status-badge status-complete is-toggleable'; statusSpan.textContent = 'Complete'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
+      else if (percActual > 0)              { statusSpan.className = 'status-badge status-progress is-toggleable'; statusSpan.textContent = 'In Progress'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
+      else                                  { statusSpan.className = 'status-badge status-pending is-toggleable';  statusSpan.textContent = 'Not Started'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
     }
 
     // Recalculate subtotal row for this category
