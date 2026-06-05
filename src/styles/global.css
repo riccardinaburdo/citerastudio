@@ -1104,6 +1104,9 @@ main {
 }
 
 /* ===== RESPONSIVE ===== */
+/* Mobile nav logo — hidden on desktop */
+.nav-mobile-logo { display: none; }
+
 @media (max-width: 768px) {
   .site-header {
     padding-top: 3.5rem;
@@ -1127,6 +1130,28 @@ main {
   .menu-toggle {
     display: block;
     margin-top: 1rem;
+  }
+
+  /* Logo inside open mobile menu */
+  .site-nav:not(.closed) .nav-mobile-logo {
+    display: block;
+    text-align: center;
+    padding: 1.4rem 1rem 1rem;
+    border-bottom: 1px solid #E4BFAD;
+    margin-bottom: .25rem;
+  }
+  .nav-mobile-brand {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-orange);
+    line-height: 1.1;
+  }
+  .nav-mobile-sub {
+    font-family: var(--font-subtitle);
+    font-size: 1rem;
+    color: var(--color-brown);
+    font-weight: 400;
   }
 
   .site-nav > ul {
