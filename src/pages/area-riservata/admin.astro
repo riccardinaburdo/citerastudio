@@ -692,7 +692,7 @@ const projectJson = JSON.stringify(data);
                     {cat.label}
                     <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">
                       Budget: {fmt(catBudget)}
-                      {catVariation !== 0 && <span style={catVariation < 0 ? 'color:#16a34a' : 'color:var(--amber)'}> {catVariation > 0 ? '+' : ''}{fmt(catVariation)}</span>}
+                      {catVariation !== 0 && <span style={catVariation < 0 ? 'color:#16a34a' : 'color:var(--red)'}> {catVariation > 0 ? '+' : ''}{fmt(catVariation)}</span>}
                       {catVariation !== 0 && <> → <strong>{fmt(catRevised)}</strong></>}
                       &nbsp;|&nbsp; Done: {fmt(catDone)} &nbsp;|&nbsp; {catPerc.toFixed(0)}%
                     </span>
@@ -741,9 +741,9 @@ const projectJson = JSON.stringify(data);
                       <td class="editable-cell">
                         <input type="number" step="any" value={item.variation || ''} placeholder="0"
                           data-cat-id={cat.id} data-item-id={item.id} data-field="variation"
-                          style={`text-align:right;width:80px;${(item.variation ?? 0) < 0 ? 'color:#16a34a;font-weight:600' : (item.variation ?? 0) > 0 ? 'color:var(--amber);font-weight:600' : 'color:var(--g3)'}`} />
+                          style={`text-align:right;width:80px;${(item.variation ?? 0) < 0 ? 'color:#16a34a;font-weight:600' : (item.variation ?? 0) > 0 ? 'color:var(--red);font-weight:600' : 'color:var(--g3)'}`} />
                       </td>
-                      <td class="auto-cell auto-cell-revised" style={(item.variationAmt ?? 0) < 0 ? 'color:#16a34a' : (item.variationAmt ?? 0) > 0 ? 'color:var(--amber)' : ''}>{extraShowDash ? <span style="color:var(--g3)">–</span> : fmt(item.revisedBudget)}</td>
+                      <td class="auto-cell auto-cell-revised" style={(item.variationAmt ?? 0) < 0 ? 'color:#16a34a' : (item.variationAmt ?? 0) > 0 ? 'color:var(--red)' : ''}>{extraShowDash ? <span style="color:var(--g3)">–</span> : fmt(item.revisedBudget)}</td>
                       <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
                         <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} data-cat-id={cat.id} data-item-id={item.id} data-field="done" />
                         {overrun && <span class="overrun-badge">↑</span>}
@@ -1280,11 +1280,11 @@ const projectJson = JSON.stringify(data);
     if (bCell) { bCell.textContent = item.extra ? '–' : fmtAmt(budget); }
     if (rCell) {
       rCell.textContent = (item.extra && revised === 0) ? '–' : fmtAmt(revised);
-      rCell.style.color = variationAmt < 0 ? '#16a34a' : variationAmt > 0 ? '#f59e0b' : '';
+      rCell.style.color = variationAmt < 0 ? '#16a34a' : variationAmt > 0 ? '#dc2626' : '';
     }
     if (dCell) dCell.textContent = fmtAmt(valDone);
     if (field === 'variation') {
-      el.style.color = variationQty < 0 ? '#16a34a' : variationQty > 0 ? 'var(--amber)' : 'var(--g3)';
+      el.style.color = variationQty < 0 ? '#16a34a' : variationQty > 0 ? '#dc2626' : 'var(--g3)';
       el.style.fontWeight = variationQty !== 0 ? '600' : '';
     }
 
@@ -1407,7 +1407,7 @@ const projectJson = JSON.stringify(data);
       if (span) {
         let html = `Budget: ${fmtAmt(sumBudget)}`;
         if (variation !== 0) {
-          const col = variation < 0 ? '#16a34a' : 'var(--amber)';
+          const col = variation < 0 ? '#16a34a' : '#dc2626';
           const sign = variation > 0 ? '+' : '';
           html += ` <span style="color:${col}">${sign}${fmtAmt(variation)}</span> → <strong>${fmtAmt(sumRevised)}</strong>`;
         }

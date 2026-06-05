@@ -546,7 +546,7 @@ const fmtDate = (d: string) => {
             <div style={`font-size:.68rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:${totalVariation < 0 ? '#15803d' : '#c2410c'};margin-bottom:.2rem`}>
               {totalVariation < 0 ? '▼ Savings' : '▲ Cost increase'}
             </div>
-            <div style={`font-size:1rem;font-weight:700;color:${totalVariation < 0 ? '#16a34a' : '#f59e0b'}`}>
+            <div style={`font-size:1rem;font-weight:700;color:${totalVariation < 0 ? '#16a34a' : '#dc2626'}`}>
               {totalVariation > 0 ? '+' : ''}{fmt(totalVariation)}
             </div>
             <div style="font-size:.65rem;color:var(--slate);margin-top:.2rem">
@@ -659,10 +659,10 @@ const fmtDate = (d: string) => {
                   <td class="item-money" style={item.extra ? 'color:var(--grey-3)' : ''}>
                     {item.extra ? '–' : fmt(item.budget)}
                   </td>
-                  <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? 'var(--amber)' : 'var(--grey-3)'}`}>
+                  <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? '#dc2626' : 'var(--grey-3)'}`}>
                     {item.variationQty !== 0 ? item.variationQty : '–'}
                   </td>
-                  <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? 'var(--amber)' : ''}`}>
+                  <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? '#dc2626' : ''}`}>
                     {revisedPos ? fmt(item.revisedBudget) : <span style="color:var(--grey-3)">–</span>}
                   </td>
                   <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : '#16a34a'}`}>
