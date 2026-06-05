@@ -1130,11 +1130,11 @@ main {
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
-    padding: .45rem .9rem .45rem .7rem;
-    background: var(--color-dark);
+    padding: .5rem 1rem;
+    background: none;
     border: none;
-    color: #fff;
-    border-radius: 5px;
+    color: var(--color-dark);
+    border-radius: 0;
     gap: .4rem;
     align-items: center;
     text-decoration: none;
