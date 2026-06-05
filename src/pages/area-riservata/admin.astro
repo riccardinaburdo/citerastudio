@@ -1268,10 +1268,10 @@ const projectJson = JSON.stringify(data);
     const overrun      = revised > 0 && doneQty > agreedQty;
     const forceComplete = !!item.complete && !overrun;
     const valDone      = forceComplete ? revised : rawDone;
-    const percActual   = (!item.extra && revised > 0) ? (rawDone / revised) * 100 : 0;
+    const percActual   = revised > 0 ? (rawDone / revised) * 100 : 0;
     const dispPerc     = forceComplete ? 100 : percActual;
     const barW         = Math.min(dispPerc, 100);
-    const pColor       = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
+    const pColor       = overrun ? '#dc2626' : forceComplete ? '#22c55e' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
 
     // Auto cells
     const bCell = row.querySelector('.auto-cell-budget');
@@ -1360,8 +1360,9 @@ const projectJson = JSON.stringify(data);
       const variationAmt= variationQty * price;
       const revised     = item.extra ? variationAmt : (qty + variationQty) * price;
       const rawDone     = (parseFloat(item.done) || 0) * price;
-      const overrun     = !item.extra && (parseFloat(item.done)||0) > qty;
-      const forceComplete = !!item.complete && !overrun && !item.extra;
+      const agreedQty   = item.extra ? variationQty : qty;
+      const overrun     = revised > 0 && (parseFloat(item.done)||0) > agreedQty;
+      const forceComplete = !!item.complete && !overrun;
       const valueDone   = forceComplete ? revised : rawDone;
       if (!item.extra) sumBudget += budget;
       sumRevised += revised;
