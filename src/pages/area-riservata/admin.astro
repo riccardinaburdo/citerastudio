@@ -706,15 +706,15 @@ const projectJson = JSON.stringify(data);
                 {cat.items.map((item:any) => {
                   const overrun        = item.overrun ?? false;
                   const forceComplete  = item.forceComplete ?? (!!item.complete && !overrun);
-                  const revisedIsZero  = item.revisedBudget <= 0;
+                  const revisedIsZero  = !(item.revisedBudget > 0);
                   const isNotExecuted  = revisedIsZero && (item.budget > 0);
-                  const hasNoRevised   = revisedIsZero && (item.budget <= 0);
+                  const hasNoRevised   = revisedIsZero && !(item.budget > 0);
                   const extraShowDash  = item.extra && revisedIsZero;
                   const percNull       = item.perc === null;
                   const percVal        = item.perc ?? 0;
-                  const isComplete     = forceComplete || percVal >= 100;
+                  const isComplete     = forceComplete || percVal > 99.9;
                   const isInProgress   = !isComplete && percVal > 0;
-                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : percVal >= 100 ? '#22c55e' : percVal > 0 ? '#f59e0b' : '#cbd5e1';
+                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : percVal > 99.9 ? '#22c55e' : percVal > 0 ? '#f59e0b' : '#cbd5e1';
                   const dispPerc = forceComplete ? 100 : percVal;
                   const barW    = Math.min(dispPerc, 100);
                   return (
