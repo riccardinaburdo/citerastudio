@@ -540,21 +540,6 @@ const fmtDate = (d: string) => {
     </div>
   </div>
 
-  <div class="cat-card" style="margin-bottom:2rem">
-    <div class="cat-card-title">Progress by work category</div>
-    {enrichedCats.map(cat => (
-      <div class="cat-bar-row">
-        <span class="cat-bar-id">{cat.id}</span>
-        <span class="cat-bar-label" title={cat.label}>{cat.label}</span>
-        <div class="cat-bar-track">
-          <div class="cat-bar-fill" style={`width:${cat.catPerc.toFixed(1)}%; background:${catColor(cat.catPerc)}`}></div>
-        </div>
-        <span class="cat-bar-pct" style={`color:${catColor(cat.catPerc)}`}>{cat.catPerc.toFixed(0)}%</span>
-        <span class={`cat-status ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span>
-      </div>
-    ))}
-  </div>
-
   <div style="display:grid;grid-template-columns:260px 1fr;gap:2rem;align-items:start;margin-bottom:2rem">
     <div class="donut-card">
       <div class="donut-wrap">
@@ -567,8 +552,23 @@ const fmtDate = (d: string) => {
       <div class="donut-title">Overall Progress</div>
       <div class="donut-sub">Progress Update #{project.updateNum}<br/>{fmtDate(project.updated)}</div>
     </div>
-    <div>
-      <div class="section-title" style="margin-top:0">Payment Schedule — by Contractor</div>
+    <div class="cat-card">
+      <div class="cat-card-title">Progress by work category</div>
+      {enrichedCats.map(cat => (
+        <div class="cat-bar-row">
+          <span class="cat-bar-id">{cat.id}</span>
+          <span class="cat-bar-label" title={cat.label}>{cat.label}</span>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" style={`width:${cat.catPerc.toFixed(1)}%; background:${catColor(cat.catPerc)}`}></div>
+          </div>
+          <span class="cat-bar-pct" style={`color:${catColor(cat.catPerc)}`}>{cat.catPerc.toFixed(0)}%</span>
+          <span class={`cat-status ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <div class="section-title">Payment Schedule — by Contractor</div>
   {contractorSchedules.length === 0 && (
     <div class="payment-card" style="text-align:center; padding:2rem; color:var(--slate); font-size:0.85rem">
       No payment schedules defined. Assign SAL milestones to contractors in the admin panel.
@@ -687,8 +687,6 @@ const fmtDate = (d: string) => {
       </div>
     );
   })}
-    </div>
-  </div>
 
   {technicianSchedules.length > 0 && (
     <>
