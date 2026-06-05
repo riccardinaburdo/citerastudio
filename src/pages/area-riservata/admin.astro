@@ -15,12 +15,12 @@ const data = await getProject(projectId);
 const { info: project, contractors, technicians, categories } = data;
 
 const enrich = (item: any) => {
-  const qty           = item.extra ? 0 : (item.qty ?? 0);
+  const qty           = item.qty ?? 0;
   const price         = item.price ?? 0;
-  const variationQty  = item.extra ? 0 : (item.variation ?? 0);   // qty delta stored in DB
-  const budget        = item.extra ? 0 : qty * price;
-  const variationAmt  = item.extra ? 0 : variationQty * price;    // euro impact
-  const revisedBudget = item.extra ? 0 : (qty + variationQty) * price;
+  const variationQty  = item.extra ? 0 : (item.variation ?? 0);
+  const budget        = qty * price;
+  const variationAmt  = item.extra ? 0 : variationQty * price;
+  const revisedBudget = item.extra ? qty * price : (qty + variationQty) * price;
   const rawDone       = item.done * price;
   const overrun       = !item.extra && item.done > item.qty;
   const forceComplete = !!item.complete && !overrun && !item.extra;
@@ -720,19 +720,19 @@ const projectJson = JSON.stringify(data);
                         </select>
                       </td>
                       <td class="editable-cell">
-                        <input type="number" value={item.extra ? '' : item.qty} placeholder={item.extra ? '–' : ''} disabled={item.extra} style={item.extra ? 'color:var(--g3)' : ''} data-cat-id={cat.id} data-item-id={item.id} data-field="qty" />
+                        <input type="number" value={item.qty ?? ''} placeholder="0" data-cat-id={cat.id} data-item-id={item.id} data-field="qty" />
                       </td>
                       <td class="editable-cell">
                         <input type="number" value={item.price} step="0.01" data-cat-id={cat.id} data-item-id={item.id} data-field="price" />
                       </td>
-                      <td class="auto-cell auto-cell-budget">{item.extra ? '–' : fmt(item.budget)}</td>
+                      <td class="auto-cell auto-cell-budget">{fmt(item.budget)}</td>
                       <td class="editable-cell">
                         {!item.extra && <input type="number" step="any" value={item.variation || ''} placeholder="0"
                           data-cat-id={cat.id} data-item-id={item.id} data-field="variation"
                           style={`text-align:right;width:80px;${(item.variation ?? 0) < 0 ? 'color:#16a34a;font-weight:600' : (item.variation ?? 0) > 0 ? 'color:var(--amber);font-weight:600' : 'color:var(--g3)'}`} />}
                         {item.extra && <span style="color:var(--g3)">–</span>}
                       </td>
-                      <td class="auto-cell auto-cell-revised" style={(item.variationAmt ?? 0) < 0 ? 'color:#16a34a' : (item.variationAmt ?? 0) > 0 ? 'color:var(--amber)' : ''}>{item.extra ? '–' : fmt(item.revisedBudget)}</td>
+                      <td class="auto-cell auto-cell-revised" style={(item.variationAmt ?? 0) < 0 ? 'color:#16a34a' : (item.variationAmt ?? 0) > 0 ? 'color:var(--amber)' : ''}>{fmt(item.revisedBudget)}</td>
                       <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
                         <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} data-cat-id={cat.id} data-item-id={item.id} data-field="done" />
                         {overrun && <span class="overrun-badge">↑</span>}
@@ -1238,14 +1238,14 @@ const projectJson = JSON.stringify(data);
     const row = el.closest('tr');
     if (!row || !(field === 'qty' || field === 'price' || field === 'done' || field === 'variation')) return;
 
-    const qty          = item.extra ? 0 : (parseFloat(item.qty) || 0);
+    const qty          = field === 'qty' ? (parseFloat(newVal) || 0) : (parseFloat(item.qty) || 0);
     const price        = parseFloat(item.price) || 0;
     const variationQty = item.extra ? 0 : (field === 'variation' ? (parseFloat(newVal) || 0) : (parseFloat(item.variation) || 0));
     const budget       = qty * price;
     const variationAmt = variationQty * price;
-    const revised      = (qty + variationQty) * price;
+    const revised      = item.extra ? qty * price : (qty + variationQty) * price;
     const rawDone       = (item.done || 0) * price;
-    const overrun       = !item.extra && (item.done || 0) > (item.qty || 0);
+    const overrun       = !item.extra && (item.done || 0) > qty;
     const forceComplete = !!item.complete && !overrun && !item.extra;
     const valDone       = forceComplete ? revised : rawDone;
     const percActual    = (!item.extra && revised > 0) ? (rawDone / revised) * 100 : 0;
@@ -1257,8 +1257,8 @@ const projectJson = JSON.stringify(data);
     const bCell = row.querySelector('.auto-cell-budget');
     const rCell = row.querySelector('.auto-cell-revised');
     const dCell = row.querySelector('.auto-cell-done');
-    if (bCell) bCell.textContent = item.extra ? '–' : fmtAmt(budget);
-    if (rCell) { rCell.textContent = item.extra ? '–' : fmtAmt(revised); rCell.style.color = variationAmt < 0 ? '#16a34a' : variationAmt > 0 ? '#f59e0b' : ''; }
+    if (bCell) bCell.textContent = fmtAmt(budget);
+    if (rCell) { rCell.textContent = fmtAmt(revised); rCell.style.color = variationAmt < 0 ? '#16a34a' : variationAmt > 0 ? '#f59e0b' : ''; }
     if (dCell) dCell.textContent = fmtAmt(valDone);
     if (field === 'variation') {
       el.style.color = variationQty < 0 ? '#16a34a' : variationQty > 0 ? 'var(--amber)' : 'var(--g3)';
