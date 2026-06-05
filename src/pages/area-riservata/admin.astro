@@ -709,8 +709,11 @@ const projectJson = JSON.stringify(data);
                   const isNotExecuted  = (item.revisedBudget <= 0) && (item.budget > 0);
                   const hasNoRevised   = (item.revisedBudget <= 0) && (item.budget <= 0);
                   const percNull       = item.perc === null;
-                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : (item.perc ?? 0) >= 100 ? '#22c55e' : (item.perc ?? 0) > 0 ? '#f59e0b' : '#cbd5e1';
-                  const dispPerc = forceComplete ? 100 : (item.perc ?? 0);
+                  const percVal        = item.perc ?? 0;
+                  const isComplete     = forceComplete || percVal >= 100;
+                  const isInProgress   = !isComplete && percVal > 0;
+                  const pColor  = overrun ? '#dc2626' : forceComplete ? '#22c55e' : percVal >= 100 ? '#22c55e' : percVal > 0 ? '#f59e0b' : '#cbd5e1';
+                  const dispPerc = forceComplete ? 100 : percVal;
                   const barW    = Math.min(dispPerc, 100);
                   return (
                     <tr class={`item${item.extra ? ' extra-row' : ''}`} data-cat-id={cat.id} data-item-id={item.id}>
@@ -758,9 +761,9 @@ const projectJson = JSON.stringify(data);
                             ? <span class="status-badge status-not-executed">Not Executed</span>
                             : hasNoRevised
                               ? <span style="color:var(--g3)">–</span>
-                              : (forceComplete || (item.perc ?? 0) >= 100)
+                              : isComplete
                                 ? <span class="status-badge status-complete is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to unmark completion">Complete</span>
-                                : (item.perc ?? 0) > 0
+                                : isInProgress
                                   ? <span class="status-badge status-progress is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to mark as complete">In Progress</span>
                                   : <span class="status-badge status-pending is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to mark as complete">Not Started</span>
                         }
