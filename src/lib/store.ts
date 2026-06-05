@@ -150,6 +150,18 @@ export async function createProjectFromTemplate(name: string): Promise<string> {
   return id;
 }
 
+export async function duplicateProject(sourceId: string, newName: string): Promise<string> {
+  const source = await getProject(sourceId);
+  const slug = newName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const id = (slug || 'project') + '-' + Date.now().toString(36);
+  await saveProject({
+    ...structuredClone(source),
+    info: { ...source.info, id, name: newName, updated: new Date().toISOString().slice(0, 10) },
+  });
+  return id;
+}
+
 export async function createProject(name: string): Promise<string> {
   const slug = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

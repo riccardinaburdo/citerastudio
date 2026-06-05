@@ -1,6 +1,6 @@
 export const prerender = false;
 import type { APIRoute } from 'astro';
-import { listProjects, createProject, createProjectFromTemplate, deleteProject } from '../../../lib/store';
+import { listProjects, createProject, createProjectFromTemplate, deleteProject, duplicateProject } from '../../../lib/store';
 
 export const GET: APIRoute = async () => {
   const data = await listProjects();
@@ -20,6 +20,26 @@ export const POST: APIRoute = async ({ request }) => {
     }
     const useTemplate = body.template === true;
     const id = useTemplate ? await createProjectFromTemplate(name.trim()) : await createProject(name.trim());
+    return new Response(JSON.stringify({ ok: true, id }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ ok: false, error: err.message }), {
+      status: 500, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
+export const PUT: APIRoute = async ({ request }) => {
+  try {
+    const body = await request.json();
+    const { sourceId, name } = body;
+    if (!sourceId || !name?.trim()) {
+      return new Response(JSON.stringify({ ok: false, error: 'sourceId and name required' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    const id = await duplicateProject(sourceId, name.trim());
     return new Response(JSON.stringify({ ok: true, id }), {
       headers: { 'Content-Type': 'application/json' }
     });

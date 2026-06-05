@@ -315,6 +315,7 @@ const projectJson = JSON.stringify(data);
               ? <><span class="proj-badge">Current</span><span class="proj-active-label">Now editing</span></>
               : <button class="btn btn-primary" data-goto={`/area-riservata/admin?p=${p.id}`} style="font-size:.78rem">Open project →</button>
             }
+            <button class="btn btn-dup-project" data-proj-id={p.id} data-proj-name={p.name} style="font-size:.72rem;padding:.3rem .7rem;background:#f1f5f9;border:1px solid var(--g2);border-radius:6px;cursor:pointer">⎘ Duplicate</button>
             <button class="btn btn-danger btn-del-project" data-proj-id={p.id} data-proj-name={p.name} data-is-current={p.id === projectId ? 'true' : 'false'} data-total-projects={allProjects.length} style="font-size:.72rem;padding:.3rem .7rem">Delete</button>
           </div>
         </div>
@@ -1044,6 +1045,27 @@ const projectJson = JSON.stringify(data);
       alert('Error: ' + json.error);
       btn.disabled = false;
       btn.textContent = 'Delete';
+    }
+  });
+
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-dup-project');
+    if (!btn) return;
+    const sourceId   = btn.dataset.projId;
+    const sourceName = btn.dataset.projName;
+    const name = prompt(`Duplicate "${sourceName}"\n\nNew project name:`, `${sourceName} (copy)`)?.trim();
+    if (!name) return;
+    btn.disabled = true; btn.textContent = 'Duplicating…';
+    const res  = await fetch('/api/area-riservata/projects', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceId, name })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      window.location.href = `/area-riservata/admin?p=${json.id}`;
+    } else {
+      alert('Error: ' + json.error);
+      btn.disabled = false; btn.textContent = '⎘ Duplicate';
     }
   });
 
