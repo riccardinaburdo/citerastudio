@@ -679,9 +679,9 @@ const projectJson = JSON.stringify(data);
           <tbody>
             {enrichedCats.map(cat => {
               const catBudget   = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
-              const catVariation= cat.items.reduce((s:number,i:any) => s+(i.variationAmt??0),0); // includes extras
-              const catRevised  = catBudget + catVariation;
-              const catDone     = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);
+              const catRevised  = cat.items.reduce((s:number,i:any) => s+i.revisedBudget,0); // direct sum of Revised Budget column
+              const catVariation= catRevised - catBudget;                                     // savings/extra = difference
+              const catDone     = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);     // direct sum of Value Done column
               const catPerc     = catRevised > 0 ? catDone/catRevised*100 : 0;
               return (<>
                 <tr class="cat-row" data-cat-id={cat.id}>
@@ -796,10 +796,9 @@ const projectJson = JSON.stringify(data);
             })}
             {(() => {
               const allItems     = enrichedCats.flatMap((c:any)=>c.items);
-              const contracted   = allItems.filter((i:any)=>!i.extra);
-              const gtOriginal   = contracted.reduce((s:number,i:any)=>s+i.budget,0);
-              const gtVariation  = allItems.reduce((s:number,i:any)=>s+(i.variationAmt??0),0);
-              const gtRevised    = gtOriginal + gtVariation;
+              const gtOriginal   = allItems.filter((i:any)=>!i.extra).reduce((s:number,i:any)=>s+i.budget,0);
+              const gtRevised    = allItems.reduce((s:number,i:any)=>s+i.revisedBudget,0);
+              const gtVariation  = gtRevised - gtOriginal;
               const gtDone       = allItems.reduce((s:number,i:any)=>s+i.valueDone,0);
               return (
                 <tr class="grand-total">
