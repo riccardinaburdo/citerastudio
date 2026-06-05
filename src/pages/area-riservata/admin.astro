@@ -1312,7 +1312,115 @@ const projectJson = JSON.stringify(data);
       else if (percActual > 0)                    { statusSpan.className = 'status-badge status-progress is-toggleable'; statusSpan.textContent = 'In Progress'; }
       else                                        { statusSpan.className = 'status-badge status-pending is-toggleable';  statusSpan.textContent = 'Not Started'; }
     }
+
+    // Recalculate subtotal row for this category
+    recalcSubtotal(catId);
   });
+
+  // ── Recalculate category subtotal row ──────────────────────────────────
+  function recalcSubtotal(catId) {
+    const tbody = document.querySelector('table.works tbody');
+    if (!tbody) return;
+    const cat = state.categories.find(c => c.id === catId);
+    if (!cat) return;
+
+    // Compute totals directly from state (same logic as server-side enrich)
+    let sumBudget = 0, sumRevised = 0, sumDone = 0;
+    for (const item of cat.items) {
+      const qty         = item.extra ? 0 : (parseFloat(item.qty) || 0);
+      const price       = parseFloat(item.price) || 0;
+      const variationQty= parseFloat(item.variation) || 0;
+      const budget      = item.extra ? 0 : qty * price;
+      const variationAmt= variationQty * price;
+      const revised     = item.extra ? variationAmt : (qty + variationQty) * price;
+      const rawDone     = (parseFloat(item.done) || 0) * price;
+      const overrun     = !item.extra && (parseFloat(item.done)||0) > qty;
+      const forceComplete = !!item.complete && !overrun && !item.extra;
+      const valueDone   = forceComplete ? revised : rawDone;
+      if (!item.extra) sumBudget += budget;
+      sumRevised += revised;
+      sumDone    += valueDone;
+    }
+    const variation = sumRevised - sumBudget;
+
+    // Update subtotal row cells
+    const subRow = tbody.querySelector(`tr.subtotal[data-cat-id="${catId}"]`);
+    if (subRow) {
+      const tds = subRow.querySelectorAll('td');
+      // td[0]=label(colspan5), td[1]=budget, td[2]=variation(–), td[3]=revised, td[4]=done(empty), td[5]=valueDone
+      if (tds[1]) tds[1].textContent = fmtAmt(sumBudget);
+      if (tds[3]) tds[3].textContent = fmtAmt(sumRevised);
+      if (tds[5]) tds[5].textContent = fmtAmt(sumDone);
+    }
+
+    // Update or insert variation row
+    let varRow = tbody.querySelector(`tr.cat-var-row[data-cat-id="${catId}"]`);
+    if (variation !== 0) {
+      const label = variation < 0 ? 'Savings' : 'Additional cost';
+      const color = variation < 0 ? '#16a34a' : 'var(--red)';
+      const sign  = variation > 0 ? '+' : '';
+      if (!varRow) {
+        varRow = document.createElement('tr');
+        varRow.className = 'cat-var-row';
+        varRow.dataset.catId = catId;
+        varRow.innerHTML = `<td colspan="7" style="text-align:right;padding-right:.4rem;font-size:.65rem;color:var(--slate);font-style:italic"></td><td class="cat-var-amt" style="text-align:right;font-family:monospace;font-weight:700;"></td><td colspan="6"></td>`;
+        subRow?.insertAdjacentElement('afterend', varRow);
+      }
+      varRow.querySelector('td:first-child').textContent = label;
+      const amtTd = varRow.querySelector('.cat-var-amt');
+      if (amtTd) { amtTd.textContent = sign + fmtAmt(variation); amtTd.style.color = color; }
+    } else if (varRow) {
+      varRow.remove();
+    }
+
+    // Update category header summary
+    const catRow = tbody.querySelector(`tr.cat-row[data-cat-id="${catId}"]`);
+    if (catRow) {
+      const span = catRow.querySelector('td > span[style*="color:var(--slate)"]') || catRow.querySelector('td span.cat-summary');
+      if (span) {
+        let html = `Budget: ${fmtAmt(sumBudget)}`;
+        if (variation !== 0) {
+          const col = variation < 0 ? '#16a34a' : 'var(--amber)';
+          const sign = variation > 0 ? '+' : '';
+          html += ` <span style="color:${col}">${sign}${fmtAmt(variation)}</span> → <strong>${fmtAmt(sumRevised)}</strong>`;
+        }
+        html += ` &nbsp;|&nbsp; Done: ${fmtAmt(sumDone)} &nbsp;|&nbsp; ${sumRevised > 0 ? (sumDone/sumRevised*100).toFixed(0) : 0}%`;
+        span.innerHTML = html;
+      }
+    }
+
+    // Recalculate grand total
+    recalcGrandTotal();
+  }
+
+  function recalcGrandTotal() {
+    let gtBudget = 0, gtRevised = 0, gtDone = 0;
+    for (const cat of state.categories) {
+      for (const item of cat.items) {
+        const qty         = item.extra ? 0 : (parseFloat(item.qty) || 0);
+        const price       = parseFloat(item.price) || 0;
+        const variationQty= parseFloat(item.variation) || 0;
+        const budget      = item.extra ? 0 : qty * price;
+        const variationAmt= variationQty * price;
+        const revised     = item.extra ? variationAmt : (qty + variationQty) * price;
+        const rawDone     = (parseFloat(item.done) || 0) * price;
+        const overrun     = !item.extra && (parseFloat(item.done)||0) > qty;
+        const forceComplete = !!item.complete && !overrun && !item.extra;
+        const valueDone   = forceComplete ? revised : rawDone;
+        if (!item.extra) gtBudget += budget;
+        gtRevised += revised;
+        gtDone    += valueDone;
+      }
+    }
+    const gtVariation = gtRevised - gtBudget;
+    const gtRow = document.querySelector('table.works tbody tr.grand-total');
+    if (gtRow) {
+      const tds = gtRow.querySelectorAll('td');
+      if (tds[1]) tds[1].textContent = fmtAmt(gtBudget);
+      if (tds[3]) tds[3].textContent = fmtAmt(gtRevised);
+      if (tds[5]) tds[5].textContent = fmtAmt(gtDone);
+    }
+  }
 
   // ── Toggle complete flag ────────────────────────────────────────────────
   document.addEventListener('click', e => {
