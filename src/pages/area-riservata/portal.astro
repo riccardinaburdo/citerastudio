@@ -26,39 +26,36 @@ const { info: project, contractors, technicians: rawTechnicians, categories: raw
 const technicians = rawTechnicians ?? [];
 const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 
-const enrich = (item: typeof rawCategories[0]['items'][0]) => {
+const enrich = (item: any) => {
   const qty           = item.extra ? 0 : (item.qty ?? 0);
-  const price         = (item.price ?? 0);
-  const variationQty  = item.extra ? 0 : ((item as any).variation ?? 0);
+  const price         = item.price ?? 0;
+  const variationQty  = item.variation ?? 0;
   const budget        = item.extra ? 0 : qty * price;
-  const variationAmt  = item.extra ? 0 : variationQty * price;
-  const revisedBudget = item.extra ? 0 : (qty + variationQty) * price;
-  const rawDone       = item.done * price;
-  const overrun       = !item.extra && item.done > item.qty;
-  const forceComplete = !!item.complete && !overrun && !item.extra;
+  const variationAmt  = variationQty * price;
+  const revisedBudget = item.extra ? variationAmt : (qty + variationQty) * price;
+  const rawDone       = (item.done ?? 0) * price;
+  const agreedQty     = item.extra ? variationQty : qty;
+  const overrun       = revisedBudget > 0 && (item.done ?? 0) > agreedQty;
+  const forceComplete = !!item.complete && !overrun;
   const valueDone     = forceComplete ? revisedBudget : rawDone;
-  const perc          = (!item.extra && revisedBudget > 0) ? (rawDone / revisedBudget) * 100 : null;
-  return { ...item, budget, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun };
+  const perc          = revisedBudget > 0 ? (rawDone / revisedBudget) * 100 : null;
+  return { ...item, qty, budget, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun, forceComplete };
 };
-const enrichedCats = rawCategories.map(cat => {
-  const items           = cat.items.map(enrich);
-  const catOriginal     = items.filter(i => !i.extra).reduce((s, i) => s + i.budget,           0);
-  const catVariation    = items.filter(i => !i.extra).reduce((s, i) => s + (i as any).variationAmt, 0);
-  const catBudget       = catOriginal + catVariation; // revised budget
-  const catDoneContr    = items.filter(i => !i.extra).reduce((s, i) => s + i.valueDone,     0);
-  const catDoneExtra    = items.filter(i =>  i.extra).reduce((s, i) => s + i.valueDone,     0);
-  const catDone         = catDoneContr + catDoneExtra;
-  const catPerc         = catBudget > 0 ? (catDoneContr / catBudget) * 100 : 0;
-  return { ...cat, items, catOriginal, catVariation, catBudget, catDoneContr, catDoneExtra, catDone, catPerc };
+const enrichedCats = rawCategories.map((cat: any) => {
+  const items        = cat.items.map(enrich);
+  const catBudget    = items.filter((i: any) => !i.extra).reduce((s: number, i: any) => s + i.budget, 0);
+  const catRevised   = items.reduce((s: number, i: any) => s + i.revisedBudget, 0);
+  const catVariation = catRevised - catBudget;
+  const catDone      = items.reduce((s: number, i: any) => s + i.valueDone, 0);
+  const catPerc      = catRevised > 0 ? (catDone / catRevised) * 100 : 0;
+  return { ...cat, items, catBudget, catRevised, catVariation, catDone, catPerc };
 });
-const totalOriginal  = enrichedCats.reduce((s, c) => s + c.catOriginal,  0);
-const totalVariation = enrichedCats.reduce((s, c) => s + c.catVariation, 0);
-const totalBudget    = totalOriginal + totalVariation; // revised
-const totalDoneContr = enrichedCats.reduce((s, c) => s + c.catDoneContr, 0);
-const totalDoneExtra = enrichedCats.reduce((s, c) => s + c.catDoneExtra, 0);
-const totalDone      = totalDoneContr + totalDoneExtra;
-const totalPerc      = totalBudget > 0 ? (totalDoneContr / totalBudget) * 100 : 0;
-const totalLeft      = totalBudget - totalDoneContr;
+const totalOriginal  = enrichedCats.reduce((s: number, c: any) => s + c.catBudget,   0);
+const totalRevised   = enrichedCats.reduce((s: number, c: any) => s + c.catRevised,  0);
+const totalVariation = totalRevised - totalOriginal;
+const totalDone      = enrichedCats.reduce((s: number, c: any) => s + c.catDone,     0);
+const totalPerc      = totalRevised > 0 ? (totalDone / totalRevised) * 100 : 0;
+const totalLeft      = totalRevised - totalDone;
 
 
 // Per-contractor payment schedules (uses each contractor's sal milestones and their own budget)
@@ -202,27 +199,29 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionD
 const fmtQ    = (n: number, unit: string) => unit === 'lump' ? (n === 0 ? '–' : '✓') : n.toLocaleString('en-GB');
 const fmtQty  = (n: number, unit: string) => unit === 'lump' ? '1' : n.toLocaleString('en-GB');
 // True when variation has zeroed out the contracted budget
-const isNotExecuted = (item: any) => !item.extra && item.budget > 0 && item.revisedBudget <= 0;
+const isNotExecuted = (item: any) => !item.extra && item.budget > 0 && !(item.revisedBudget > 0);
 
 const statusLabel = (itemOrPerc: any) => {
   if (typeof itemOrPerc === 'number' || itemOrPerc === null) {
     const p = itemOrPerc as number | null;
-    return p === null ? 'Extra' : p >= 100 ? 'Complete' : p > 0 ? 'In Progress' : 'Not Started';
+    return p === null ? '–' : p > 99.9 ? 'Complete' : p > 0 ? 'In Progress' : 'Not Started';
   }
   const item = itemOrPerc;
-  if (item.extra) return 'Extra';
+  if (item.overrun) return 'Overrun';
   if (isNotExecuted(item)) return 'Not Executed';
-  const forceComplete = !!item.complete && !item.overrun && !item.extra;
-  if (forceComplete || (item.perc !== null && item.perc >= 100)) return 'Complete';
-  if (item.perc !== null && item.perc > 0) return 'In Progress';
+  if (item.perc === null) return '–';
+  if (item.forceComplete || item.perc > 99.9) return 'Complete';
+  if (item.perc > 0) return 'In Progress';
   return 'Not Started';
 };
 const statusClass = (p: number | null, item?: any) => {
+  if (item && item.overrun) return 'overrun';
   if (item && isNotExecuted(item)) return 'not-executed';
-  if (item && !!item.complete && !item.overrun && !item.extra) return 'complete';
-  return p === null ? 'extra' : p >= 100 ? 'complete' : p > 0 ? 'progress' : 'pending';
+  if (item && item.forceComplete) return 'complete';
+  if (item && item.perc === null) return 'pending';
+  return p === null ? 'pending' : p > 99.9 ? 'complete' : p > 0 ? 'progress' : 'pending';
 };
-const catColor    = (p: number | null) => p === null ? '#f59e0b' : p >= 100 ? '#22c55e' : p >= 75 ? '#FB8503' : p > 0 ? '#f59e0b' : '#cbd5e1';
+const catColor = (p: number) => p > 99.9 ? '#22c55e' : p > 74.9 ? '#FB8503' : p > 0 ? '#f59e0b' : '#cbd5e1';
 // Done-qty cell colour: neutral for not-executed items, normal otherwise
 const doneColor   = (item: any) => {
   if (item.overrun) return '#dc2626';
@@ -538,10 +537,10 @@ const fmtDate = (d: string) => {
 
   <div class="metrics">
     <div class="metric-card">
-      <div class="metric-label">Contract Budget <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
-      <div class="metric-value">{fmt(totalBudget)}</div>
+      <div class="metric-label">Revised Budget <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
+      <div class="metric-value">{fmt(totalRevised)}</div>
       <div class="metric-sub">
-        inc. VAT 10%: {fmt(totalBudget * 1.10)}
+        inc. VAT 10%: {fmt(totalRevised * 1.10)}
         {totalVariation !== 0 && (
           <div style={`margin-top:.5rem;padding:.5rem .65rem;border-radius:6px;background:${totalVariation < 0 ? '#f0fdf4' : '#fff7ed'};border:1px solid ${totalVariation < 0 ? '#bbf7d0' : '#fed7aa'}`}>
             <div style={`font-size:.68rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:${totalVariation < 0 ? '#15803d' : '#c2410c'};margin-bottom:.2rem`}>
@@ -560,15 +559,12 @@ const fmtDate = (d: string) => {
     <div class="metric-card highlight">
       <div class="metric-label">Works Completed <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
       <div class="metric-value">{fmt(totalDone)}</div>
-      <div class="metric-sub">
-        {totalPerc.toFixed(1)}% of contract
-        {totalDoneExtra > 0 && <> &nbsp;|&nbsp; <span style="color:var(--amber)">+{fmt(totalDoneExtra)} extras</span></>}
-      </div>
+      <div class="metric-sub">{totalPerc.toFixed(1)}% of revised budget</div>
     </div>
     <div class="metric-card">
       <div class="metric-label">Remaining Works <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
       <div class="metric-value">{fmt(totalLeft)}</div>
-      <div class="metric-sub">contracted works to execute</div>
+      <div class="metric-sub">works to execute</div>
     </div>
   </div>
 
@@ -591,10 +587,10 @@ const fmtDate = (d: string) => {
           <span class="cat-bar-id">{cat.id}</span>
           <span class="cat-bar-label" title={cat.label}>{cat.label}</span>
           <div class="cat-bar-track">
-            <div class="cat-bar-fill" style={`width:${cat.catPerc.toFixed(1)}%; background:${catColor(cat.catPerc)}`}></div>
+            <div class="cat-bar-fill" style={`width:${Math.min(cat.catPerc,100).toFixed(1)}%; background:${catColor(cat.catPerc)}`}></div>
           </div>
           <span class="cat-bar-pct" style={`color:${catColor(cat.catPerc)}`}>{cat.catPerc.toFixed(0)}%</span>
-          <span class={`cat-status ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span>
+          <span class={`cat-status ${cat.catPerc > 99.9 ? 'complete' : cat.catPerc > 0 ? 'progress' : 'pending'}`}>{cat.catPerc > 99.9 ? 'Complete' : cat.catPerc > 0 ? 'In Progress' : 'Not Started'}</span>
         </div>
       ))}
     </div>
@@ -612,6 +608,8 @@ const fmtDate = (d: string) => {
             <th class="right" style="width:75px">Contracted<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
             <th class="right" style="width:90px">Unit Price<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
             <th class="right" style="width:105px">Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+            <th class="right" style="width:75px">Variation<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
+            <th class="right" style="width:105px">Revised Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
             <th class="right" style="width:80px">Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
             <th class="right" style="width:105px">Value Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
             <th style="width:110px">Progress</th>
@@ -632,20 +630,17 @@ const fmtDate = (d: string) => {
                   <span class="cat-chevron">▾</span>
                 </td>
               </tr>
-              {cat.items.map(item => {
-                const fc        = !!item.complete && !item.overrun && !item.extra;
-                const notExec   = isNotExecuted(item);
-                const dispPerc  = fc || notExec ? 100 : (item.perc ?? 0);
-                const barColor  = item.overrun ? '#dc2626' : (fc || notExec || dispPerc >= 100) ? '#22c55e' : dispPerc > 0 ? '#f59e0b' : '#cbd5e1';
-                const dispDoneQty = fc ? (item.qty + (item as any).variationQty) : item.done;
-                const dispValue = (item.valueDone > 0 || fc) ? item.valueDone : null;
-                const rowBg = !item.extra && (item as any).variationAmt < 0
-                  ? 'background:rgba(22,163,74,.05)'
-                  : !item.extra && (item as any).variationAmt > 0
-                    ? 'background:rgba(220,38,38,.05)'
-                    : '';
+              {cat.items.map((item: any) => {
+                const notExec      = isNotExecuted(item);
+                const percVal      = item.perc ?? 0;
+                const dispPerc     = item.forceComplete ? 100 : percVal;
+                const barColor     = item.overrun ? '#dc2626' : item.forceComplete ? '#22c55e' : percVal > 99.9 ? '#22c55e' : percVal > 0 ? '#f59e0b' : '#cbd5e1';
+                const percIsNull   = item.perc === null;
+                const variationPos = item.variationQty > 0;
+                const variationNeg = item.variationQty < 0;
+                const revisedPos   = item.revisedBudget > 0;
                 return (
-                <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id} style={rowBg}>
+                <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id}>
                   <td class="item-id">{item.id}</td>
                   <td class="item-desc">
                     {item.extra && <span class="extra-badge">Extra</span>}
@@ -662,19 +657,25 @@ const fmtDate = (d: string) => {
                     {item.extra ? '–' : fmtQty(item.qty, item.unit)}
                   </td>
                   <td class="item-money">{fmt(item.price)}</td>
-                  <td class="item-money" style={`font-weight:500; ${item.extra ? 'color:var(--grey-3)' : ''}`}>
+                  <td class="item-money" style={item.extra ? 'color:var(--grey-3)' : ''}>
                     {item.extra ? '–' : fmt(item.budget)}
                   </td>
-                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : !item.extra && dispDoneQty <= item.qty ? '#16a34a' : 'var(--navy)'}; font-weight:600`}>
-                    {item.extra ? fmtQ(item.done, item.unit) : fmtQ(dispDoneQty, item.unit)}
+                  <td class="item-money" style={`font-weight:600; color:${variationNeg ? '#16a34a' : variationPos ? 'var(--amber)' : 'var(--grey-3)'}`}>
+                    {item.variationQty !== 0 ? item.variationQty : '–'}
+                  </td>
+                  <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? 'var(--amber)' : ''}`}>
+                    {revisedPos ? fmt(item.revisedBudget) : <span style="color:var(--grey-3)">–</span>}
+                  </td>
+                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : '#16a34a'}; font-weight:600`}>
+                    {fmtQ(item.done, item.unit)}
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
-                  <td class="item-money" style={`color:${item.extra ? 'var(--amber)' : barColor}; font-weight:500`}>
-                    {dispValue !== null ? fmt(dispValue) : '–'}
+                  <td class="item-money" style={`color:${barColor}; font-weight:500`}>
+                    {item.valueDone > 0 ? fmt(item.valueDone) : '–'}
                   </td>
                   <td class="perc-cell">
-                    {item.extra ? (
-                      <span style="font-size:0.7rem; color:var(--amber); font-weight:600">Extra works</span>
+                    {percIsNull ? (
+                      <span style="color:var(--grey-3); font-size:0.72rem">–</span>
                     ) : notExec ? (
                       <span style="color:var(--grey-3); font-size:0.72rem">–</span>
                     ) : (
@@ -689,45 +690,47 @@ const fmtDate = (d: string) => {
                     )}
                   </td>
                   <td>
-                    {item.extra ? (
-                      <span class="badge extra">Extra</span>
-                    ) : item.overrun ? (
-                      <span class="badge overrun">Overrun</span>
-                    ) : (
-                      <span class={`badge ${statusClass(item.perc, item)}`}>{statusLabel(item)}</span>
-                    )}
+                    <span class={`badge ${statusClass(item.perc, item)}`}>{statusLabel(item)}</span>
                   </td>
                 </tr>
               );})}
               <tr class="subtotal" data-cat-member={cat.id}>
                 <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
                 <td class="item-money">{fmt(cat.catBudget)}</td>
+                <td class="item-money" style="color:var(--grey-3)">–</td>
+                <td class="item-money">{fmt(cat.catRevised)}</td>
                 <td></td>
-                <td class="item-money" style="color:var(--navy)">
-                  {fmt(cat.catDone)}
-                  {cat.catDoneExtra > 0 && <span style="display:block; font-size:0.62rem; color:var(--amber); font-weight:400">incl. {fmt(cat.catDoneExtra)} extras</span>}
-                </td>
+                <td class="item-money" style="color:var(--navy)">{fmt(cat.catDone)}</td>
                 <td class="perc-cell">
                   <div class="perc-wrap">
                     <div class="perc-mini"><div class="perc-mini-fill" style={`width:${Math.min(cat.catPerc,100).toFixed(0)}%; background:${catColor(cat.catPerc)}`}></div></div>
                     <span class="perc-num">{cat.catPerc.toFixed(0)}%</span>
                   </div>
                 </td>
-                <td><span class={`badge ${statusClass(cat.catPerc)}`}>{statusLabel(cat.catPerc)}</span></td>
+                <td><span class={`badge ${cat.catPerc > 99.9 ? 'complete' : cat.catPerc > 0 ? 'progress' : 'pending'}`}>{cat.catPerc > 99.9 ? 'Complete' : cat.catPerc > 0 ? 'In Progress' : 'Not Started'}</span></td>
               </tr>
+              {cat.catVariation !== 0 && (
+                <tr style="background:#f8fafc" data-cat-member={cat.id}>
+                  <td colspan="7" style={`text-align:right; padding-right:1rem; font-size:0.72rem; font-style:italic; color:${cat.catVariation < 0 ? '#16a34a' : 'var(--red, #dc2626)'}`}>
+                    {cat.catVariation < 0 ? 'Savings' : 'Additional cost'}
+                  </td>
+                  <td class="item-money" style={`font-weight:700; color:${cat.catVariation < 0 ? '#16a34a' : '#dc2626'}`}>
+                    {cat.catVariation > 0 ? '+' : ''}{fmt(cat.catVariation)}
+                  </td>
+                  <td colspan="4"></td>
+                </tr>
+              )}
             </>
           ))}
           <tr class="grand-total">
             <td colspan="5" style="text-align:right; padding-right:1rem; letter-spacing:.04em">TOTAL <span style="font-size:0.65rem; opacity:.65; font-weight:400">(net ex. VAT)</span></td>
-            <td class="item-money">{fmt(totalBudget)}</td>
+            <td class="item-money">{fmt(totalOriginal)}</td>
+            <td class="item-money" style="opacity:.65">–</td>
+            <td class="item-money">{fmt(totalRevised)}</td>
             <td></td>
-            <td class="item-money">
-              {fmt(totalDone)}
-              {totalDoneExtra > 0 && <span style="display:block; font-size:0.62rem; opacity:.7; font-weight:400">incl. {fmt(totalDoneExtra)} extras</span>}
-            </td>
+            <td class="item-money">{fmt(totalDone)}</td>
             <td colspan="2" style="padding-left:.75rem; font-size:0.88rem">
-              {totalPerc.toFixed(2)}% contracted complete
-              {totalDoneExtra > 0 && <span style="display:block; font-size:0.7rem; opacity:.7; font-weight:400">+ {fmt(totalDoneExtra)} extra works (net)</span>}
+              {totalPerc.toFixed(2)}% complete
             </td>
           </tr>
         </tbody>
