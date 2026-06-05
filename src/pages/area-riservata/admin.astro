@@ -15,18 +15,18 @@ const data = await getProject(projectId);
 const { info: project, contractors, technicians, categories } = data;
 
 const enrich = (item: any) => {
-  const qty           = item.qty ?? 0;
+  const qty           = item.extra ? 0 : (item.qty ?? 0);
   const price         = item.price ?? 0;
-  const variationQty  = item.extra ? 0 : (item.variation ?? 0);
-  const budget        = qty * price;
-  const variationAmt  = item.extra ? 0 : variationQty * price;
-  const revisedBudget = item.extra ? qty * price : (qty + variationQty) * price;
-  const rawDone       = item.done * price;
-  const overrun       = !item.extra && item.done > item.qty;
+  const variationQty  = item.variation ?? 0;                        // applies to both regular and extra
+  const budget        = item.extra ? 0 : qty * price;              // extras have no contracted budget
+  const variationAmt  = variationQty * price;                       // euro impact of variation
+  const revisedBudget = item.extra ? variationAmt : (qty + variationQty) * price;
+  const rawDone       = (item.done ?? 0) * price;
+  const overrun       = !item.extra && (item.done ?? 0) > (item.qty ?? 0);
   const forceComplete = !!item.complete && !overrun && !item.extra;
   const valueDone     = forceComplete ? revisedBudget : rawDone;
   const perc          = (!item.extra && revisedBudget > 0) ? (rawDone / revisedBudget) * 100 : null;
-  return { ...item, budget, variationAmt, revisedBudget, valueDone, perc };
+  return { ...item, budget, variationQty, variationAmt, revisedBudget, valueDone, perc };
 };
 const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
 
@@ -240,6 +240,7 @@ const projectJson = JSON.stringify(data);
     .status-badge.is-toggleable:hover { opacity:.75; }
     tr.subtotal td { background:var(--g1); padding:.35rem .65rem; font-size:.7rem; font-weight:600;
       color:var(--navy); border-top:1px dashed #c7d9f0; border-bottom:2px solid var(--g2); }
+    tr.cat-var-row td { background:#fafcff; padding:.2rem .65rem; border-bottom:1px solid var(--g2); }
     tr.grand-total td { background:var(--navy); color:#fff; padding:.5rem .65rem; font-weight:700; font-size:.78rem; }
     .legend { display:flex; gap:1.2rem; align-items:center; flex-wrap:wrap; font-size:.7rem; color:var(--slate); }
     .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
@@ -678,7 +679,7 @@ const projectJson = JSON.stringify(data);
           <tbody>
             {enrichedCats.map(cat => {
               const catBudget   = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
-              const catVariation= cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+(i.variationAmt??0),0);
+              const catVariation= cat.items.reduce((s:number,i:any) => s+(i.variationAmt??0),0); // includes extras
               const catRevised  = catBudget + catVariation;
               const catDone     = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);
               const catPerc     = catRevised > 0 ? catDone/catRevised*100 : 0;
@@ -725,14 +726,13 @@ const projectJson = JSON.stringify(data);
                       <td class="editable-cell">
                         <input type="number" value={item.price} step="0.01" data-cat-id={cat.id} data-item-id={item.id} data-field="price" />
                       </td>
-                      <td class="auto-cell auto-cell-budget">{fmt(item.budget)}</td>
+                      <td class="auto-cell auto-cell-budget">{item.extra ? <span style="color:var(--g3)">–</span> : fmt(item.budget)}</td>
                       <td class="editable-cell">
-                        {!item.extra && <input type="number" step="any" value={item.variation || ''} placeholder="0"
+                        <input type="number" step="any" value={item.variation || ''} placeholder="0"
                           data-cat-id={cat.id} data-item-id={item.id} data-field="variation"
-                          style={`text-align:right;width:80px;${(item.variation ?? 0) < 0 ? 'color:#16a34a;font-weight:600' : (item.variation ?? 0) > 0 ? 'color:var(--amber);font-weight:600' : 'color:var(--g3)'}`} />}
-                        {item.extra && <span style="color:var(--g3)">–</span>}
+                          style={`text-align:right;width:80px;${(item.variation ?? 0) < 0 ? 'color:#16a34a;font-weight:600' : (item.variation ?? 0) > 0 ? 'color:var(--amber);font-weight:600' : 'color:var(--g3)'}`} />
                       </td>
-                      <td class="auto-cell auto-cell-revised" style={(item.variationAmt ?? 0) < 0 ? 'color:#16a34a' : (item.variationAmt ?? 0) > 0 ? 'color:var(--amber)' : ''}>{fmt(item.revisedBudget)}</td>
+                      <td class="auto-cell auto-cell-revised" style={(item.variationAmt ?? 0) < 0 ? 'color:#16a34a' : (item.variationAmt ?? 0) > 0 ? 'color:var(--amber)' : ''}>{item.extra && item.revisedBudget === 0 ? <span style="color:var(--g3)">–</span> : fmt(item.revisedBudget)}</td>
                       <td class="editable-cell" style={overrun ? 'color:var(--red)' : ''}>
                         <input type="number" value={item.done} style={overrun ? 'color:var(--red);font-weight:700' : ''} data-cat-id={cat.id} data-item-id={item.id} data-field="done" />
                         {overrun && <span class="overrun-badge">↑</span>}
@@ -775,26 +775,35 @@ const projectJson = JSON.stringify(data);
                 <tr class="subtotal" data-cat-id={cat.id}>
                   <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
                   <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
-                  <td style={`text-align:right;font-family:monospace;${catVariation < 0 ? 'color:#16a34a' : catVariation > 0 ? 'color:var(--amber)' : 'color:var(--g3)'}`}>{catVariation !== 0 ? (catVariation > 0 ? '+' : '') + fmt(catVariation) : '–'}</td>
+                  <td style="text-align:right;font-family:monospace;color:var(--g3)">–</td>
                   <td style="text-align:right;font-family:monospace;font-weight:700">{fmt(catRevised)}</td>
                   <td></td>
                   <td style="text-align:right;font-family:monospace;color:var(--navy)">{fmt(catDone)}</td>
                   <td colspan="4"></td>
                 </tr>
+                {catVariation !== 0 && (
+                  <tr class="cat-var-row" data-cat-id={cat.id}>
+                    <td colspan="7" style="text-align:right;padding-right:.4rem;font-size:.65rem;color:var(--slate);font-style:italic">{catVariation < 0 ? 'Savings' : 'Additional cost'}</td>
+                    <td class="cat-var-amt" style={`text-align:right;font-family:monospace;font-weight:700;${catVariation < 0 ? 'color:#16a34a' : 'color:var(--red)'}`}>
+                      {catVariation > 0 ? '+' : ''}{fmt(catVariation)}
+                    </td>
+                    <td colspan="6"></td>
+                  </tr>
+                )}
               </>);
             })}
             {(() => {
               const allItems     = enrichedCats.flatMap((c:any)=>c.items);
               const contracted   = allItems.filter((i:any)=>!i.extra);
               const gtOriginal   = contracted.reduce((s:number,i:any)=>s+i.budget,0);
-              const gtVariation  = contracted.reduce((s:number,i:any)=>s+(i.variationAmt??0),0);
+              const gtVariation  = allItems.reduce((s:number,i:any)=>s+(i.variationAmt??0),0);
               const gtRevised    = gtOriginal + gtVariation;
               const gtDone       = allItems.reduce((s:number,i:any)=>s+i.valueDone,0);
               return (
                 <tr class="grand-total">
-                  <td colspan="5" style="text-align:right;padding-right:.75rem;letter-spacing:.04em;font-size:.72rem">TOTAL <span style="opacity:.55;font-weight:400">(net ex. VAT — contracted only)</span></td>
+                  <td colspan="5" style="text-align:right;padding-right:.75rem;letter-spacing:.04em;font-size:.72rem">TOTAL <span style="opacity:.55;font-weight:400">(net ex. VAT)</span></td>
                   <td style="text-align:right;font-family:monospace">{fmt(gtOriginal)}</td>
-                  <td style={`text-align:right;font-family:monospace;${gtVariation < 0 ? 'color:#86efac' : gtVariation > 0 ? 'color:#fcd34d' : 'opacity:.5'}`}>{gtVariation !== 0 ? (gtVariation > 0 ? '+' : '') + fmt(gtVariation) : '–'}</td>
+                  <td style="text-align:right;font-family:monospace;opacity:.5">–</td>
                   <td style="text-align:right;font-family:monospace;font-weight:700">{fmt(gtRevised)}</td>
                   <td></td>
                   <td style="text-align:right;font-family:monospace">{fmt(gtDone)}</td>
@@ -1238,27 +1247,30 @@ const projectJson = JSON.stringify(data);
     const row = el.closest('tr');
     if (!row || !(field === 'qty' || field === 'price' || field === 'done' || field === 'variation')) return;
 
-    const qty          = field === 'qty' ? (parseFloat(newVal) || 0) : (parseFloat(item.qty) || 0);
+    const qty          = item.extra ? 0 : (field === 'qty' ? (parseFloat(newVal) || 0) : (parseFloat(item.qty) || 0));
     const price        = parseFloat(item.price) || 0;
-    const variationQty = item.extra ? 0 : (field === 'variation' ? (parseFloat(newVal) || 0) : (parseFloat(item.variation) || 0));
-    const budget       = qty * price;
+    const variationQty = field === 'variation' ? (parseFloat(newVal) || 0) : (parseFloat(item.variation) || 0);
+    const budget       = item.extra ? 0 : qty * price;
     const variationAmt = variationQty * price;
-    const revised      = item.extra ? qty * price : (qty + variationQty) * price;
-    const rawDone       = (item.done || 0) * price;
-    const overrun       = !item.extra && (item.done || 0) > qty;
+    const revised      = item.extra ? variationAmt : (qty + variationQty) * price;
+    const rawDone      = (item.done || 0) * price;
+    const overrun      = !item.extra && (item.done || 0) > qty;
     const forceComplete = !!item.complete && !overrun && !item.extra;
-    const valDone       = forceComplete ? revised : rawDone;
-    const percActual    = (!item.extra && revised > 0) ? (rawDone / revised) * 100 : 0;
-    const dispPerc      = forceComplete ? 100 : percActual;
-    const barW          = Math.min(dispPerc, 100);
-    const pColor        = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
+    const valDone      = forceComplete ? revised : rawDone;
+    const percActual   = (!item.extra && revised > 0) ? (rawDone / revised) * 100 : 0;
+    const dispPerc     = forceComplete ? 100 : percActual;
+    const barW         = Math.min(dispPerc, 100);
+    const pColor       = overrun ? '#dc2626' : forceComplete ? '#22c55e' : item.extra ? '#f59e0b' : percActual >= 100 ? '#22c55e' : percActual > 0 ? '#f59e0b' : '#cbd5e1';
 
     // Auto cells
     const bCell = row.querySelector('.auto-cell-budget');
     const rCell = row.querySelector('.auto-cell-revised');
     const dCell = row.querySelector('.auto-cell-done');
-    if (bCell) bCell.textContent = fmtAmt(budget);
-    if (rCell) { rCell.textContent = fmtAmt(revised); rCell.style.color = variationAmt < 0 ? '#16a34a' : variationAmt > 0 ? '#f59e0b' : ''; }
+    if (bCell) { bCell.textContent = item.extra ? '–' : fmtAmt(budget); }
+    if (rCell) {
+      rCell.textContent = (item.extra && revised === 0) ? '–' : fmtAmt(revised);
+      rCell.style.color = variationAmt < 0 ? '#16a34a' : variationAmt > 0 ? '#f59e0b' : '';
+    }
     if (dCell) dCell.textContent = fmtAmt(valDone);
     if (field === 'variation') {
       el.style.color = variationQty < 0 ? '#16a34a' : variationQty > 0 ? 'var(--amber)' : 'var(--g3)';
