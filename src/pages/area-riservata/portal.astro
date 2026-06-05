@@ -624,8 +624,7 @@ const fmtDate = (d: string) => {
                   <span class="cat-letter">{cat.id}</span>
                   {cat.label}
                   <span style="margin-left:.5rem; font-weight:400; color:var(--slate); font-size:0.68rem">
-                    Budget: {fmt(cat.catBudget)} &nbsp;|&nbsp; Contracted done: {fmt(cat.catDoneContr)} ({cat.catPerc.toFixed(0)}%)
-                    {cat.catDoneExtra > 0 && <> &nbsp;|&nbsp; <span style="color:var(--amber)">Extra: {fmt(cat.catDoneExtra)}</span></>}
+                    Revised: {fmt(cat.catRevised)} &nbsp;|&nbsp; Done: {fmt(cat.catDone)} ({cat.catPerc.toFixed(0)}%)
                   </span>
                   <span class="cat-chevron">▾</span>
                 </td>
