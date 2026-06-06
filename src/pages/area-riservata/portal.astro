@@ -694,14 +694,15 @@ const fmtDate = (d: string) => {
                 </tr>
               );})}
               <tr class="subtotal" data-cat-member={cat.id}>
-                <td class="sub-label" style="padding-left:.75rem">
+                <td></td>
+                <td class="sub-label">
                   {cat.catVariation !== 0 && (
                     <span style={`font-style:italic; font-weight:600; color:${cat.catVariation < 0 ? '#16a34a' : '#dc2626'}`}>
                       {cat.catVariation < 0 ? 'Savings' : 'Additional cost'}: {cat.catVariation > 0 ? '+' : ''}{fmt(cat.catVariation)}
                     </span>
                   )}
                 </td>
-                <td colspan="4" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
+                <td colspan="3" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
                 <td class="item-money">{fmt(cat.catBudget)}</td>
                 <td class="item-money" style="color:var(--grey-3)">–</td>
                 <td class="item-money">{fmt(cat.catRevised)}</td>
