@@ -34,9 +34,13 @@ const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }))
 const ctrBudgets = new Map<string, { budget: number; itemCount: number }>();
 for (const cat of categories) {
   for (const item of cat.items) {
-    if (!item.extra) {
+    if (!item.extra && item.contractor) {
+      const qty      = item.qty ?? 0;
+      const varQty   = (item as any).variation ?? 0;
+      const price    = item.price ?? 0;
+      const revised  = (qty + varQty) * price;
       const cur = ctrBudgets.get(item.contractor) ?? { budget: 0, itemCount: 0 };
-      ctrBudgets.set(item.contractor, { budget: cur.budget + item.qty * item.price, itemCount: cur.itemCount + 1 });
+      ctrBudgets.set(item.contractor, { budget: cur.budget + revised, itemCount: cur.itemCount + 1 });
     }
   }
 }
@@ -1254,6 +1258,7 @@ const projectJson = JSON.stringify(data);
     const newVal = el.type === 'number' ? (parseFloat(el.value) ?? 0) || 0 : el.type === 'checkbox' ? el.checked : el.value;
     item[field] = newVal;
     const row = el.closest('tr');
+    if (field === 'contractor') { recalcCtrBudgets(); return; }
     if (!row || !(field === 'qty' || field === 'price' || field === 'done' || field === 'variation')) return;
 
     const qty          = item.extra ? 0 : (field === 'qty' ? (parseFloat(newVal) || 0) : (parseFloat(item.qty) || 0));
@@ -1341,6 +1346,7 @@ const projectJson = JSON.stringify(data);
 
     // Recalculate subtotal row for this category
     recalcSubtotal(catId);
+    recalcCtrBudgets();
   });
 
   // ── Recalculate category subtotal row ──────────────────────────────────
@@ -1447,6 +1453,45 @@ const projectJson = JSON.stringify(data);
       if (tds[3]) tds[3].textContent = fmtAmt(gtRevised);
       if (tds[5]) tds[5].textContent = fmtAmt(gtDone);
     }
+  }
+
+  // ── Recalculate contractor budgets ────────────────────────────────────
+  function recalcCtrBudgets() {
+    const budgets = {};
+    for (const cat of state.categories) {
+      for (const item of cat.items) {
+        if (item.extra || !item.contractor) continue;
+        const qty      = parseFloat(item.qty) || 0;
+        const varQty   = parseFloat(item.variation) || 0;
+        const price    = parseFloat(item.price) || 0;
+        const revised  = (qty + varQty) * price;
+        budgets[item.contractor] = (budgets[item.contractor] || 0) + revised;
+      }
+    }
+    document.querySelectorAll('.ctr-card[data-ctr-id]').forEach(card => {
+      const ctrId = card.dataset.ctrId;
+      const budget = budgets[ctrId] || 0;
+      card.dataset.budget = budget.toFixed(2);
+      const val = card.querySelector('.ctr-budget-val');
+      if (val) val.textContent = fmtAmt(budget);
+      // Update SAL milestone amount inputs
+      card.querySelectorAll('tr:not(.sal-total) .sal-pct-input, tr:not(.sal-total) .sal-amt-input').forEach(inp => {
+        if (inp.classList.contains('sal-amt-input')) {
+          const pctInput = inp.closest('tr')?.querySelector('.sal-pct-input');
+          const pct = parseFloat(pctInput?.value) || 0;
+          if (budget > 0) inp.value = (budget * pct / 100).toFixed(2);
+        }
+      });
+      // Update SAL total row
+      const totalRow = card.querySelector('tr.sal-total');
+      if (totalRow) {
+        const totalPct = Array.from(card.querySelectorAll('.sal-pct-input')).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+        const totalAmt = budget > 0 ? budget * totalPct / 100 : Array.from(card.querySelectorAll('.sal-amt-input')).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+        const tds = totalRow.querySelectorAll('td');
+        if (tds[3]) tds[3].textContent = '€ ' + totalAmt.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (tds[4]) tds[4].textContent = totalPct.toFixed(1) + '%';
+      }
+    });
   }
 
   // ── Toggle complete flag ────────────────────────────────────────────────
