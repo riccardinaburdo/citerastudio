@@ -694,7 +694,14 @@ const fmtDate = (d: string) => {
                 </tr>
               );})}
               <tr class="subtotal" data-cat-member={cat.id}>
-                <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">Category {cat.id} subtotal</td>
+                <td colspan="5" class="sub-label" style="text-align:right; padding-right:1rem">
+                  {cat.catVariation !== 0 && (
+                    <span style={`margin-right:.75rem; font-style:italic; color:${cat.catVariation < 0 ? '#16a34a' : '#dc2626'}`}>
+                      {cat.catVariation < 0 ? 'Savings' : 'Additional cost'}: {cat.catVariation > 0 ? '+' : ''}{fmt(cat.catVariation)}
+                    </span>
+                  )}
+                  Category {cat.id} subtotal
+                </td>
                 <td class="item-money">{fmt(cat.catBudget)}</td>
                 <td class="item-money" style="color:var(--grey-3)">–</td>
                 <td class="item-money">{fmt(cat.catRevised)}</td>
@@ -708,14 +715,6 @@ const fmtDate = (d: string) => {
                 </td>
                 <td><span class={`badge ${cat.catPerc > 99.9 ? 'complete' : cat.catPerc > 0 ? 'progress' : 'pending'}`}>{cat.catPerc > 99.9 ? 'Complete' : cat.catPerc > 0 ? 'In Progress' : 'Not Started'}</span></td>
               </tr>
-              {cat.catVariation !== 0 && (
-                <tr style="background:#f8fafc" data-cat-member={cat.id}>
-                  <td colspan="2" style={`padding-left:.75rem; font-size:0.72rem; font-style:italic; font-weight:600; color:${cat.catVariation < 0 ? '#16a34a' : '#dc2626'}`}>
-                    {cat.catVariation < 0 ? 'Savings' : 'Additional cost'}: {cat.catVariation > 0 ? '+' : ''}{fmt(cat.catVariation)}
-                  </td>
-                  <td colspan="10"></td>
-                </tr>
-              )}
             </>
           ))}
           <tr class="grand-total">
