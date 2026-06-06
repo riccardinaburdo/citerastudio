@@ -35,9 +35,9 @@ const ctrBudgets = new Map<string, { budget: number; itemCount: number }>();
 for (const cat of categories) {
   for (const item of cat.items) {
     if (!item.extra && item.contractor) {
-      const qty      = item.qty ?? 0;
-      const varQty   = (item as any).variation ?? 0;
-      const price    = item.price ?? 0;
+      const qty      = parseFloat(item.qty)                     || 0;
+      const varQty   = parseFloat((item as any).variation)      || 0;
+      const price    = parseFloat(item.price)                   || 0;
       const revised  = (qty + varQty) * price;
       const cur = ctrBudgets.get(item.contractor) ?? { budget: 0, itemCount: 0 };
       ctrBudgets.set(item.contractor, { budget: cur.budget + revised, itemCount: cur.itemCount + 1 });
@@ -467,6 +467,18 @@ const projectJson = JSON.stringify(data);
         const info   = ctrBudgets.get(c.id) ?? { budget: 0, itemCount: 0 };
         const budget = info.budget;
         const total  = c.sal.reduce((s, m) => s + m.pct, 0);
+        // Per-category breakdown for this contractor
+        const catBreakdown = categories.map(cat => {
+          const items = cat.items.filter((i: any) => !i.extra && i.contractor === c.id);
+          if (items.length === 0) return null;
+          const catTotal = items.reduce((s: number, i: any) => {
+            const q = parseFloat(i.qty) || 0;
+            const v = parseFloat((i as any).variation) || 0;
+            const p = parseFloat(i.price) || 0;
+            return s + (q + v) * p;
+          }, 0);
+          return { id: cat.id, label: cat.label, total: catTotal, count: items.length };
+        }).filter(Boolean);
         return (
           <div class="card ctr-card" data-budget={budget.toFixed(2)} data-ctr-id={c.id}>
             <div class="ctr-header">
@@ -479,6 +491,15 @@ const projectJson = JSON.stringify(data);
                   <span class="auto-tag">auto</span>
                   <span style="font-size:.6rem;color:var(--g3)">· {info.itemCount} items (net ex. VAT)</span>
                 </div>
+                {catBreakdown.length > 0 && (
+                  <div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.3rem .6rem">
+                    {catBreakdown.map((cb: any) => (
+                      <span style="font-size:.62rem;color:var(--g3)">
+                        <span style="font-weight:700;color:var(--navy)">{cb.id}</span> {cb.label}: <strong style="color:var(--slate)">{fmt(cb.total)}</strong>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div class="ctr-actions">
                 <button class="btn-icon btn-edit-ctr" title="Edit">✎</button>
