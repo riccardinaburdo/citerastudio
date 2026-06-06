@@ -667,11 +667,11 @@ const fmtDate = (d: string) => {
                   <td class="item-money" style={`color:${notExecuted ? '#16a34a' : revisedColor}`}>
                     {(revisedPos || notExecuted) ? fmt(item.revisedBudget) : <span style="color:var(--grey-3)">–</span>}
                   </td>
-                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : '#16a34a'}`}>
+                  <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : 'var(--text)'}`}>
                     {fmtQ(item.done, item.unit)}
                     {item.overrun && <span style="font-size:0.6rem; margin-left:.2rem; opacity:.8">↑</span>}
                   </td>
-                  <td class="item-money" style={`color:${barColor}`}>
+                  <td class="item-money">
                     {item.valueDone > 0 ? fmt(item.valueDone) : '–'}
                   </td>
                   <td class="perc-cell">
