@@ -635,9 +635,11 @@ const fmtDate = (d: string) => {
                 const dispPerc     = item.forceComplete ? 100 : percVal;
                 const barColor     = item.overrun ? '#dc2626' : item.forceComplete ? '#22c55e' : percVal > 99.9 ? '#22c55e' : percVal > 0 ? '#f59e0b' : '#cbd5e1';
                 const percIsNull   = item.perc === null;
-                const variationPos = item.variationQty > 0;
-                const variationNeg = item.variationQty < 0;
-                const revisedPos   = item.revisedBudget > 0;
+                const variationPos  = item.variationQty > 0;
+                const variationNeg  = item.variationQty < 0;
+                const revisedPos    = item.revisedBudget > 0;
+                const notExecuted   = !item.extra && item.budget > 0 && !(item.revisedBudget > 0);
+                const revisedColor  = variationNeg ? '#16a34a' : variationPos ? '#dc2626' : '';
                 return (
                 <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id}>
                   <td class="item-id">{item.id}</td>
@@ -662,8 +664,8 @@ const fmtDate = (d: string) => {
                   <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? '#dc2626' : 'var(--grey-3)'}`}>
                     {item.variationQty !== 0 ? item.variationQty : '–'}
                   </td>
-                  <td class="item-money" style={`color:${variationNeg ? '#16a34a' : variationPos ? '#dc2626' : ''}`}>
-                    {revisedPos ? fmt(item.revisedBudget) : <span style="color:var(--grey-3)">–</span>}
+                  <td class="item-money" style={`color:${notExecuted ? '#16a34a' : revisedColor}`}>
+                    {(revisedPos || notExecuted) ? fmt(item.revisedBudget) : <span style="color:var(--grey-3)">–</span>}
                   </td>
                   <td class="item-done-qty" style={`color:${item.overrun ? '#dc2626' : '#16a34a'}`}>
                     {fmtQ(item.done, item.unit)}
