@@ -710,13 +710,10 @@ const fmtDate = (d: string) => {
               </tr>
               {cat.catVariation !== 0 && (
                 <tr style="background:#f8fafc" data-cat-member={cat.id}>
-                  <td colspan="7" style={`text-align:right; padding-right:1rem; font-size:0.72rem; font-style:italic; color:${cat.catVariation < 0 ? '#16a34a' : 'var(--red, #dc2626)'}`}>
-                    {cat.catVariation < 0 ? 'Savings' : 'Additional cost'}
+                  <td colspan="2" style={`padding-left:.75rem; font-size:0.72rem; font-style:italic; font-weight:600; color:${cat.catVariation < 0 ? '#16a34a' : '#dc2626'}`}>
+                    {cat.catVariation < 0 ? 'Savings' : 'Additional cost'}: {cat.catVariation > 0 ? '+' : ''}{fmt(cat.catVariation)}
                   </td>
-                  <td class="item-money" style={`font-weight:700; color:${cat.catVariation < 0 ? '#16a34a' : '#dc2626'}`}>
-                    {cat.catVariation > 0 ? '+' : ''}{fmt(cat.catVariation)}
-                  </td>
-                  <td colspan="4"></td>
+                  <td colspan="10"></td>
                 </tr>
               )}
             </>
