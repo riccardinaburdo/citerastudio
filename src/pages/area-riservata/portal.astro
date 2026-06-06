@@ -34,7 +34,7 @@ const enrich = (item: any) => {
   const variationAmt  = variationQty * price;
   const revisedBudget = item.extra ? variationAmt : (qty + variationQty) * price;
   const rawDone       = (item.done ?? 0) * price;
-  const agreedQty     = item.extra ? variationQty : qty;
+  const agreedQty     = item.extra ? variationQty : (qty + variationQty);
   const overrun       = revisedBudget > 0 && (item.done ?? 0) > agreedQty;
   const forceComplete = !!item.complete && !overrun;
   const valueDone     = forceComplete ? revisedBudget : rawDone;
