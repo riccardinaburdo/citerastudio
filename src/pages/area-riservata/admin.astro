@@ -686,24 +686,6 @@ const projectJson = JSON.stringify(data);
     <div class="card" style="overflow:hidden">
       <div class="works-wrap">
         <table class="works">
-          <thead>
-            <tr>
-              <th style="width:52px">#</th>
-              <th>Brief description<br/><span style="font-size:.5rem;opacity:.65;font-weight:400">click to expand full text</span></th>
-              <th style="width:50px">Unit</th>
-              <th class="right" style="width:82px">Contracted Qty</th>
-              <th class="right" style="width:100px">Unit Price<br/><span style="font-size:.5rem;opacity:.65">net ex. VAT</span></th>
-              <th class="right" style="width:100px">Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-              <th class="right" style="width:82px">Variation<br/><span style="font-size:.5rem;opacity:.65">+/– qty</span></th>
-              <th class="right" style="width:110px">Revised Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-              <th class="right" style="width:76px">Done Qty</th>
-              <th class="right" style="width:120px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-              <th style="width:88px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-              <th style="width:68px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-              <th style="width:110px">Contractor</th>
-              <th style="width:52px"></th>
-            </tr>
-          </thead>
           <tbody>
             {enrichedCats.map(cat => {
               const catBudget   = cat.items.filter((i:any) => !i.extra).reduce((s:number,i:any) => s+i.budget,0);
@@ -826,7 +808,15 @@ const projectJson = JSON.stringify(data);
                   );
                 })}
                 <tr class="subtotal" data-cat-id={cat.id}>
-                  <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
+                  <td></td>
+                  <td class="sub-savings" style="font-style:italic;font-size:.65rem;font-weight:600">
+                    {catVariation !== 0 && (
+                      <span style={`color:${catVariation < 0 ? '#16a34a' : 'var(--red)'}`}>
+                        {catVariation < 0 ? 'Savings' : 'Additional cost'}: {catVariation > 0 ? '+' : ''}{fmt(catVariation)}
+                      </span>
+                    )}
+                  </td>
+                  <td colspan="3" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category {cat.id} subtotal</td>
                   <td style="text-align:right;font-family:monospace">{fmt(catBudget)}</td>
                   <td style="text-align:right;font-family:monospace;color:var(--g3)">–</td>
                   <td style="text-align:right;font-family:monospace;font-weight:700">{fmt(catRevised)}</td>
@@ -834,15 +824,6 @@ const projectJson = JSON.stringify(data);
                   <td style="text-align:right;font-family:monospace;color:var(--navy)">{fmt(catDone)}</td>
                   <td colspan="4"></td>
                 </tr>
-                {catVariation !== 0 && (
-                  <tr class="cat-var-row" data-cat-id={cat.id}>
-                    <td colspan="7" style="text-align:right;padding-right:.4rem;font-size:.65rem;color:var(--slate);font-style:italic">{catVariation < 0 ? 'Savings' : 'Additional cost'}</td>
-                    <td class="cat-var-amt" style={`text-align:right;font-family:monospace;font-weight:700;${catVariation < 0 ? 'color:#16a34a' : 'color:var(--red)'}`}>
-                      {catVariation > 0 ? '+' : ''}{fmt(catVariation)}
-                    </td>
-                    <td colspan="6"></td>
-                  </tr>
-                )}
               </>);
             })}
             {(() => {
@@ -1416,33 +1397,25 @@ const projectJson = JSON.stringify(data);
     const variation = sumRevised - sumBudget;
 
     // Update subtotal row cells
+    // td[0]=# td[1]=savings td[2]=label(colspan3) td[3]=budget td[4]=var(–) td[5]=revised td[6]=doneEmpty td[7]=valueDone td[8..]=rest
     const subRow = tbody.querySelector(`tr.subtotal[data-cat-id="${catId}"]`);
     if (subRow) {
       const tds = subRow.querySelectorAll('td');
-      // td[0]=label(colspan5), td[1]=budget, td[2]=variation(–), td[3]=revised, td[4]=done(empty), td[5]=valueDone
-      if (tds[1]) tds[1].textContent = fmtAmt(sumBudget);
-      if (tds[3]) tds[3].textContent = fmtAmt(sumRevised);
-      if (tds[5]) tds[5].textContent = fmtAmt(sumDone);
-    }
-
-    // Update or insert variation row
-    let varRow = tbody.querySelector(`tr.cat-var-row[data-cat-id="${catId}"]`);
-    if (variation !== 0) {
-      const label = variation < 0 ? 'Savings' : 'Additional cost';
-      const color = variation < 0 ? '#16a34a' : 'var(--red)';
-      const sign  = variation > 0 ? '+' : '';
-      if (!varRow) {
-        varRow = document.createElement('tr');
-        varRow.className = 'cat-var-row';
-        varRow.dataset.catId = catId;
-        varRow.innerHTML = `<td colspan="7" style="text-align:right;padding-right:.4rem;font-size:.65rem;color:var(--slate);font-style:italic"></td><td class="cat-var-amt" style="text-align:right;font-family:monospace;font-weight:700;"></td><td colspan="6"></td>`;
-        subRow?.insertAdjacentElement('afterend', varRow);
+      if (tds[3]) tds[3].textContent = fmtAmt(sumBudget);
+      if (tds[5]) tds[5].textContent = fmtAmt(sumRevised);
+      if (tds[7]) tds[7].textContent = fmtAmt(sumDone);
+      // Update inline savings/additional cost
+      const savingsCell = subRow.querySelector('.sub-savings');
+      if (savingsCell) {
+        if (variation !== 0) {
+          const label = variation < 0 ? 'Savings' : 'Additional cost';
+          const color = variation < 0 ? '#16a34a' : 'var(--red)';
+          const sign  = variation > 0 ? '+' : '';
+          savingsCell.innerHTML = `<span style="color:${color}">${label}: ${sign}${fmtAmt(variation)}</span>`;
+        } else {
+          savingsCell.innerHTML = '';
+        }
       }
-      varRow.querySelector('td:first-child').textContent = label;
-      const amtTd = varRow.querySelector('.cat-var-amt');
-      if (amtTd) { amtTd.textContent = sign + fmtAmt(variation); amtTd.style.color = color; }
-    } else if (varRow) {
-      varRow.remove();
     }
 
     // Update category header summary
@@ -2190,7 +2163,9 @@ const projectJson = JSON.stringify(data);
       </td>
     </tr>
     <tr class="subtotal" data-cat-id="${id}">
-      <td colspan="5" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category ${id} subtotal</td>
+      <td></td>
+      <td class="sub-savings" style="font-style:italic;font-size:.65rem;font-weight:600"></td>
+      <td colspan="3" style="text-align:right;padding-right:.75rem;color:var(--slate);font-weight:400;font-size:.68rem">Category ${id} subtotal</td>
       <td style="text-align:right;font-family:monospace">€ 0.00</td>
       <td style="text-align:right;font-family:monospace;color:var(--g3)">–</td>
       <td style="text-align:right;font-family:monospace;font-weight:700">€ 0.00</td>
