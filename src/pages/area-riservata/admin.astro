@@ -170,8 +170,10 @@ const projectJson = JSON.stringify(data);
       padding:.05rem .35rem; border-radius:3px; margin-left:.4rem; vertical-align:middle; }
     .works-wrap { overflow-x:auto; }
     table.works { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.75rem; }
-    table.works thead th { background:var(--navy); color:rgba(255,255,255,.85); padding:.5rem .65rem;
+    table.works thead th,
+    tr.works-thead-repeat th { background:var(--navy); color:rgba(255,255,255,.85); padding:.5rem .65rem;
       text-align:left; font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; overflow:hidden; }
+    tr.works-thead-repeat { display:table-row; }
     table.works thead th.right { text-align:right; }
     tr.cat-row td { background:#f0f6ff; color:var(--navy); padding:.4rem .65rem;
       font-weight:700; font-size:.72rem; border-top:2px solid var(--g2); border-bottom:1px solid #c7d9f0;
@@ -710,6 +712,22 @@ const projectJson = JSON.stringify(data);
               const catDone     = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);     // direct sum of Value Done column
               const catPerc     = catRevised > 0 ? catDone/catRevised*100 : 0;
               return (<>
+                <tr class="works-thead-repeat" data-cat-id={cat.id}>
+                  <th style="width:52px">#</th>
+                  <th>Brief description<br/><span style="font-size:.5rem;opacity:.65;font-weight:400">click to expand full text</span></th>
+                  <th style="width:50px">Unit</th>
+                  <th class="right" style="width:82px">Contracted Qty</th>
+                  <th class="right" style="width:100px">Unit Price<br/><span style="font-size:.5rem;opacity:.65">net ex. VAT</span></th>
+                  <th class="right" style="width:100px">Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th class="right" style="width:82px">Variation<br/><span style="font-size:.5rem;opacity:.65">+/– qty</span></th>
+                  <th class="right" style="width:110px">Revised Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th class="right" style="width:76px">Done Qty</th>
+                  <th class="right" style="width:120px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th style="width:88px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th style="width:68px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th style="width:110px">Contractor</th>
+                  <th style="width:52px"></th>
+                </tr>
                 <tr class="cat-row" data-cat-id={cat.id}>
                   <td colspan="14">
                     <span class="cat-badge">{cat.id}</span>
@@ -1031,7 +1049,7 @@ const projectJson = JSON.stringify(data);
       const newState = !collapsed;
       catRow.dataset.collapsed = newState;
       if (chevron) chevron.style.transform = newState ? 'rotate(-90deg)' : '';
-      document.querySelectorAll(`tr.item[data-cat-id="${catId}"], tr.subtotal[data-cat-id="${catId}"]`).forEach(row => {
+      document.querySelectorAll(`tr.item[data-cat-id="${catId}"], tr.subtotal[data-cat-id="${catId}"], tr.works-thead-repeat[data-cat-id="${catId}"]`).forEach(row => {
         row.style.display = newState ? 'none' : '';
       });
     });
@@ -2152,7 +2170,15 @@ const projectJson = JSON.stringify(data);
     if (!label) return;
     state.categories.push({ id, label, items: [] });
     const grandTotal = document.querySelector('table.works tbody tr.grand-total');
-    grandTotal.insertAdjacentHTML('beforebegin', `<tr class="cat-row" data-cat-id="${id}">
+    grandTotal.insertAdjacentHTML('beforebegin', `<tr class="works-thead-repeat" data-cat-id="${id}">
+      <th style="width:52px">#</th><th>Brief description</th><th style="width:50px">Unit</th>
+      <th class="right" style="width:82px">Contracted Qty</th><th class="right" style="width:100px">Unit Price</th>
+      <th class="right" style="width:100px">Budget</th><th class="right" style="width:82px">Variation</th>
+      <th class="right" style="width:110px">Revised Budget</th><th class="right" style="width:76px">Done Qty</th>
+      <th class="right" style="width:120px">Value Done</th><th style="width:88px">Progress</th>
+      <th style="width:68px">Status</th><th style="width:110px">Contractor</th><th style="width:52px"></th>
+    </tr>
+    <tr class="cat-row" data-cat-id="${id}">
       <td colspan="14">
         <span class="cat-badge">${id}</span> ${label}
         <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">Budget: € 0.00 &nbsp;|&nbsp; Done: € 0.00 &nbsp;|&nbsp; 0%</span>
