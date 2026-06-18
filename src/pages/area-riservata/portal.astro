@@ -390,8 +390,10 @@ const fmtDate = (d: string) => {
     .works-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: hidden; margin-bottom: 2rem; }
     .works-scroll { overflow-x: auto; }
     table.works { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    table.works thead th { background: var(--navy); color: rgba(255,255,255,.85); padding: .55rem .75rem; text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; white-space: nowrap; }
-    table.works thead th.right { text-align: right; }
+    table.works thead th,
+    tr.works-thead-repeat th { background: var(--navy); color: rgba(255,255,255,.85); padding: .55rem .75rem; text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; overflow: hidden; }
+    table.works thead th.right,
+    tr.works-thead-repeat th.right { text-align: right; }
     tr.works-cat td { background: #f0f6ff; color: var(--navy); padding: .4rem .75rem; font-weight: 700; font-size: 0.72rem; border-top: 2px solid var(--grey-2); border-bottom: 1px solid #c7d9f0; cursor: pointer; user-select: none; }
     tr.works-cat td:hover { background: #e4eeff; }
     tr.works-cat .cat-letter { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 0.65rem; font-weight: 700; margin-right: .5rem; }
@@ -486,7 +488,7 @@ const fmtDate = (d: string) => {
 
       /* Works table */
       table.works { font-size: .68rem; }
-      table.works thead th { padding: .4rem .45rem; font-size: .58rem; }
+      table.works thead th, tr.works-thead-repeat th { padding: .4rem .45rem; font-size: .58rem; }
       table.works tbody tr.item td { padding: .38rem .45rem; }
       tr.subtotal td { padding: .35rem .45rem; font-size: .65rem; }
       tr.grand-total td { padding: .45rem .45rem; font-size: .72rem; }
@@ -521,7 +523,7 @@ const fmtDate = (d: string) => {
 
       /* Works table — very compact */
       table.works { font-size: .62rem; }
-      table.works thead th { padding: .35rem .35rem; font-size: .54rem; }
+      table.works thead th, tr.works-thead-repeat th { padding: .35rem .35rem; font-size: .54rem; }
       table.works tbody tr.item td { padding: .32rem .35rem; }
       tr.subtotal td { padding: .3rem .35rem; font-size: .6rem; }
       tr.grand-total td { padding: .4rem .35rem; font-size: .68rem; }
@@ -663,22 +665,6 @@ const fmtDate = (d: string) => {
     <div class="works-scroll">
       {enrichedCats.map(cat => (
       <table class="works" style="margin-bottom:1.5rem">
-        <thead>
-          <tr>
-            <th style="width:50px">#</th>
-            <th>Description</th>
-            <th style="width:55px">Unit</th>
-            <th class="right" style="width:75px">Contracted<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
-            <th class="right" style="width:120px">Unit Price<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
-            <th class="right" style="width:120px">Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
-            <th class="right" style="width:75px">Variation<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
-            <th class="right" style="width:120px">Revised Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
-            <th class="right" style="width:80px">Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
-            <th class="right" style="width:120px">Value Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
-            <th style="width:110px">Progress</th>
-            <th style="width:90px">Status</th>
-          </tr>
-        </thead>
         <tbody>
               <tr class="works-cat" data-cat-toggle={cat.id}>
                 <td colspan="12">
@@ -689,6 +675,20 @@ const fmtDate = (d: string) => {
                   </span>
                   <span class="cat-chevron">▾</span>
                 </td>
+              </tr>
+              <tr class="works-thead-repeat" data-cat-member={cat.id}>
+                <th style="width:50px">#</th>
+                <th>Description</th>
+                <th style="width:55px">Unit</th>
+                <th class="right" style="width:75px">Contracted<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
+                <th class="right" style="width:120px">Unit Price<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+                <th class="right" style="width:120px">Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+                <th class="right" style="width:75px">Variation<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
+                <th class="right" style="width:120px">Revised Budget<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+                <th class="right" style="width:80px">Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">Qty</span></th>
+                <th class="right" style="width:120px">Value Done<br/><span style="font-size:0.55rem;opacity:.65;font-weight:400">net ex. VAT</span></th>
+                <th style="width:110px">Progress</th>
+                <th style="width:90px">Status</th>
               </tr>
               {cat.items.map((item: any) => {
                 const notExec      = isNotExecuted(item);

@@ -694,22 +694,6 @@ const projectJson = JSON.stringify(data);
               const catDone     = cat.items.reduce((s:number,i:any) => s+i.valueDone,0);     // direct sum of Value Done column
               const catPerc     = catRevised > 0 ? catDone/catRevised*100 : 0;
               return (<>
-                <tr class="works-thead-repeat" data-cat-id={cat.id}>
-                  <th style="width:52px">#</th>
-                  <th>Brief description<br/><span style="font-size:.5rem;opacity:.65;font-weight:400">click to expand full text</span></th>
-                  <th style="width:50px">Unit</th>
-                  <th class="right" style="width:100px">Contracted Qty</th>
-                  <th class="right" style="width:100px">Unit Price<br/><span style="font-size:.5rem;opacity:.65">net ex. VAT</span></th>
-                  <th class="right" style="width:100px">Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-                  <th class="right" style="width:82px">Variation<br/><span style="font-size:.5rem;opacity:.65">+/– qty</span></th>
-                  <th class="right" style="width:110px">Revised Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-                  <th class="right" style="width:76px">Done Qty</th>
-                  <th class="right" style="width:120px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-                  <th style="width:88px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-                  <th style="width:108px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-                  <th style="width:140px">Contractor</th>
-                  <th style="width:52px"></th>
-                </tr>
                 <tr class="cat-row" data-cat-id={cat.id}>
                   <td colspan="14">
                     <span class="cat-badge">{cat.id}</span>
@@ -727,6 +711,22 @@ const projectJson = JSON.stringify(data);
                       <button class="btn-icon btn-del-cat" data-cat-id={cat.id} title="Delete category" style="font-size:.72rem;padding:.2rem .45rem;color:var(--red);border-color:#fca5a5">🗑 Delete</button>
                     </span>
                   </td>
+                </tr>
+                <tr class="works-thead-repeat" data-cat-id={cat.id}>
+                  <th style="width:52px">#</th>
+                  <th>Brief description<br/><span style="font-size:.5rem;opacity:.65;font-weight:400">click to expand full text</span></th>
+                  <th style="width:50px">Unit</th>
+                  <th class="right" style="width:100px">Contracted Qty</th>
+                  <th class="right" style="width:100px">Unit Price<br/><span style="font-size:.5rem;opacity:.65">net ex. VAT</span></th>
+                  <th class="right" style="width:100px">Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th class="right" style="width:82px">Variation<br/><span style="font-size:.5rem;opacity:.65">+/– qty</span></th>
+                  <th class="right" style="width:110px">Revised Budget<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th class="right" style="width:76px">Done Qty</th>
+                  <th class="right" style="width:120px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th style="width:88px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th style="width:108px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th style="width:140px">Contractor</th>
+                  <th style="width:52px"></th>
                 </tr>
                 {cat.items.map((item:any) => {
                   const overrun        = item.overrun ?? false;
@@ -2143,15 +2143,7 @@ const projectJson = JSON.stringify(data);
     if (!label) return;
     state.categories.push({ id, label, items: [] });
     const grandTotal = document.querySelector('table.works tbody tr.grand-total');
-    grandTotal.insertAdjacentHTML('beforebegin', `<tr class="works-thead-repeat" data-cat-id="${id}">
-      <th style="width:52px">#</th><th>Brief description</th><th style="width:50px">Unit</th>
-      <th class="right" style="width:100px">Contracted Qty</th><th class="right" style="width:100px">Unit Price</th>
-      <th class="right" style="width:100px">Budget</th><th class="right" style="width:82px">Variation</th>
-      <th class="right" style="width:110px">Revised Budget</th><th class="right" style="width:76px">Done Qty</th>
-      <th class="right" style="width:120px">Value Done</th><th style="width:88px">Progress</th>
-      <th style="width:108px">Status</th><th style="width:140px">Contractor</th><th style="width:52px"></th>
-    </tr>
-    <tr class="cat-row" data-cat-id="${id}">
+    grandTotal.insertAdjacentHTML('beforebegin', `<tr class="cat-row" data-cat-id="${id}">
       <td colspan="14">
         <span class="cat-badge">${id}</span> ${label}
         <span style="margin-left:.75rem;font-size:.65rem;font-weight:400;color:var(--slate)">Budget: € 0.00 &nbsp;|&nbsp; Done: € 0.00 &nbsp;|&nbsp; 0%</span>
@@ -2161,6 +2153,14 @@ const projectJson = JSON.stringify(data);
           <button class="btn-icon btn-del-cat" data-cat-id="${id}" title="Delete category" style="font-size:.72rem;padding:.2rem .45rem;color:var(--red);border-color:#fca5a5">🗑 Delete</button>
         </span>
       </td>
+    </tr>
+    <tr class="works-thead-repeat" data-cat-id="${id}">
+      <th style="width:52px">#</th><th>Brief description</th><th style="width:50px">Unit</th>
+      <th class="right" style="width:100px">Contracted Qty</th><th class="right" style="width:100px">Unit Price</th>
+      <th class="right" style="width:100px">Budget</th><th class="right" style="width:82px">Variation</th>
+      <th class="right" style="width:110px">Revised Budget</th><th class="right" style="width:76px">Done Qty</th>
+      <th class="right" style="width:120px">Value Done</th><th style="width:88px">Progress</th>
+      <th style="width:108px">Status</th><th style="width:140px">Contractor</th><th style="width:52px"></th>
     </tr>
     <tr class="subtotal" data-cat-id="${id}">
       <td></td>
