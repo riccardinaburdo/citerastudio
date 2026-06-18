@@ -290,7 +290,7 @@ const fmtDate = (d: string) => {
     .metric-value { font-size: 1.6rem; font-weight: 700; color: var(--navy); line-height: 1; }
     .metric-sub   { font-size: 0.75rem; color: var(--slate); margin-top: .3rem; }
     .metric-card.highlight .metric-value { color: var(--orange); }
-    .payment-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .payment-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 1.5rem; margin-bottom: 1.5rem; overflow: hidden; }
     .pay-contractor-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.2rem; padding-bottom: .75rem; border-bottom: 1px solid var(--grey-2); }
     .pay-contractor-name  { font-family: var(--brand); font-size: 1rem; font-weight: 700; color: var(--navy); margin-right: .6rem; }
     .pay-contractor-trade { font-size: 0.72rem; color: var(--slate); text-transform: uppercase; letter-spacing: .06em; }
@@ -343,8 +343,8 @@ const fmtDate = (d: string) => {
     .pay-now-line { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 1.5px; height: 12px; background: var(--navy); opacity: .4; }
     .pay-track-labels { margin: 0 1rem; padding-top: 2.5rem; display: flex; justify-content: space-between; }
     .pay-track-edge { font-size: 0.6rem; color: var(--grey-3); }
-    .pay-table-wrap { border-top: 1px solid var(--grey-2); padding-top: 1rem; }
-    table.pay-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .pay-table-wrap { border-top: 1px solid var(--grey-2); padding-top: 1rem; overflow-x: auto; }
+    table.pay-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 500px; }
     table.pay-table th { font-size: 0.62rem; text-transform: uppercase; letter-spacing: .06em; color: var(--grey-3); font-weight: 600; padding: .4rem .75rem; border-bottom: 1px solid var(--grey-2); text-align: left; }
     table.pay-table th.right { text-align: right; }
     table.pay-table td { padding: .55rem .75rem; border-bottom: 1px solid var(--grey-2); vertical-align: middle; }
