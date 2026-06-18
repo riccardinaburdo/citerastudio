@@ -706,8 +706,8 @@ const projectJson = JSON.stringify(data);
                   <th class="right" style="width:76px">Done Qty</th>
                   <th class="right" style="width:120px">Value Done<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
                   <th style="width:88px">Progress<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-                  <th style="width:68px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
-                  <th style="width:110px">Contractor</th>
+                  <th style="width:108px">Status<br/><span style="font-size:.5rem;opacity:.65">auto</span></th>
+                  <th style="width:140px">Contractor</th>
                   <th style="width:52px"></th>
                 </tr>
                 <tr class="cat-row" data-cat-id={cat.id}>
@@ -796,7 +796,7 @@ const projectJson = JSON.stringify(data);
                         }
                       </td>
                       <td class="edit-col">
-                        <select data-cat-id={cat.id} data-item-id={item.id} data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%">
+                        <select data-cat-id={cat.id} data-item-id={item.id} data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:136px;width:100%">
                           <option value="">— none —</option>
                           {contractors.map(c => <option value={c.id} selected={item.contractor===c.id}>{c.name}</option>)}
                         </select>
@@ -2105,7 +2105,7 @@ const projectJson = JSON.stringify(data);
       `<td class="auto-cell auto-cell-done">€ 0.00</td>`,
       `<td class="auto-bg" style="min-width:90px">${percHtml}</td>`,
       `<td class="auto-bg">${statusHtml}</td>`,
-      `<td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:120px;width:100%"><option value="">— none —</option>${opts}</select></td>`,
+      `<td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="contractor" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.68rem;max-width:136px;width:100%"><option value="">— none —</option>${opts}</select></td>`,
       `<td style="white-space:nowrap"><button class="btn-icon btn-del-item" data-cat-id="${catId}" data-item-id="${item.id}" title="Delete" style="margin-left:.2rem">🗑</button></td>`,
       `</tr>`
     ].join('');
@@ -2149,7 +2149,7 @@ const projectJson = JSON.stringify(data);
       <th class="right" style="width:100px">Budget</th><th class="right" style="width:82px">Variation</th>
       <th class="right" style="width:110px">Revised Budget</th><th class="right" style="width:76px">Done Qty</th>
       <th class="right" style="width:120px">Value Done</th><th style="width:88px">Progress</th>
-      <th style="width:68px">Status</th><th style="width:110px">Contractor</th><th style="width:52px"></th>
+      <th style="width:108px">Status</th><th style="width:140px">Contractor</th><th style="width:52px"></th>
     </tr>
     <tr class="cat-row" data-cat-id="${id}">
       <td colspan="14">
