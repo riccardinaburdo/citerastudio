@@ -451,36 +451,98 @@ const fmtDate = (d: string) => {
     @media print { .topbar, .btn-top, .btn-logout { display: none; } body { background: #fff; } .main { padding: .5rem; } }
     @media (max-width: 900px) { .cat-bar-track { width: 100px; } }
     @media (max-width: 900px) { .metrics { grid-template-columns: repeat(2,1fr); } .updates-grid { grid-template-columns: 1fr; } .hero-top { flex-direction: column; } .pay-summary { grid-template-columns: 1fr; } .pay-sum-arrow { display: none; } .pay-timeline-wrap { display: none; } }
-    @media (max-width: 600px) { .metrics { grid-template-columns: 1fr; } .topbar-project { display: none; } .main { padding: 1rem; } }
+    @media (max-width: 600px) { .metrics { grid-template-columns: 1fr; } .topbar-project { display: none; } .main { padding: .75rem; } }
     @media (max-width: 768px) {
       /* Topbar */
-      .topbar { padding: .5rem .85rem; gap: .5rem; flex-wrap: wrap; }
-      .topbar-lock, .btn-top, .btn-logout { font-size: .65rem; padding: .22rem .55rem; }
-      .role-badge { font-size: .6rem; }
-      .topbar-project-select { max-width: 180px; font-size: .75rem; }
+      .topbar { padding: .45rem .75rem; gap: .4rem; flex-wrap: wrap; }
+      .topbar-lock, .btn-top, .btn-logout { font-size: .62rem; padding: .2rem .5rem; }
+      .role-badge { font-size: .58rem; }
+      .topbar-project-select { max-width: 160px; font-size: .72rem; }
+      .topbar-sep { display: none; }
 
       /* Hero */
-      .hero { padding: 1.5rem 1rem 1.2rem; }
-      .hero-inner h1 { font-size: 1.3rem; }
+      .hero { padding: 1.2rem .85rem 1rem; }
+      .hero-title { font-size: 1.2rem !important; }
+      .hero-sub { font-size: .8rem !important; }
+      .hero-meta { font-size: .75rem !important; gap: .25rem .75rem !important; }
+      .update-badge { font-size: .65rem !important; }
 
-      /* Progress overview: stack donut above categories */
+      /* Metrics */
+      .metric-card { padding: .85rem 1rem; }
+      .metric-value { font-size: 1.55rem !important; }
+      .metric-label { font-size: .6rem !important; }
+
+      /* Progress overview */
       .progress-overview { grid-template-columns: 1fr !important; }
       .progress-overview > .donut-card { width: 100% !important; }
+      .donut-wrap { width: 130px !important; height: 130px !important; }
+      .donut-ring { width: 130px !important; height: 130px !important; }
+      .donut-pct { font-size: 1.5rem !important; }
+      .cat-bar-label { font-size: .72rem; }
+      .cat-status { width: 70px; font-size: .58rem; }
 
       /* Section titles */
-      .section-title { font-size: .82rem; padding: .55rem .9rem; }
+      .section-title { font-size: .78rem; padding: .5rem .85rem; letter-spacing: .08em; }
 
-      /* Works table already has .works-scroll with overflow-x:auto */
+      /* Works table */
+      table.works { font-size: .68rem; }
+      table.works thead th { padding: .4rem .45rem; font-size: .58rem; }
+      table.works tbody tr.item td { padding: .38rem .45rem; }
+      tr.subtotal td { padding: .35rem .45rem; font-size: .65rem; }
+      tr.grand-total td { padding: .45rem .45rem; font-size: .72rem; }
+      tr.works-cat td { padding: .38rem .45rem; font-size: .65rem; }
+      .item-money { font-size: .67rem; }
+      .badge { font-size: .56rem; padding: .15rem .45rem; }
+      .perc-num { font-size: .65rem; }
+      .perc-cell { min-width: 70px; }
+      .extra-badge { font-size: .52rem; }
 
-      /* Payment cards */
-      .payment-card { padding: 1rem; }
-      .pay-contractor-header { flex-direction: column; gap: .4rem; }
+      /* Payment */
+      .payment-card { padding: .85rem; }
+      .pay-contractor-header { flex-direction: column; gap: .35rem; }
+      table.pay-table { font-size: .72rem; }
+      table.pay-table th { font-size: .58rem; padding: .35rem .55rem; }
+      table.pay-table td { padding: .45rem .55rem; }
+      .pay-sum-amount { font-size: 1.3rem !important; }
 
       /* Update cards */
-      .update-card { padding: 1rem; }
+      .update-card { padding: .9rem 1rem; }
+      .update-date { font-size: .8rem; }
+      .update-pct { font-size: 1.2rem !important; }
+    }
+    @media (max-width: 480px) {
+      /* Topbar compact — hide print button */
+      .btn-top:not(.btn-logout) { display: none; }
+      .topbar-brand { font-size: .82rem; }
+
+      /* Hero */
+      .hero { padding: 1rem .75rem .85rem; }
+      .hero-meta { display: none; }
+
+      /* Works table — very compact */
+      table.works { font-size: .62rem; }
+      table.works thead th { padding: .35rem .35rem; font-size: .54rem; }
+      table.works tbody tr.item td { padding: .32rem .35rem; }
+      tr.subtotal td { padding: .3rem .35rem; font-size: .6rem; }
+      tr.grand-total td { padding: .4rem .35rem; font-size: .68rem; }
+      tr.works-cat td { padding: .32rem .35rem; }
+      .item-money { font-size: .62rem; }
+      .badge { font-size: .52rem; padding: .12rem .38rem; }
+      .perc-mini { display: none; }
+      .perc-num { width: auto; }
 
       /* Metric cards */
-      .metric-card { padding: 1rem 1.2rem; }
+      .metric-value { font-size: 1.35rem !important; }
+      .metric-sub { font-size: .68rem !important; }
+
+      /* Payment table — hide less critical columns */
+      table.pay-table th:nth-child(3),
+      table.pay-table td:nth-child(3) { display: none; }
+      .pay-sum-sub { font-size: .65rem; }
+      .pay-sum-trigger { font-size: .65rem; }
+
+      /* Footer */
+      .page-footer { font-size: .65rem; padding: .9rem; }
     }
   </style>
 </head>
