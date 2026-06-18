@@ -389,7 +389,7 @@ const fmtDate = (d: string) => {
     .section-title { font-size: 1rem; text-transform: uppercase; letter-spacing: .12em; color: #fff; font-weight: 700; margin-bottom: 1.5rem; margin-top: .5rem; padding: .75rem 1.25rem; background: var(--orange); border-radius: 6px; }
     .works-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: hidden; margin-bottom: 2rem; }
     .works-scroll { overflow-x: auto; }
-    table.works { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    table.works { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.78rem; }
     table.works thead th,
     tr.works-thead-repeat th { background: var(--navy); color: rgba(255,255,255,.85); padding: .55rem .75rem; text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; overflow: hidden; }
     table.works thead th.right,
@@ -405,7 +405,7 @@ const fmtDate = (d: string) => {
     table.works tbody tr.item:last-child td { border-bottom: none; }
     table.works tbody tr.item:hover td { background: #f8fafc; }
     .item-id    { color: var(--grey-3); font-size: 0.68rem; font-family: monospace; white-space: nowrap; }
-    .item-desc  { min-width: 160px; line-height: 1.4; }
+    .item-desc  { line-height: 1.4; overflow-wrap: break-word; word-break: break-word; }
     .item-num   { text-align: right; white-space: nowrap; }
     .item-money { text-align: right; font-family: monospace; font-size: 0.75rem; white-space: nowrap; }
     .item-done-qty { text-align: right; font-size: 0.78rem; }
@@ -665,6 +665,20 @@ const fmtDate = (d: string) => {
     <div class="works-scroll">
       {enrichedCats.map(cat => (
       <table class="works" style="margin-bottom:1.5rem">
+        <colgroup>
+          <col style="width:50px"/>
+          <col/>
+          <col style="width:55px"/>
+          <col style="width:75px"/>
+          <col style="width:120px"/>
+          <col style="width:120px"/>
+          <col style="width:75px"/>
+          <col style="width:120px"/>
+          <col style="width:80px"/>
+          <col style="width:120px"/>
+          <col style="width:110px"/>
+          <col style="width:90px"/>
+        </colgroup>
         <tbody>
               <tr class="works-cat" data-cat-toggle={cat.id}>
                 <td colspan="12">
