@@ -389,7 +389,7 @@ const fmtDate = (d: string) => {
     .section-title { font-size: 1rem; text-transform: uppercase; letter-spacing: .12em; color: #fff; font-weight: 700; margin-bottom: 1.5rem; margin-top: .5rem; padding: .75rem 1.25rem; background: var(--orange); border-radius: 6px; }
     .works-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--grey-2); box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: hidden; margin-bottom: 2rem; }
     .works-scroll { overflow-x: auto; }
-    table.works { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    table.works { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.78rem; }
     table.works thead th { background: var(--navy); color: rgba(255,255,255,.85); padding: .55rem .75rem; text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; white-space: nowrap; }
     table.works thead th.right { text-align: right; }
     tr.works-cat td { background: #f0f6ff; color: var(--navy); padding: .4rem .75rem; font-weight: 700; font-size: 0.72rem; border-top: 2px solid var(--grey-2); border-bottom: 1px solid #c7d9f0; cursor: pointer; user-select: none; }
@@ -403,7 +403,7 @@ const fmtDate = (d: string) => {
     table.works tbody tr.item:last-child td { border-bottom: none; }
     table.works tbody tr.item:hover td { background: #f8fafc; }
     .item-id    { color: var(--grey-3); font-size: 0.68rem; font-family: monospace; white-space: nowrap; }
-    .item-desc  { max-width: 320px; line-height: 1.4; }
+    .item-desc  { line-height: 1.4; overflow: hidden; }
     .item-num   { text-align: right; white-space: nowrap; }
     .item-money { text-align: right; font-family: monospace; font-size: 0.75rem; white-space: nowrap; }
     .item-done-qty { text-align: right; font-size: 0.78rem; }
