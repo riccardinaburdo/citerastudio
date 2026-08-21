@@ -2081,11 +2081,9 @@ const projectJson = JSON.stringify(data);
       : '<span class="perc-null" style="color:var(--g3)">–</span>';
     const statusHtml  = overrunX
       ? `<span class="status-badge status-overrun">Overrun</span>`
-      : revised <= 0 && (isX || (parseFloat(item.qty)||0) > 0)
-        ? `<span class="status-badge status-pending is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}">Not Started</span>`
-        : revised <= 0
-          ? `<span style="color:var(--g3)">–</span>`
-          : fcX || dispPercX >= 100
+      : revised <= 0
+        ? `<span class="status-badge status-pending is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to mark as complete">Not Started</span>`
+        : fcX || dispPercX >= 100
             ? `<span class="status-badge status-complete is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to unmark completion">Complete</span>`
             : dispPercX > 0
               ? `<span class="status-badge status-progress is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to mark as complete">In Progress</span>`
