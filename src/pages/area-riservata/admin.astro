@@ -779,7 +779,7 @@ const projectJson = JSON.stringify(data);
                           <div class="perc-mini"><div class="perc-fill" style={`width:${barW}%;background:${pColor}`}></div></div>
                           <span class="perc-num" style={`color:${pColor}`}>{Math.round(dispPerc)}%</span>
                         </div>
-                        {percNull && <span class="perc-null" style="color:var(--g3)">–</span>}
+                        <span class="perc-null" style={`color:var(--g3)${percNull ? '' : ';display:none'}`}>–</span>
                       </td>
                       <td class="auto-bg">
                         {overrun
@@ -787,7 +787,7 @@ const projectJson = JSON.stringify(data);
                           : isNotExecuted
                             ? <span class="status-badge status-not-executed">Not Executed</span>
                             : hasNoRevised
-                              ? <span style="color:var(--g3)">–</span>
+                              ? <span class="status-badge status-pending is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to mark as complete">Not Started</span>
                               : isComplete
                                 ? <span class="status-badge status-complete is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to unmark completion">Complete</span>
                                 : isInProgress
