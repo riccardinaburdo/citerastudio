@@ -2076,9 +2076,7 @@ const projectJson = JSON.stringify(data);
     const dispPercX   = fcX ? 100 : (percX ?? 0);
     const barWX       = Math.min(dispPercX, 100);
     const pColorX     = overrunX ? '#dc2626' : fcX ? '#22c55e' : dispPercX >= 100 ? '#22c55e' : dispPercX > 0 ? '#f59e0b' : '#cbd5e1';
-    const percHtml    = revised > 0
-      ? `<div class="perc-wrap"><div class="perc-mini"><div class="perc-fill" style="width:${barWX}%;background:${pColorX}"></div></div><span class="perc-num" style="color:${pColorX}">${Math.round(dispPercX)}%</span></div>`
-      : '<span class="perc-null" style="color:var(--g3)">–</span>';
+    const percHtml    = `<div class="perc-wrap"${revised <= 0 ? ' style="display:none"' : ''}><div class="perc-mini"><div class="perc-fill" style="width:${barWX}%;background:${pColorX}"></div></div><span class="perc-num" style="color:${pColorX}">${Math.round(dispPercX)}%</span></div><span class="perc-null" style="color:var(--g3)${revised > 0 ? ';display:none' : ''}">–</span>`;
     const statusHtml  = overrunX
       ? `<span class="status-badge status-overrun">Overrun</span>`
       : revised <= 0
