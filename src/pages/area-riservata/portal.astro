@@ -73,10 +73,19 @@ const contractorSchedules = contractors.flatMap(c => {
   const quantified   = c.sal.filter(m => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
   const unquantified = c.sal.filter(m => m.pct === 0 && !((m as any).fixedAmt) && m.triggerType === 'date');
 
+  // Acconto: the milestone triggered "on signing". At most one other milestone
+  // may deduct it (deductDeposit) — the deduction is applied exactly once.
+  const depM     = c.sal.find(m => m.triggerType === 'signing') ?? null;
+  const depAmt   = depM ? (cBudget > 0 ? (depM.pct / 100) * cBudget : ((depM as any).fixedAmt ?? 0)) : 0;
+  const dedIdx   = c.sal.findIndex(m => (m as any).deductDeposit === true && m.triggerType !== 'signing');
+  const dedId    = dedIdx >= 0 ? c.sal[dedIdx].id : null;
+
   const milestones = quantified.map(m => {
     cumPct += m.pct;
     const tickPos  = Math.min(cumPct, 100);
-    const amount   = cBudget > 0 ? (m.pct / 100) * cBudget : ((m as any).fixedAmt ?? 0);
+    const gross    = cBudget > 0 ? (m.pct / 100) * cBudget : ((m as any).fixedAmt ?? 0);
+    const deposDed = (dedId !== null && m.id === dedId) ? Math.min(depAmt, gross) : 0;
+    const amount   = gross - deposDed;
     // triggerAt (bar position) = tickPos for pct milestones
     // workTriggerAt (isDue check) uses cumTriggerPct so pct ≠ triggerPct doesn't cause false dues
     let triggerAt: number;
@@ -108,7 +117,7 @@ const contractorSchedules = contractors.flatMap(c => {
         isDue = m.triggerType === 'signing' || (m.triggerType === 'start' && cPerc > 0) || (workTriggerAt > 0 && cPerc >= workTriggerAt);
       } else { status = 'pending'; }
     }
-    return { ...m, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, amount, gross, deposDed, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   // Collapsed "Remaining" block for unquantified date milestones
@@ -145,10 +154,18 @@ const technicianSchedules = technicians.flatMap((t: any) => {
 
   const quantified = t.sal.filter((m: any) => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
 
+  // Acconto handling — identical rule to the contractors above
+  const depMT   = t.sal.find((m: any) => m.triggerType === 'signing') ?? null;
+  const depAmtT = depMT ? (t.fee > 0 ? t.fee * depMT.pct / 100 : (depMT.fixedAmt ?? 0)) : 0;
+  const dedMT   = t.sal.find((m: any) => m.deductDeposit === true && m.triggerType !== 'signing') ?? null;
+  const dedIdT  = dedMT ? dedMT.id : null;
+
   const milestones = quantified.map((m: any) => {
     cumPctT += m.pct;
     const tickPos = cumPctT;
-    const amount  = t.fee > 0 ? t.fee * m.pct / 100 : ((m.fixedAmt ?? 0) as number);
+    const gross    = t.fee > 0 ? t.fee * m.pct / 100 : ((m.fixedAmt ?? 0) as number);
+    const deposDed = (dedIdT !== null && m.id === dedIdT) ? Math.min(depAmtT, gross) : 0;
+    const amount   = gross - deposDed;
 
     let triggerAt: number;
     if      (m.triggerType === 'signing') { triggerAt = 0; }
@@ -183,7 +200,7 @@ const technicianSchedules = technicians.flatMap((t: any) => {
              || (m.triggerType === 'percent' && totalPerc >= (m.triggerPct ?? 0));
       } else { status = 'pending'; }
     }
-    return { ...m, amount, triggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, amount, gross, deposDed, triggerAt, triggerNote, status, isDue, tickPos };
   });
 
   const paidT    = milestones.filter((m: any) => m.status === 'paid').reduce((s: number, m: any) => s + m.amount, 0);
@@ -926,7 +943,14 @@ const fmtDate = (d: string) => {
               {milestones.map(m => (
                 <tr class={`pay-row-${m.status}`}>
                   <td class="pay-col-id">{m.id}</td>
-                  <td class="pay-col-label">{m.label}</td>
+                  <td class="pay-col-label">
+                    {m.label}
+                    {(m as any).deposDed > 0 && (
+                      <span style="display:block;font-size:.66rem;color:var(--slate);margin-top:.1rem">
+                        {fmt((m as any).gross)} − acconto {fmt((m as any).deposDed)}
+                      </span>
+                    )}
+                  </td>
                   <td class="pay-col-trigger">{m.triggerNote}</td>
                   <td class="pay-col-money">{fmt(m.amount)}</td>
                   <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * 0.10)}</td>
@@ -1038,7 +1062,14 @@ const fmtDate = (d: string) => {
                   {milestones.map((m: any) => (
                     <tr class={`pay-row-${m.status}`}>
                       <td class="pay-col-id">{m.id}</td>
-                      <td class="pay-col-label">{m.label}</td>
+                      <td class="pay-col-label">
+                        {m.label}
+                        {m.deposDed > 0 && (
+                          <span style="display:block;font-size:.66rem;color:var(--slate);margin-top:.1rem">
+                            {fmt(m.gross)} − acconto {fmt(m.deposDed)}
+                          </span>
+                        )}
+                      </td>
                       <td class="pay-col-trigger">{m.triggerNote}</td>
                       <td class="pay-col-money">{fmt(m.amount)}</td>
                       <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? (m.isDue ? 'Due' : 'Upcoming') : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>

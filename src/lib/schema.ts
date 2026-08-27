@@ -8,6 +8,14 @@ export interface SalMilestone {
   fixedAmt?: number;
   paid?: boolean;     // manually certified as paid
   paidDate?: string;  // ISO date of actual payment
+  /**
+   * Detrae l'acconto (la milestone con triggerType 'signing') dall'importo di
+   * QUESTA milestone. Vincolo: al massimo UNA milestone per fornitore/tecnico
+   * può averlo attivo, e mai la milestone di acconto stessa.
+   * L'importo lordo (pct / fixedAmt) resta quello certificato dal SAL sui
+   * lavori eseguiti; il netto da incassare è lordo − acconto.
+   */
+  deductDeposit?: boolean;
 }
 
 export interface Technician {
