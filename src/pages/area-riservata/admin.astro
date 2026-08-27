@@ -1162,6 +1162,16 @@ const projectJson = JSON.stringify(data);
           <div style="font-size:.68rem;color:var(--navy);margin-top:.15rem">Cifra forfettaria: non cambia se cambia il budget del fornitore.</div>
         </div>
       </div>
+      <div id="ms-ded-row" style="border-top:1px solid var(--g2);padding-top:.75rem;margin-top:.9rem">
+        <label style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400;color:inherit">
+          <input id="ms-ded" type="checkbox" style="width:15px;height:15px;margin-top:.15rem;cursor:pointer;accent-color:var(--orange)" />
+          <span>
+            <span style="font-size:.82rem;font-weight:600;color:var(--text)">Detrai l&rsquo;acconto gi&agrave; versato</span>
+            <span id="ms-ded-hint" style="display:block;font-size:.7rem;color:var(--g3);margin-top:.15rem"></span>
+          </span>
+        </label>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="ms-cancel-btn">Cancel</button>
       <button class="btn btn-primary" id="ms-save-btn">Add Milestone</button>
@@ -2096,6 +2106,9 @@ const projectJson = JSON.stringify(data);
   const msModeBtn        = document.getElementById('ms-mode-pct');
   const msModeBtnContract = document.getElementById('ms-mode-contract');
   const msModeBtnDone     = document.getElementById('ms-mode-done');
+  const msDed             = document.getElementById('ms-ded');
+  const msDedRow          = document.getElementById('ms-ded-row');
+  const msDedHint         = document.getElementById('ms-ded-hint');
   const msPctHint        = document.getElementById('ms-pct-hint');
   const msPctBaseLbl     = document.getElementById('ms-pct-base-lbl');
   const msModeBtnEur     = document.getElementById('ms-mode-eur');
@@ -2124,7 +2137,7 @@ const projectJson = JSON.stringify(data);
     if (isEur) updateEurHint();
     else if (isDone) {
       const doneAmt = parseFloat(msTargetCard?.dataset.doneAmt ?? '0') || 0;
-      msPctHint.textContent = `La rata segue i lavori eseguiti dalla ditta, oggi ${fmtAmt(doneAmt)}. Per detrarre l’acconto usa la casella “− acconto” sulla riga.`;
+      msPctHint.textContent = `La rata segue i lavori eseguiti dalla ditta, oggi ${fmtAmt(doneAmt)}, e si aggiorna da sola man mano che il cantiere avanza.`;
     }
     else updatePctHint();
   }
@@ -2163,15 +2176,45 @@ const projectJson = JSON.stringify(data);
   msTriggerType.addEventListener('change', () => {
     msPctRow.style.display  = msTriggerType.value === 'percent' ? '' : 'none';
     msDateRow.style.display = msTriggerType.value === 'date'    ? '' : 'none';
+    refreshMsDedState();
   });
   msPctRow.style.display = 'none';
+
+  /**
+   * Tiene onesta la casella del modale: si può detrarre l'acconto solo se un
+   * acconto esiste, se non lo sta già detraendo un'altra rata, e se la milestone
+   * che si sta creando non è l'acconto stesso.
+   */
+  function refreshMsDedState() {
+    if (!msTargetCard) return;
+    const rows     = salRowsOf(msTargetCard);
+    const depRow   = rows.find(isSigningRow) ?? null;
+    const deposit  = depRow ? (parseFloat(depRow.querySelector('.sal-amt-input')?.value) || 0) : 0;
+    const takenRow = rows.find(r => !isSigningRow(r) && r.querySelector('.sal-ded-check')?.checked);
+    let reason = '';
+    if (deposit <= 0) reason = 'Nessun acconto da detrarre: manca una milestone con trigger “On signing”, o vale zero.';
+    else if (takenRow) {
+      const ref = takenRow.querySelector('.sal-ref-input')?.value?.trim() || 'un’altra rata';
+      reason = `L’acconto è già detratto da ${ref}: si può sottrarre una sola volta.`;
+    }
+    else if (msTriggerType.value === 'signing') reason = 'L’acconto non può detrarre sé stesso.';
+    const blocked = reason !== '';
+    msDed.disabled = blocked;
+    if (blocked) msDed.checked = false;
+    msDedRow.style.opacity = blocked ? '.45' : '1';
+    msDedHint.textContent = blocked
+      ? reason
+      : `Sottrae ${fmtAmt(deposit)} da questa rata. Tipico del primo SAL, che certifica tutti i lavori eseguiti.`;
+  }
 
   function openMsModal(card) {
     msTargetCard = card;
     msCtrName.textContent = card.querySelector('.ctr-name')?.textContent ?? '';
     msRef.value = ''; msLabel.value = ''; msPct.value = ''; msTriggerPct.value = ''; msEurInput.value = ''; msTriggerDate.value = '';
     msTriggerType.value = 'signing'; msPctRow.style.display = 'none'; msDateRow.style.display = 'none';
+    msDed.checked = false;
     setMsAmountMode('pctContract');
+    refreshMsDedState();
     msModal.classList.add('is-open'); msRef.focus();
   }
   function closeMsModal() { msModal.classList.remove('is-open'); msTargetCard = null; }
@@ -2201,7 +2244,8 @@ const projectJson = JSON.stringify(data);
       pct = parseFloat(msPct.value) || 0;
       if (base > 0) fixedAmt = base * pct / 100;
     }
-    // Deduct the acconto only if it is still available on this card
+    // La detrazione vale solo se è ancora disponibile su questa scheda
+    const deductDeposit = msDed.checked && !msDed.disabled && ttype !== 'signing';
     // "% del revised alla data": la fotografia si scatta adesso, alla creazione.
     const baseAmt  = amountMode === 'pct' ? budget : null;   // 'done' non ha base: la legge dai lavori
     const baseDate = amountMode === 'pct' ? new Date().toISOString().slice(0, 10) : null;
@@ -2209,8 +2253,9 @@ const projectJson = JSON.stringify(data);
     const totalRow = tbody.querySelector('.sal-total');
     const tr = document.createElement('tr');
     if (baseAmt != null) { tr.dataset.baseAmt = String(baseAmt); tr.dataset.baseDate = baseDate; }
-    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct, fixedAmt, amountMode, baseAmt, baseDate }, budget, contract);
+    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct, fixedAmt, amountMode, baseAmt, baseDate, deductDeposit }, budget, contract);
     tbody.insertBefore(tr, totalRow);
+    if (deductDeposit) enforceSingleDeduction(msTargetCard, tr);
     recalcCard(msTargetCard);
     syncSalFromCard(msTargetCard);
     closeMsModal();
