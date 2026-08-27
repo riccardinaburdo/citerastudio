@@ -70,6 +70,10 @@ const triggerLabel = (m: any) =>
 
 const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// Aliquota IVA del soggetto: assente = 10%, il caso normale.
+const vatOf    = (e: any) => (e?.vatRate ?? 10) as number;
+const vatLabel = (r: any) => (r ?? 10) === 0 ? 'No IVA' : `IVA ${r ?? 10}%`;
+
 // ── Acconto (deposit) handling ────────────────────────────────────────────
 // The "acconto" is the milestone with triggerType === 'signing'.
 // Exactly ONE other milestone may carry `deductDeposit: true`: its gross amount
@@ -602,6 +606,7 @@ const projectJson = JSON.stringify(data);
                   <span class="ctr-contract-note" style={`font-size:.6rem;color:var(--g3);margin-left:.4rem${Math.abs(budget - contract) < 0.01 ? ';display:none' : ''}`}>
                     · a contratto: <strong class="ctr-contract-val" style="color:var(--slate)">{fmt(contract)}</strong>
                   </span>
+                  <span style="font-size:.6rem;color:var(--g3);margin-left:.4rem">· <strong style="color:var(--slate)">{vatLabel(c.vatRate)}</strong></span>
                 </div>
                 {catBreakdown.length > 0 && (
                   <div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.3rem .6rem">
@@ -741,7 +746,7 @@ const projectJson = JSON.stringify(data);
                 <div class="ctr-contact">{t.contact}</div>
                 <div class="ctr-budget">
                   Fee: <strong class="ctr-budget-val">{fmt(t.fee)}</strong>
-                  <span style="font-size:.6rem;color:var(--g3)"> · manually entered · net ex. VAT</span>
+                  <span style="font-size:.6rem;color:var(--g3)"> · manually entered · net ex. VAT · <strong style="color:var(--slate)">{vatLabel(t.vatRate)}</strong></span>
                 </div>
               </div>
               <div class="ctr-actions">
@@ -1064,6 +1069,14 @@ const projectJson = JSON.stringify(data);
         <input id="ctr-contact-inp" type="text" placeholder="ing. Mario Rossi — +39 080 555 0000"
           style="width:100%;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
       </div>
+      <div>
+        <label>Aliquota IVA</label>
+        <select id="ctr-vat-inp" style="width:180px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff">
+          <option value="0">No IVA</option>
+          <option value="10" selected>10%</option>
+          <option value="22">22%</option>
+        </select>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="ctr-cancel-btn">Cancel</button>
@@ -1103,6 +1116,14 @@ const projectJson = JSON.stringify(data);
         <label>Total Fee <span style="font-size:.6rem;font-weight:400;color:var(--g3)">(net ex. VAT, €)</span></label>
         <input id="tec-fee-inp" type="number" min="0" step="0.01" placeholder="e.g. 12000"
           style="width:180px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:monospace" />
+      </div>
+      <div>
+        <label>Aliquota IVA</label>
+        <select id="tec-vat-inp" style="width:180px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans);background:#fff">
+          <option value="0">No IVA</option>
+          <option value="10" selected>10%</option>
+          <option value="22">22%</option>
+        </select>
       </div>
     </div>
     <div class="modal-footer">
@@ -2348,6 +2369,7 @@ const projectJson = JSON.stringify(data);
   const ctrNameInp   = document.getElementById('ctr-name-inp');
   const ctrTradeInp  = document.getElementById('ctr-trade-inp');
   const ctrContactInp= document.getElementById('ctr-contact-inp');
+  const ctrVatInp    = document.getElementById('ctr-vat-inp');
   let   ctrEditId    = null;
 
   function openCtrModal(ctr) {
@@ -2357,6 +2379,7 @@ const projectJson = JSON.stringify(data);
     ctrNameInp.value    = ctr?.name    ?? '';
     ctrTradeInp.value   = ctr?.trade   ?? '';
     ctrContactInp.value = ctr?.contact ?? '';
+    ctrVatInp.value     = String(ctr?.vatRate ?? 10);   // 10% è il caso normale
     ctrIdInp.disabled   = !!ctr;
     ctrModal.classList.add('is-open');
     ctrNameInp.focus();
@@ -2372,11 +2395,12 @@ const projectJson = JSON.stringify(data);
     const name    = ctrNameInp.value.trim();
     const trade   = ctrTradeInp.value.trim();
     const contact = ctrContactInp.value.trim();
+    const vatRate = parseInt(ctrVatInp.value, 10) || 0;
     if (!id || !name) { alert('ID and Name are required.'); return; }
 
     if (ctrEditId) {
       const ctr = state.contractors.find(c => c.id === ctrEditId);
-      if (ctr) { ctr.name = name; ctr.trade = trade; ctr.contact = contact; }
+      if (ctr) { ctr.name = name; ctr.trade = trade; ctr.contact = contact; ctr.vatRate = vatRate; }
       const card = document.querySelector(`.ctr-card[data-ctr-id="${ctrEditId}"]`);
       if (card) {
         card.querySelector('.ctr-name').textContent    = name;
@@ -2385,7 +2409,7 @@ const projectJson = JSON.stringify(data);
       }
     } else {
       if (state.contractors.find(c => c.id === id)) { alert('Contractor ID already exists.'); return; }
-      const newCtr = { id, name, trade, contact, sal: [] };
+      const newCtr = { id, name, trade, contact, vatRate, sal: [] };
       state.contractors.push(newCtr);
       const grid = document.querySelector('.contractor-grid');
       const div = document.createElement('div');
@@ -2470,6 +2494,7 @@ const projectJson = JSON.stringify(data);
   const tecRoleInp    = document.getElementById('tec-role-inp');
   const tecContactInp = document.getElementById('tec-contact-inp');
   const tecFeeInp     = document.getElementById('tec-fee-inp');
+  const tecVatInp     = document.getElementById('tec-vat-inp');
   let   tecEditId     = null;
 
   function openTecModal(tec) {
@@ -2480,6 +2505,7 @@ const projectJson = JSON.stringify(data);
     tecRoleInp.value    = tec?.role    ?? '';
     tecContactInp.value = tec?.contact ?? '';
     tecFeeInp.value     = tec?.fee     ?? '';
+    tecVatInp.value     = String(tec?.vatRate ?? 10);
     tecIdInp.disabled   = !!tec;
     tecModal.classList.add('is-open');
     tecNameInp.focus();
@@ -2496,11 +2522,12 @@ const projectJson = JSON.stringify(data);
     const role    = tecRoleInp.value.trim();
     const contact = tecContactInp.value.trim();
     const fee     = parseFloat(tecFeeInp.value) || 0;
+    const vatRate = parseInt(tecVatInp.value, 10) || 0;
     if (!id || !name) { alert('ID and Name are required.'); return; }
 
     if (tecEditId) {
       const tec = state.technicians.find(t => t.id === tecEditId);
-      if (tec) { tec.name = name; tec.role = role; tec.contact = contact; tec.fee = fee; }
+      if (tec) { tec.name = name; tec.role = role; tec.contact = contact; tec.fee = fee; tec.vatRate = vatRate; }
       const card = document.querySelector(`.tec-card[data-tec-id="${tecEditId}"]`);
       if (card) {
         card.dataset.budget = fee.toFixed(2);
@@ -2512,7 +2539,7 @@ const projectJson = JSON.stringify(data);
       }
     } else {
       if (state.technicians.find(t => t.id === id)) { alert('Technician ID already exists.'); return; }
-      const newTec = { id, name, role, contact, fee, sal: [] };
+      const newTec = { id, name, role, contact, fee, vatRate, sal: [] };
       state.technicians.push(newTec);
       const grid = document.getElementById('technician-grid');
       const div = document.createElement('div');

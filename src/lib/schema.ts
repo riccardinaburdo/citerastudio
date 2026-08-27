@@ -44,6 +44,12 @@ export interface Technician {
   role: string;    // e.g. "Architect", "Structural Engineer"
   contact: string;
   fee: number;     // total technical fee (net ex. VAT), manually entered
+  /**
+   * Aliquota IVA applicata ai pagamenti: 0 (fuori campo / esente), 10 o 22.
+   * Sta sul soggetto e non sulla categoria di lavori perché è così che viene
+   * fatturato. Assente = 10, il caso normale delle ristrutturazioni.
+   */
+  vatRate?: 0 | 10 | 22;
   sal: SalMilestone[];
 }
 
@@ -52,6 +58,12 @@ export interface Contractor {
   name: string;
   trade: string;
   contact: string;
+  /**
+   * Aliquota IVA applicata ai pagamenti: 0 (fuori campo / esente), 10 o 22.
+   * Sta sul soggetto e non sulla categoria di lavori perché è così che viene
+   * fatturato. Assente = 10, il caso normale delle ristrutturazioni.
+   */
+  vatRate?: 0 | 10 | 22;
   sal: SalMilestone[];
 }
 

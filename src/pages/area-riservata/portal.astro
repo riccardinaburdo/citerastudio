@@ -29,6 +29,10 @@ const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num
 // Importo di una milestone, come nel pannello admin: in modalità 'eur' è una
 // cifra forfettaria che non si riproporziona al variare del budget, in 'pct' è
 // una percentuale che lo segue. Senza budget si ricade sulla cifra.
+// Aliquota IVA del soggetto (fornitore o tecnico): assente = 10%.
+const vatOf    = (e: any) => (e?.vatRate ?? 10) as number;
+const vatLabel = (r: number) => r === 0 ? 'No IVA' : `IVA ${r}%`;
+
 const msAmount = (m: any, budget: number, contractBudget: number) => {
   const mode = m.amountMode ?? 'pct';
   if (mode === 'eur') return m.fixedAmt ?? 0;
@@ -175,7 +179,7 @@ const contractorSchedules = contractors.flatMap(c => {
   const lastPaid     = [...milestones].filter(m => m.status === 'paid').slice(-1)[0] ?? null;
   const lastPaidDate = lastPaid ? ((lastPaid as any).paidDate ?? (lastPaid as any).triggerDate ?? null) : null;
   const lastPaidPos  = lastPaid?.tickPos ?? 0;
-  return [{ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos }];
+  return [{ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos, vat: vatOf(c) }];
 });
 
 // Per-technician payment schedules — triggered by OVERALL project progress (totalPerc)
@@ -249,7 +253,7 @@ const technicianSchedules = technicians.flatMap((t: any) => {
   const pendingT = milestones.filter((m: any) => m.status !== 'paid').slice(1).reduce((s: number, m: any) => s + m.amount, 0);
   const lastPaidT     = [...milestones].filter((m: any) => m.status === 'paid').slice(-1)[0] ?? null;
   const lastPaidDateT = lastPaidT ? (lastPaidT.paidDate ?? lastPaidT.triggerDate ?? null) : null;
-  return [{ t, tFee: t.fee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT }];
+  return [{ t, tFee: t.fee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT, vat: vatOf(t) }];
 });
 
 const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -890,8 +894,9 @@ const fmtDate = (d: string) => {
       No payment schedules defined. Assign SAL milestones to contractors in the admin panel.
     </div>
   )}
-  {contractorSchedules.map(({ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos }) => {
+  {contractorSchedules.map(({ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos, vat }) => {
     const nextNetC   = nextC?.amount ?? 0;
+    const withVat    = (n: number) => n * (1 + vat / 100);
     const progNdC    = nextC ? Math.max(0, (nextC.workTriggerAt ?? nextC.triggerAt) - cPerc) : 0;
     return (
       <div class="payment-card">
@@ -902,6 +907,7 @@ const fmtDate = (d: string) => {
           </div>
           <div class="pay-contractor-stats">
             Budget: <strong>{fmt(cBudget)}</strong>
+            &nbsp;|&nbsp; <span style="font-weight:600">{vatLabel(vat)}</span>
             &nbsp;|&nbsp; Progress: <strong style={`color:${cPerc >= 100 ? 'var(--green)' : cPerc > 0 ? 'var(--orange)' : 'var(--slate)'}`}>{cPerc.toFixed(1)}%</strong>
           </div>
         </div>
@@ -909,14 +915,14 @@ const fmtDate = (d: string) => {
           <div class="pay-sum-item paid">
             <div class="pay-sum-label">Paid to Date</div>
             <div class="pay-sum-amount">{fmt(paidC)}</div>
-            <div class="pay-sum-sub">net ex. VAT</div>
+            <div class="pay-sum-sub">imponibile{vat > 0 && paidC > 0 ? ` — con IVA: ${fmt(withVat(paidC))}` : vat === 0 ? ' — No IVA' : ''}</div>
             {paidC > 0 && <div class="pay-sum-paid-note">&#10003; payments certified</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class={`pay-sum-item ${nextC ? (nextC.isDue ? 'next' : 'upcoming') : 'pending'}`}>
             <div class="pay-sum-label">{nextC ? (nextC.isDue ? '▶ Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
             <div class="pay-sum-amount">{nextC ? fmt(nextNetC) : '–'}</div>
-            {nextC && <div class="pay-sum-sub">net ex. VAT</div>}
+            {nextC && <div class="pay-sum-sub">imponibile{vat > 0 && nextNetC > 0 ? ` — con IVA: ${fmt(withVat(nextNetC))}` : vat === 0 ? ' — No IVA' : ''}</div>}
             {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
             {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'signing' && <div class="pay-sum-trigger">On contract signing</div>}
             {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'start'   && <div class="pay-sum-trigger">At start of works</div>}
@@ -929,7 +935,7 @@ const fmtDate = (d: string) => {
           <div class="pay-sum-item pending">
             <div class="pay-sum-label">Remaining After</div>
             <div class="pay-sum-amount">{fmt(pendingC)}</div>
-            <div class="pay-sum-sub">net ex. VAT</div>
+            <div class="pay-sum-sub">imponibile{vat > 0 && pendingC > 0 ? ` — con IVA: ${fmt(withVat(pendingC))}` : vat === 0 ? ' — No IVA' : ''}</div>
           </div>
         </div>
         <div class="pay-timeline-wrap">
@@ -970,7 +976,9 @@ const fmtDate = (d: string) => {
                 <th style="width:55px">Ref.</th>
                 <th>Milestone</th>
                 <th>Trigger</th>
-                <th class="right">Da pagare <span style="font-size:.6em;font-weight:400;opacity:.7">(net ex. VAT)</span></th>
+                <th class="right">Imponibile</th>
+                {vat > 0 && <th class="right">IVA {vat}%</th>}
+                {vat > 0 && <th class="right">Totale</th>}
                 <th style="width:100px">Status</th>
               </tr>
             </thead>
@@ -989,13 +997,17 @@ const fmtDate = (d: string) => {
                     )}
                   </td>
                   <td class="pay-col-trigger">{m.triggerNote}</td>
-                  <td class="pay-col-gross">{fmt(m.amount)}</td>
+                  <td class="pay-col-money">{fmt(m.amount)}</td>
+                  {vat > 0 && <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * vat / 100)}</td>}
+                  {vat > 0 && <td class="pay-col-gross">{fmt(withVat(m.amount))}</td>}
                   <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? (m.isDue ? 'Due' : 'Upcoming') : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
                 </tr>
               ))}
               <tr style="background:var(--grey-1)">
                 <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">CONTRACTOR TOTAL</td>
-                <td class="pay-col-gross" style="font-weight:700">{fmt(cBudget)}</td>
+                <td class="pay-col-money" style="font-weight:700; color:var(--navy)">{fmt(cBudget)}</td>
+                {vat > 0 && <td class="pay-col-money" style="font-weight:700; color:var(--slate)">{fmt(cBudget * vat / 100)}</td>}
+                {vat > 0 && <td class="pay-col-gross" style="font-weight:700">{fmt(withVat(cBudget))}</td>}
                 <td></td>
               </tr>
             </tbody>
@@ -1008,7 +1020,8 @@ const fmtDate = (d: string) => {
   {technicianSchedules.length > 0 && (
     <>
       <div class="section-title">Technical Fees — by Technician</div>
-      {technicianSchedules.map(({ t, tFee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT }: any) => {
+      {technicianSchedules.map(({ t, tFee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT, vat }: any) => {
+        const withVatT = (n: number) => n * (1 + vat / 100);
         const nextNetT = nextT?.amount ?? 0;
         return (
           <div class="payment-card">
@@ -1019,6 +1032,7 @@ const fmtDate = (d: string) => {
               </div>
               <div class="pay-contractor-stats">
                 Total Fee: <strong>{fmt(tFee)}</strong>
+                &nbsp;|&nbsp; <span style="font-weight:600">{vatLabel(vat)}</span>
                 &nbsp;|&nbsp; Overall Works: <strong style={`color:${totalPerc >= 100 ? 'var(--green)' : totalPerc > 0 ? 'var(--orange)' : 'var(--slate)'}`}>{totalPerc.toFixed(1)}%</strong>
               </div>
             </div>
@@ -1026,14 +1040,14 @@ const fmtDate = (d: string) => {
               <div class="pay-sum-item paid">
                 <div class="pay-sum-label">Paid to Date</div>
                 <div class="pay-sum-amount">{fmt(paidT)}</div>
-                <div class="pay-sum-sub">net ex. VAT</div>
+                <div class="pay-sum-sub">imponibile{vat > 0 && paidT > 0 ? ` — con IVA: ${fmt(withVatT(paidT))}` : vat === 0 ? ' — No IVA' : ''}</div>
                 {paidT > 0 && <div class="pay-sum-paid-note">&#10003; payments certified</div>}
               </div>
               <div class="pay-sum-arrow">&#8594;</div>
               <div class={`pay-sum-item ${nextT ? (nextT.isDue ? 'next' : 'upcoming') : 'pending'}`}>
                 <div class="pay-sum-label">{nextT ? (nextT.isDue ? '▶ Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
                 <div class="pay-sum-amount">{nextT ? fmt(nextNetT) : '–'}</div>
-                {nextT && <div class="pay-sum-sub">net ex. VAT</div>}
+                {nextT && <div class="pay-sum-sub">imponibile{vat > 0 && nextNetT > 0 ? ` — con IVA: ${fmt(withVatT(nextNetT))}` : vat === 0 ? ' — No IVA' : ''}</div>}
                 {nextT && nextT.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextT.triggerDate ?? '—'}</div>}
                 {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'signing'  && <div class="pay-sum-trigger">On contract signing</div>}
                 {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'start'    && <div class="pay-sum-trigger">At start of works</div>}
@@ -1046,7 +1060,7 @@ const fmtDate = (d: string) => {
               <div class="pay-sum-item pending">
                 <div class="pay-sum-label">Remaining After</div>
                 <div class="pay-sum-amount">{fmt(pendingT)}</div>
-                <div class="pay-sum-sub">net ex. VAT</div>
+                <div class="pay-sum-sub">imponibile{vat > 0 && pendingT > 0 ? ` — con IVA: ${fmt(withVatT(pendingT))}` : vat === 0 ? ' — No IVA' : ''}</div>
               </div>
             </div>
             <div class="pay-timeline-wrap">
@@ -1087,7 +1101,9 @@ const fmtDate = (d: string) => {
                     <th style="width:55px">Ref.</th>
                     <th>Milestone</th>
                     <th>Trigger</th>
-                    <th class="right">Amount <span style="font-size:.6em;font-weight:400;opacity:.7">(net ex. VAT)</span></th>
+                    <th class="right">Imponibile</th>
+                    {vat > 0 && <th class="right">IVA {vat}%</th>}
+                    {vat > 0 && <th class="right">Totale</th>}
                     <th style="width:100px">Status</th>
                   </tr>
                 </thead>
@@ -1107,12 +1123,16 @@ const fmtDate = (d: string) => {
                       </td>
                       <td class="pay-col-trigger">{m.triggerNote}</td>
                       <td class="pay-col-money">{fmt(m.amount)}</td>
+                      {vat > 0 && <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * vat / 100)}</td>}
+                      {vat > 0 && <td class="pay-col-gross">{fmt(withVatT(m.amount))}</td>}
                       <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? (m.isDue ? 'Due' : 'Upcoming') : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
                     </tr>
                   ))}
                   <tr style="background:var(--grey-1)">
-                    <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">TOTAL FEE (net ex. VAT)</td>
+                    <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">TOTAL FEE</td>
                     <td class="pay-col-money" style="font-weight:700; color:var(--navy)">{fmt(tFee)}</td>
+                    {vat > 0 && <td class="pay-col-money" style="font-weight:700; color:var(--slate)">{fmt(tFee * vat / 100)}</td>}
+                    {vat > 0 && <td class="pay-col-gross" style="font-weight:700">{fmt(withVatT(tFee))}</td>}
                     <td></td>
                   </tr>
                 </tbody>
