@@ -95,26 +95,10 @@ const contractorSchedules = contractors.flatMap(c => {
   const quantified   = c.sal.filter(m => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
   const unquantified = c.sal.filter(m => m.pct === 0 && !((m as any).fixedAmt) && m.triggerType === 'date');
 
-  // Acconto: the milestone triggered "on signing". At most one other milestone
-  // may deduct it (deductDeposit) — the deduction is applied exactly once.
-  const depM     = c.sal.find(m => m.triggerType === 'signing') ?? null;
-  const depAmt   = depM ? msAmount(depM, cBudget, cContract) : 0;
-  const dedIdx   = c.sal.findIndex(m => (m as any).deductDeposit === true && m.triggerType !== 'signing');
-  const dedId    = dedIdx >= 0 ? c.sal[dedIdx].id : null;
-  // Gli importi dei SAL sono cumulativi: si incassa l'incremento sul SAL
-  // precedente, meno l'acconto sul SAL dove è stato messo il recupero.
-  let prevCumC = 0;
 
   const milestones = quantified.map(m => {
-    const gross    = msAmount(m, cBudget, cContract);
-    const isDep    = m === depM;
-    const deposDed = (!isDep && dedId !== null && m.id === dedId) ? depAmt : 0;
-    const prevCum  = isDep ? 0 : prevCumC;
-    const amount   = isDep ? gross : gross - prevCum - deposDed;
-    if (!isDep) prevCumC = gross;
-    // Il tick sulla barra dei pagamenti va posizionato sulla CASSA cumulata:
-    // sommare le percentuali dei singoli importi non funziona più, perché quelli
-    // dei SAL sono già cumulativi e si finiva tutti schiacciati sul 100%.
+    // Ogni milestone è una rata: le rate si sommano fino al 100% del budget.
+    const amount   = msAmount(m, cBudget, cContract);
     const effPct   = cBudget > 0 ? (amount / cBudget) * 100 : (m.pct || 0);
     cumPct += effPct;
     const tickPos  = Math.min(cumPct, 100);
@@ -153,7 +137,7 @@ const contractorSchedules = contractors.flatMap(c => {
         isDue = m.triggerType === 'signing' || (m.triggerType === 'start' && cPerc > 0) || (workTriggerAt > 0 && cPerc >= workTriggerAt);
       } else { status = 'pending'; }
     }
-    return { ...m, pct: effPct, amount, gross, prevCum, deposDed, isDep, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, pct: effPct, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   // Collapsed "Remaining" block for unquantified date milestones
@@ -191,19 +175,9 @@ const technicianSchedules = technicians.flatMap((t: any) => {
   const quantified = t.sal.filter((m: any) => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
 
   // Acconto handling — identical rule to the contractors above
-  const depMT   = t.sal.find((m: any) => m.triggerType === 'signing') ?? null;
-  const depAmtT = depMT ? msAmount(depMT, t.fee, t.fee) : 0;
-  const dedMT   = t.sal.find((m: any) => m.deductDeposit === true && m.triggerType !== 'signing') ?? null;
-  const dedIdT  = dedMT ? dedMT.id : null;
-  let prevCumT = 0;
 
   const milestones = quantified.map((m: any) => {
-    const gross    = msAmount(m, t.fee, t.fee);
-    const isDep    = m === depMT;
-    const deposDed = (!isDep && dedIdT !== null && m.id === dedIdT) ? depAmtT : 0;
-    const prevCum  = isDep ? 0 : prevCumT;
-    const amount   = isDep ? gross : gross - prevCum - deposDed;
-    if (!isDep) prevCumT = gross;
+    const amount   = msAmount(m, t.fee, t.fee);
     const effPct   = t.fee > 0 ? (amount / t.fee) * 100 : (m.pct || 0);
     cumPctT += effPct;
     const tickPos = Math.min(cumPctT, 100);
@@ -244,7 +218,7 @@ const technicianSchedules = technicians.flatMap((t: any) => {
              || (m.triggerType === 'percent' && totalPerc >= (m.triggerPct ?? 0));
       } else { status = 'pending'; }
     }
-    return { ...m, pct: effPct, amount, gross, prevCum, deposDed, isDep, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, pct: effPct, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   const paidT    = milestones.filter((m: any) => m.status === 'paid').reduce((s: number, m: any) => s + m.amount, 0);
@@ -988,13 +962,6 @@ const fmtDate = (d: string) => {
                   <td class="pay-col-id">{m.id}</td>
                   <td class="pay-col-label">
                     {m.label}
-                    {!(m as any).isDep && ((m as any).prevCum > 0 || (m as any).deposDed > 0) && (
-                      <span style="display:block;font-size:.66rem;color:var(--slate);margin-top:.1rem">
-                        cumulato {fmt((m as any).gross)}
-                        {(m as any).prevCum > 0 ? ` − ${fmt((m as any).prevCum)} SAL prec.` : ''}
-                        {(m as any).deposDed > 0 ? ` − ${fmt((m as any).deposDed)} acconto` : ''}
-                      </span>
-                    )}
                   </td>
                   <td class="pay-col-trigger">{m.triggerNote}</td>
                   <td class="pay-col-money">{fmt(m.amount)}</td>
@@ -1113,13 +1080,6 @@ const fmtDate = (d: string) => {
                       <td class="pay-col-id">{m.id}</td>
                       <td class="pay-col-label">
                         {m.label}
-                        {!m.isDep && (m.prevCum > 0 || m.deposDed > 0) && (
-                          <span style="display:block;font-size:.66rem;color:var(--slate);margin-top:.1rem">
-                            cumulato {fmt(m.gross)}
-                            {m.prevCum > 0 ? ` − ${fmt(m.prevCum)} SAL prec.` : ''}
-                            {m.deposDed > 0 ? ` − ${fmt(m.deposDed)} acconto` : ''}
-                          </span>
-                        )}
                       </td>
                       <td class="pay-col-trigger">{m.triggerNote}</td>
                       <td class="pay-col-money">{fmt(m.amount)}</td>

@@ -29,13 +29,6 @@ export interface SalMilestone {
   baseDate?: string;
   paid?: boolean;     // manually certified as paid
   paidDate?: string;  // ISO date of actual payment
-  /**
-   * Recupera l'acconto su QUESTA milestone. Gli importi dei SAL sono cumulativi
-   * e ogni SAL detrae già da sé il cumulato precedente; l'acconto invece resta
-   * fuori dal conteggio finché non lo si recupera qui, esplicitamente.
-   * Vincolo: al massimo UNA milestone per fornitore/tecnico, mai l'acconto stesso.
-   */
-  deductDeposit?: boolean;
 }
 
 export interface Technician {
