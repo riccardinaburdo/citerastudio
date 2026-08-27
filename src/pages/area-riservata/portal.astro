@@ -103,16 +103,17 @@ const contractorSchedules = contractors.flatMap(c => {
 
   const milestones = quantified.map(m => {
     const gross    = msAmount(m, cBudget, cContract);
-    // Percentuale derivata dall'importo: quella memorizzata è stantia per le
-    // milestone a cifra fissa se il budget è cambiato dopo il salvataggio.
-    const effPct   = cBudget > 0 ? (gross / cBudget) * 100 : (m.pct || 0);
-    cumPct += effPct;
-    const tickPos  = Math.min(cumPct, 100);
     const isDep    = m === depM;
     const deposDed = (!isDep && dedId !== null && m.id === dedId) ? depAmt : 0;
     const prevCum  = isDep ? 0 : prevCumC;
     const amount   = isDep ? gross : gross - prevCum - deposDed;
     if (!isDep) prevCumC = gross;
+    // Il tick sulla barra dei pagamenti va posizionato sulla CASSA cumulata:
+    // sommare le percentuali dei singoli importi non funziona più, perché quelli
+    // dei SAL sono già cumulativi e si finiva tutti schiacciati sul 100%.
+    const effPct   = cBudget > 0 ? (amount / cBudget) * 100 : (m.pct || 0);
+    cumPct += effPct;
+    const tickPos  = Math.min(cumPct, 100);
     // Two different axes, deliberately kept apart:
     //  · triggerAt     = position on the PAYMENTS bar   → cumulative payment share (tickPos)
     //  · workTriggerAt = threshold on the WORK PROGRESS  → the milestone's own triggerPct,
@@ -194,14 +195,14 @@ const technicianSchedules = technicians.flatMap((t: any) => {
 
   const milestones = quantified.map((m: any) => {
     const gross    = msAmount(m, t.fee, t.fee);
-    const effPct   = t.fee > 0 ? (gross / t.fee) * 100 : (m.pct || 0);
-    cumPctT += effPct;
-    const tickPos = cumPctT;
     const isDep    = m === depMT;
     const deposDed = (!isDep && dedIdT !== null && m.id === dedIdT) ? depAmtT : 0;
     const prevCum  = isDep ? 0 : prevCumT;
     const amount   = isDep ? gross : gross - prevCum - deposDed;
     if (!isDep) prevCumT = gross;
+    const effPct   = t.fee > 0 ? (amount / t.fee) * 100 : (m.pct || 0);
+    cumPctT += effPct;
+    const tickPos = Math.min(cumPctT, 100);
 
     // Same split as the contractors above: triggerAt positions the tick on the
     // payments bar, workTriggerAt is the overall-works % that actually releases it.
@@ -660,7 +661,6 @@ const fmtDate = (d: string) => {
       <div class="metric-label">Revised Budget <span style="font-weight:400;text-transform:none;letter-spacing:0">(net ex. VAT)</span></div>
       <div class="metric-value">{fmt(totalRevised)}</div>
       <div class="metric-sub">
-        inc. VAT 10%: {fmt(totalRevised * 1.10)}
         {totalVariation !== 0 && (
           <div style={`margin-top:.5rem;padding:.5rem .65rem;border-radius:6px;background:${totalVariation < 0 ? '#f0fdf4' : '#fff7ed'};border:1px solid ${totalVariation < 0 ? '#bbf7d0' : '#fed7aa'}`}>
             <div style={`font-size:.68rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:${totalVariation < 0 ? '#15803d' : '#c2410c'};margin-bottom:.2rem`}>
@@ -892,8 +892,6 @@ const fmtDate = (d: string) => {
   )}
   {contractorSchedules.map(({ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos }) => {
     const nextNetC   = nextC?.amount ?? 0;
-    const nextVatC   = nextNetC * 0.10;
-    const nextGrossC = nextNetC + nextVatC;
     const progNdC    = nextC ? Math.max(0, (nextC.workTriggerAt ?? nextC.triggerAt) - cPerc) : 0;
     return (
       <div class="payment-card">
@@ -911,14 +909,14 @@ const fmtDate = (d: string) => {
           <div class="pay-sum-item paid">
             <div class="pay-sum-label">Paid to Date</div>
             <div class="pay-sum-amount">{fmt(paidC)}</div>
-            <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(paidC * 1.10)}</div>
+            <div class="pay-sum-sub">net ex. VAT</div>
             {paidC > 0 && <div class="pay-sum-paid-note">&#10003; payments certified</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class={`pay-sum-item ${nextC ? (nextC.isDue ? 'next' : 'upcoming') : 'pending'}`}>
             <div class="pay-sum-label">{nextC ? (nextC.isDue ? '▶ Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
             <div class="pay-sum-amount">{nextC ? fmt(nextNetC) : '–'}</div>
-            {nextC && <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(nextGrossC)}</div>}
+            {nextC && <div class="pay-sum-sub">net ex. VAT</div>}
             {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
             {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'signing' && <div class="pay-sum-trigger">On contract signing</div>}
             {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'start'   && <div class="pay-sum-trigger">At start of works</div>}
@@ -931,7 +929,7 @@ const fmtDate = (d: string) => {
           <div class="pay-sum-item pending">
             <div class="pay-sum-label">Remaining After</div>
             <div class="pay-sum-amount">{fmt(pendingC)}</div>
-            <div class="pay-sum-sub">ex. VAT &nbsp;|&nbsp; inc. VAT: {fmt(pendingC * 1.10)}</div>
+            <div class="pay-sum-sub">net ex. VAT</div>
           </div>
         </div>
         <div class="pay-timeline-wrap">
@@ -949,7 +947,7 @@ const fmtDate = (d: string) => {
               <div class={`pay-tick ${m.status}`} style={`left:${m.tickPos}%`}>
                 <div class="pay-tick-id">{m.id}</div>
                 <div class="pay-tick-dot"></div>
-                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : m.triggerAt + '%'}</div>
+                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : Math.round(m.triggerAt) + '%'}</div>
               </div>
             ))}
             {lastPaidDate && (
@@ -972,9 +970,7 @@ const fmtDate = (d: string) => {
                 <th style="width:55px">Ref.</th>
                 <th>Milestone</th>
                 <th>Trigger</th>
-                <th class="right">Net (ex. VAT)</th>
-                <th class="right">VAT 10%</th>
-                <th class="right">Total inc. VAT</th>
+                <th class="right">Da pagare <span style="font-size:.6em;font-weight:400;opacity:.7">(net ex. VAT)</span></th>
                 <th style="width:100px">Status</th>
               </tr>
             </thead>
@@ -993,17 +989,13 @@ const fmtDate = (d: string) => {
                     )}
                   </td>
                   <td class="pay-col-trigger">{m.triggerNote}</td>
-                  <td class="pay-col-money">{fmt(m.amount)}</td>
-                  <td class="pay-col-money" style="color:var(--slate)">{fmt(m.amount * 0.10)}</td>
-                  <td class="pay-col-gross">{fmt(m.amount * 1.10)}</td>
+                  <td class="pay-col-gross">{fmt(m.amount)}</td>
                   <td><span class={`pay-badge ${m.status}`}>{m.status === 'next' ? (m.isDue ? 'Due' : 'Upcoming') : m.status === 'paid' ? 'Paid' : 'Pending'}</span></td>
                 </tr>
               ))}
               <tr style="background:var(--grey-1)">
                 <td colspan="3" style="text-align:right; padding-right:1rem; font-size:0.72rem; font-weight:600; color:var(--slate); letter-spacing:.04em">CONTRACTOR TOTAL</td>
-                <td class="pay-col-money" style="font-weight:700; color:var(--navy)">{fmt(cBudget)}</td>
-                <td class="pay-col-money" style="font-weight:700; color:var(--slate)">{fmt(cBudget * 0.10)}</td>
-                <td class="pay-col-gross">{fmt(cBudget * 1.10)}</td>
+                <td class="pay-col-gross" style="font-weight:700">{fmt(cBudget)}</td>
                 <td></td>
               </tr>
             </tbody>
@@ -1072,7 +1064,7 @@ const fmtDate = (d: string) => {
                   <div class={`pay-tick ${m.status}`} style={`left:${m.tickPos}%`}>
                     <div class="pay-tick-id">{m.id}</div>
                     <div class="pay-tick-dot"></div>
-                    <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : m.triggerAt + '%'}</div>
+                    <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : Math.round(m.triggerAt) + '%'}</div>
                   </div>
                 ))}
                 {lastPaidDateT && (
