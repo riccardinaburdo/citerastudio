@@ -5,15 +5,19 @@ export interface SalMilestone {
   triggerPct: number | null;
   triggerDate?: string;
   /**
-   * Come è definito l'importo della milestone:
-   *  - 'pct' (default): è una percentuale del budget. Se il budget cambia,
-   *    l'importo in euro si riproporziona.
-   *  - 'eur': è una cifra forfettaria pattuita. Resta quella qualunque cosa
-   *    succeda al budget; la percentuale diventa un valore derivato.
+   * Su cosa è calcolato l'importo della milestone:
+   *  - 'pct' (default): percentuale dell'importo RIDETERMINATO del fornitore
+   *    (varianti ed extra compresi). Si riproporziona quando il budget cambia.
+   *    È la base giusta per i SAL, che certificano i lavori effettivamente svolti.
+   *  - 'pctContract': percentuale dell'importo CONTRATTUALE, cioè quantità
+   *    contrattata × prezzo delle sole voci a contratto, senza varianti né extra.
+   *    È la base giusta per l'acconto, che si paga alla firma su quell'importo:
+   *    varianti ed extra decisi dopo non lo spostano.
+   *  - 'eur': cifra forfettaria. Non si muove mai; la percentuale è derivata.
    * Assente = 'pct', così le milestone già salvate non cambiano comportamento.
    */
-  amountMode?: 'pct' | 'eur';
-  pct: number;        // % of budget/fee — autoritativa solo in modalità 'pct'
+  amountMode?: 'pct' | 'pctContract' | 'eur';
+  pct: number;        // % della propria base — autoritativa nelle due modalità percentuali
   fixedAmt?: number;  // importo in euro — autoritativo in modalità 'eur'
   paid?: boolean;     // manually certified as paid
   paidDate?: string;  // ISO date of actual payment

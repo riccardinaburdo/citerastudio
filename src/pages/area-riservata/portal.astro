@@ -29,8 +29,12 @@ const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num
 // Importo di una milestone, come nel pannello admin: in modalità 'eur' è una
 // cifra forfettaria che non si riproporziona al variare del budget, in 'pct' è
 // una percentuale che lo segue. Senza budget si ricade sulla cifra.
-const msAmount = (m: any, budget: number) =>
-  m.amountMode === 'eur' || !(budget > 0) ? (m.fixedAmt ?? 0) : budget * (m.pct || 0) / 100;
+const msAmount = (m: any, budget: number, contractBudget: number) => {
+  const mode = m.amountMode ?? 'pct';
+  if (mode === 'eur') return m.fixedAmt ?? 0;
+  const base = mode === 'pctContract' ? contractBudget : budget;
+  return base > 0 ? base * (m.pct || 0) / 100 : (m.fixedAmt ?? 0);
+};
 
 // Stessa logica del pannello admin: le voci extra hanno quantità contrattata,
 // revised budget e avanzamento come tutte le altre. Solo `budget` (l'importo
@@ -72,6 +76,9 @@ const totalLeft      = totalRevised - totalDone;
 const contractorSchedules = contractors.flatMap(c => {
   const allItems = enrichedCats.flatMap(cat => cat.items).filter(i => i.contractor === c.id);   // extra compresi
   const cBudget  = allItems.reduce((s, i) => s + i.revisedBudget, 0);
+  // Importo contrattuale del fornitore: base delle milestone in modalità
+  // "% del contratto", tipicamente l'acconto. Varianti ed extra non lo toccano.
+  const cContract = allItems.reduce((s, i) => s + (i.extra ? 0 : i.contracted), 0);
   if (cBudget === 0 || !c.sal || c.sal.length === 0) return [];
   const cDone    = allItems.reduce((s, i) => s + i.valueDone, 0);
   const cPerc    = (cDone / cBudget) * 100;
@@ -85,12 +92,12 @@ const contractorSchedules = contractors.flatMap(c => {
   // Acconto: the milestone triggered "on signing". At most one other milestone
   // may deduct it (deductDeposit) — the deduction is applied exactly once.
   const depM     = c.sal.find(m => m.triggerType === 'signing') ?? null;
-  const depAmt   = depM ? msAmount(depM, cBudget) : 0;
+  const depAmt   = depM ? msAmount(depM, cBudget, cContract) : 0;
   const dedIdx   = c.sal.findIndex(m => (m as any).deductDeposit === true && m.triggerType !== 'signing');
   const dedId    = dedIdx >= 0 ? c.sal[dedIdx].id : null;
 
   const milestones = quantified.map(m => {
-    const gross    = msAmount(m, cBudget);
+    const gross    = msAmount(m, cBudget, cContract);
     // Percentuale derivata dall'importo: quella memorizzata è stantia per le
     // milestone a cifra fissa se il budget è cambiato dopo il salvataggio.
     const effPct   = cBudget > 0 ? (gross / cBudget) * 100 : (m.pct || 0);
@@ -172,12 +179,12 @@ const technicianSchedules = technicians.flatMap((t: any) => {
 
   // Acconto handling — identical rule to the contractors above
   const depMT   = t.sal.find((m: any) => m.triggerType === 'signing') ?? null;
-  const depAmtT = depMT ? msAmount(depMT, t.fee) : 0;
+  const depAmtT = depMT ? msAmount(depMT, t.fee, t.fee) : 0;
   const dedMT   = t.sal.find((m: any) => m.deductDeposit === true && m.triggerType !== 'signing') ?? null;
   const dedIdT  = dedMT ? dedMT.id : null;
 
   const milestones = quantified.map((m: any) => {
-    const gross    = msAmount(m, t.fee);
+    const gross    = msAmount(m, t.fee, t.fee);
     const effPct   = t.fee > 0 ? (gross / t.fee) * 100 : (m.pct || 0);
     cumPctT += effPct;
     const tickPos = cumPctT;

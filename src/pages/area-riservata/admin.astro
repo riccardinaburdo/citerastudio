@@ -37,9 +37,12 @@ const enrich = (item: any) => {
 };
 const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
 
-// Budget per fornitore = somma dei revised budget delle sue voci, EXTRA COMPRESI:
-// è l'importo su cui vengono calcolate le percentuali delle milestone SAL.
-const ctrBudgets = new Map<string, { budget: number; itemCount: number }>();
+// Due importi per fornitore, che servono a cose diverse:
+//  · budget         = rideterminato, varianti ed extra compresi. Base dei SAL.
+//  · contractBudget = contrattuale, quantità a contratto × prezzo delle sole voci
+//                     non extra. Base dell'acconto: è l'importo firmato, e
+//                     varianti ed extra decisi dopo non devono spostarlo.
+const ctrBudgets = new Map<string, { budget: number; contractBudget: number; itemCount: number }>();
 for (const cat of categories) {
   for (const item of cat.items) {
     if (item.contractor) {
@@ -47,8 +50,13 @@ for (const cat of categories) {
       const varQty   = parseFloat((item as any).variation)      || 0;
       const price    = parseFloat(item.price)                   || 0;
       const revised  = (qty + varQty) * price;
-      const cur = ctrBudgets.get(item.contractor) ?? { budget: 0, itemCount: 0 };
-      ctrBudgets.set(item.contractor, { budget: cur.budget + revised, itemCount: cur.itemCount + 1 });
+      const contract = item.extra ? 0 : qty * price;
+      const cur = ctrBudgets.get(item.contractor) ?? { budget: 0, contractBudget: 0, itemCount: 0 };
+      ctrBudgets.set(item.contractor, {
+        budget:         cur.budget + revised,
+        contractBudget: cur.contractBudget + contract,
+        itemCount:      cur.itemCount + 1,
+      });
     }
   }
 }
@@ -71,23 +79,33 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionD
 // autoritativo e NON si riproporziona quando il budget del fornitore cambia:
 // è il caso dell'acconto forfettario. In modalità 'pct' l'importo segue il
 // budget. Senza budget non esiste percentuale, quindi si ricade sulla cifra.
-const isFixedMs = (m: any) => m.amountMode === 'eur';
-const msAmount = (m: any, budget: number) =>
-  isFixedMs(m) || !(budget > 0) ? (m.fixedAmt ?? 0) : budget * (m.pct || 0) / 100;
-// Percentuale effettiva sul budget: autoritativa in 'pct', derivata in 'eur'.
-const msPct = (m: any, budget: number) =>
-  budget > 0 ? (msAmount(m, budget) / budget) * 100 : (m.pct || 0);
+const msMode    = (m: any) => m.amountMode ?? 'pct';
+const isFixedMs = (m: any) => msMode(m) === 'eur';
+// Base su cui si applica la percentuale della milestone.
+const msBase = (m: any, budget: number, contractBudget: number) =>
+  msMode(m) === 'pctContract' ? contractBudget : budget;
+const msAmount = (m: any, budget: number, contractBudget: number) => {
+  if (isFixedMs(m)) return m.fixedAmt ?? 0;
+  const base = msBase(m, budget, contractBudget);
+  return base > 0 ? base * (m.pct || 0) / 100 : (m.fixedAmt ?? 0);
+};
+// Percentuale mostrata nella colonna %: nelle due modalità percentuali è quella
+// digitata (riferita alla propria base); in 'eur' è derivata dal rideterminato.
+const msPct = (m: any, budget: number, contractBudget: number) =>
+  isFixedMs(m)
+    ? (budget > 0 ? (msAmount(m, budget, contractBudget) / budget) * 100 : (m.pct || 0))
+    : (m.pct || 0);
 
-const salTotals = (sal: any[], budget: number) => {
+const salTotals = (sal: any[], budget: number, contractBudget: number) => {
   const list       = sal ?? [];
-  // Con modalità miste il conto si fa in euro: le percentuali da sole non
-  // descrivono più il totale, perché una parte è pattuita a cifra fissa.
-  const grossTotal = list.reduce((s: number, m: any) => s + msAmount(m, budget), 0);
+  // Con basi e modalità miste il conto si fa in euro: le percentuali da sole non
+  // descrivono più il piano, perché sono riferite a basi diverse.
+  const grossTotal = list.reduce((s: number, m: any) => s + msAmount(m, budget, contractBudget), 0);
   const totalPct   = budget > 0 ? (grossTotal / budget) * 100 : list.reduce((s: number, m: any) => s + (m.pct || 0), 0);
   const depM       = list.find((m: any) => m.triggerType === 'signing') ?? null;
-  const depAmt     = depM ? msAmount(depM, budget) : 0;
+  const depAmt     = depM ? msAmount(depM, budget, contractBudget) : 0;
   const dedM       = list.find((m: any) => m.deductDeposit === true && m.triggerType !== 'signing') ?? null;
-  const deduction  = dedM ? Math.min(depAmt, msAmount(dedM, budget)) : 0;
+  const deduction  = dedM ? Math.min(depAmt, msAmount(dedM, budget, contractBudget)) : 0;
   const netTotal   = grossTotal - deduction;
   // Il piano è coerente quando il netto da incassare copre esattamente il budget.
   // Senza budget (fornitore ancora senza voci) ci si accontenta del 100%.
@@ -211,10 +229,9 @@ const projectJson = JSON.stringify(data);
     .sal-add-row { margin-top:.5rem; }
     /* Modalità importo (€ fisso) e detrazione acconto: entrambe nella cella Amount */
     .sal-mode-wrap { display:flex; align-items:center; justify-content:flex-end; margin-top:.18rem; }
-    .sal-mode-lbl  { display:inline-flex; align-items:center; gap:.2rem; font-size:.62rem; color:var(--slate);
-                     cursor:pointer; user-select:none; white-space:nowrap; }
-    .sal-mode-lbl input { width:12px; height:12px; cursor:pointer; accent-color:var(--navy); }
-    .sal-mode-lbl:has(input:checked) { color:var(--navy); font-weight:600; }
+    .sal-mode-select { font-size:.6rem; font-family:var(--sans); color:var(--slate); background:#fff;
+                       border:1px solid var(--g2); border-radius:4px; padding:.1rem .15rem; cursor:pointer; max-width:120px; }
+    .sal-mode-select:focus { outline:none; border-color:var(--navy); }
     .sal-ded-wrap { display:flex; align-items:center; justify-content:flex-end; gap:.3rem; margin-top:.18rem; }
     .sal-ded-lbl  { display:inline-flex; align-items:center; gap:.2rem; font-size:.62rem; color:var(--slate);
                     cursor:pointer; user-select:none; white-space:nowrap; }
@@ -527,11 +544,13 @@ const projectJson = JSON.stringify(data);
     <div class="contractor-grid">
       {contractors.map(c => {
         const info   = ctrBudgets.get(c.id) ?? { budget: 0, itemCount: 0 };
-        const budget = info.budget;
-        const st     = salTotals(c.sal, budget);
-        // Per-category breakdown for this contractor
+        const budget   = info.budget;
+        const contract = info.contractBudget;
+        const st       = salTotals(c.sal, budget, contract);
+        // Dettaglio per categoria: stessa formula del budget in intestazione,
+        // extra compresi, altrimenti le due cifre non tornano.
         const catBreakdown = categories.map(cat => {
-          const items = cat.items.filter((i: any) => !i.extra && i.contractor === c.id);
+          const items = cat.items.filter((i: any) => i.contractor === c.id);
           if (items.length === 0) return null;
           const catTotal = items.reduce((s: number, i: any) => {
             const q = parseFloat(i.qty) || 0;
@@ -542,7 +561,7 @@ const projectJson = JSON.stringify(data);
           return { id: cat.id, label: cat.label, total: catTotal, count: items.length };
         }).filter(Boolean);
         return (
-          <div class="card ctr-card" data-budget={budget.toFixed(2)} data-ctr-id={c.id}>
+          <div class="card ctr-card" data-budget={budget.toFixed(2)} data-contract-budget={contract.toFixed(2)} data-ctr-id={c.id}>
             <div class="ctr-header">
               <div>
                 <div class="ctr-name">{c.name}</div>
@@ -552,6 +571,9 @@ const projectJson = JSON.stringify(data);
                   Budget: <strong class="ctr-budget-val">{fmt(budget)}</strong>
                   <span class="auto-tag">auto</span>
                   <span style="font-size:.6rem;color:var(--g3)">· {info.itemCount} items (net ex. VAT)</span>
+                  <span class="ctr-contract-note" style={`font-size:.6rem;color:var(--g3);margin-left:.4rem${Math.abs(budget - contract) < 0.01 ? ';display:none' : ''}`}>
+                    · a contratto: <strong class="ctr-contract-val" style="color:var(--slate)">{fmt(contract)}</strong>
+                  </span>
                 </div>
                 {catBreakdown.length > 0 && (
                   <div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.3rem .6rem">
@@ -599,12 +621,13 @@ const projectJson = JSON.stringify(data);
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>
-                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, budget).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, budget, contract).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
                       <div class="sal-mode-wrap">
-                        <label class="sal-mode-lbl" title="Importo forfettario: non si riproporziona se cambia il budget">
-                          <input class="sal-fixed-check" type="checkbox" checked={isFixedMs(m)} />
-                          <span>&#8364; fisso</span>
-                        </label>
+                        <select class="sal-mode-select" title="Su cosa è calcolato questo importo">
+                          <option value="pctContract" selected={msMode(m) === 'pctContract'}>% del contratto</option>
+                          <option value="pct"         selected={msMode(m) === 'pct'}>% del rideterminato</option>
+                          <option value="eur"         selected={msMode(m) === 'eur'}>&#8364; fisso</option>
+                        </select>
                       </div>
                       <div class="sal-ded-wrap" style={m.triggerType === 'signing' ? 'display:none' : ''}>
                         <label class="sal-ded-lbl">
@@ -615,7 +638,7 @@ const projectJson = JSON.stringify(data);
                       </div>
                     </td>
                     <td style="text-align:right;white-space:nowrap">
-                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, budget).toFixed(6))} readonly={isFixedMs(m)} title={isFixedMs(m) ? 'Derivata dall\u2019importo fisso' : 'Percentuale del budget'} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
+                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, budget, contract).toFixed(6))} readonly={isFixedMs(m)} title={isFixedMs(m) ? 'Derivata dall\u2019importo fisso' : (msMode(m) === 'pctContract' ? 'Percentuale dell\u2019importo contrattuale' : 'Percentuale dell\u2019importo rideterminato')} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
                       <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
                     </td>
                     <td style="text-align:center;white-space:nowrap">
@@ -628,7 +651,14 @@ const projectJson = JSON.stringify(data);
                   </tr>
                 ))}
                 <tr class="sal-total">
-                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
+                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">
+                    TOTAL
+                    <span class="sal-gap" style={`font-size:.66rem;font-weight:600;letter-spacing:0;margin-left:.5rem;color:var(--red)${st.ok ? ';display:none' : ''}`}>
+                      {st.netTotal < budget - 0.01
+                        ? `scoperto ${fmt(budget - st.netTotal)}`
+                        : `eccedenza ${fmt(st.netTotal - budget)}`}
+                    </span>
+                  </td>
                   <td class="sal-amt sal-total-amt-eur" style={`text-align:right;font-family:monospace;font-weight:700;color:${st.deduction > 0 ? 'var(--slate)' : (st.ok ? 'var(--green)' : 'var(--red)')}`}>
                     {fmt(st.grossTotal)}
                   </td>
@@ -670,9 +700,9 @@ const projectJson = JSON.stringify(data);
     </div>
     <div class="contractor-grid" id="technician-grid">
       {(technicians ?? []).map(t => {
-        const st = salTotals(t.sal, t.fee);
+        const st = salTotals(t.sal, t.fee, t.fee);   // parcella unica: nessuna distinzione contratto/rideterminato
         return (
-          <div class="card tec-card" data-budget={t.fee.toFixed(2)} data-tec-id={t.id}>
+          <div class="card tec-card" data-budget={t.fee.toFixed(2)} data-contract-budget={t.fee.toFixed(2)} data-tec-id={t.id}>
             <div class="ctr-header">
               <div>
                 <div class="ctr-name">{t.name}</div>
@@ -719,12 +749,13 @@ const projectJson = JSON.stringify(data);
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>
-                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, t.fee).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, t.fee, t.fee).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
                       <div class="sal-mode-wrap">
-                        <label class="sal-mode-lbl" title="Importo forfettario: non si riproporziona se cambia il budget">
-                          <input class="sal-fixed-check" type="checkbox" checked={isFixedMs(m)} />
-                          <span>&#8364; fisso</span>
-                        </label>
+                        <select class="sal-mode-select" title="Su cosa è calcolato questo importo">
+                          <option value="pctContract" selected={msMode(m) === 'pctContract'}>% del contratto</option>
+                          <option value="pct"         selected={msMode(m) === 'pct'}>% del rideterminato</option>
+                          <option value="eur"         selected={msMode(m) === 'eur'}>&#8364; fisso</option>
+                        </select>
                       </div>
                       <div class="sal-ded-wrap" style={m.triggerType === 'signing' ? 'display:none' : ''}>
                         <label class="sal-ded-lbl">
@@ -735,7 +766,7 @@ const projectJson = JSON.stringify(data);
                       </div>
                     </td>
                     <td style="text-align:right;white-space:nowrap">
-                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, t.fee).toFixed(6))} readonly={isFixedMs(m)} title={isFixedMs(m) ? 'Derivata dall\u2019importo fisso' : 'Percentuale del budget'} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
+                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, t.fee, t.fee).toFixed(6))} readonly={isFixedMs(m)} title={isFixedMs(m) ? 'Derivata dall\u2019importo fisso' : (msMode(m) === 'pctContract' ? 'Percentuale dell\u2019importo contrattuale' : 'Percentuale dell\u2019importo rideterminato')} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
                       <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
                     </td>
                     <td style="text-align:center;white-space:nowrap">
@@ -748,7 +779,14 @@ const projectJson = JSON.stringify(data);
                   </tr>
                 ))}
                 <tr class="sal-total">
-                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">TOTAL</td>
+                  <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">
+                    TOTAL
+                    <span class="sal-gap" style={`font-size:.66rem;font-weight:600;letter-spacing:0;margin-left:.5rem;color:var(--red)${st.ok ? ';display:none' : ''}`}>
+                      {st.netTotal < t.fee - 0.01
+                        ? `scoperto ${fmt(t.fee - st.netTotal)}`
+                        : `eccedenza ${fmt(st.netTotal - t.fee)}`}
+                    </span>
+                  </td>
                   <td class="sal-amt sal-total-amt-eur" style={`text-align:right;font-family:monospace;font-weight:700;color:${st.deduction > 0 ? 'var(--slate)' : (st.ok ? 'var(--green)' : 'var(--red)')}`}>
                     {fmt(st.grossTotal)}
                   </td>
@@ -1079,13 +1117,15 @@ const projectJson = JSON.stringify(data);
       <div>
         <label>Payment amount</label>
         <div style="display:flex;gap:0;border:1px solid var(--g2);border-radius:6px;overflow:hidden;width:fit-content;margin-bottom:.55rem">
-          <button type="button" id="ms-mode-pct" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">%</button>
+          <button type="button" id="ms-mode-contract" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">% del contratto</button>
+          <button type="button" id="ms-mode-pct" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:#fff;color:var(--g3)">% del rideterminato</button>
           <button type="button" id="ms-mode-eur" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:#fff;color:var(--g3)">€ fisso</button>
         </div>
         <div id="ms-pct-amount-row" style="display:flex;align-items:center;gap:.4rem">
           <input id="ms-pct" type="number" min="0" max="100" placeholder="e.g. 20" style="width:80px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:var(--sans)" />
-          <span style="font-size:.8rem;color:var(--g3)">% del budget</span>
+          <span id="ms-pct-base-lbl" style="font-size:.8rem;color:var(--g3)">%</span>
         </div>
+        <div id="ms-pct-hint" style="font-size:.7rem;color:var(--g3);margin-top:.3rem"></div>
         <div id="ms-eur-amount-row" style="display:none;flex-direction:column;gap:.3rem">
           <div style="display:flex;align-items:center;gap:.4rem">
             <span style="font-size:.82rem;color:var(--g3)">€</span>
@@ -1599,6 +1639,7 @@ const projectJson = JSON.stringify(data);
   // ── Recalculate contractor budgets ────────────────────────────────────
   function recalcCtrBudgets() {
     const budgets = {};
+    const contracts = {};
     for (const cat of state.categories) {
       for (const item of cat.items) {
         if (!item.contractor) continue;   // gli extra entrano nel budget del fornitore
@@ -1606,15 +1647,23 @@ const projectJson = JSON.stringify(data);
         const varQty   = parseFloat(item.variation) || 0;
         const price    = parseFloat(item.price) || 0;
         const revised  = (qty + varQty) * price;
+        // Importo contrattuale: niente varianti, niente extra
+        contracts[item.contractor] = (contracts[item.contractor] || 0) + (item.extra ? 0 : qty * price);
         budgets[item.contractor] = (budgets[item.contractor] || 0) + revised;
       }
     }
     document.querySelectorAll('.ctr-card[data-ctr-id]').forEach(card => {
       const ctrId = card.dataset.ctrId;
-      const budget = budgets[ctrId] || 0;
+      const budget   = budgets[ctrId] || 0;
+      const contract = contracts[ctrId] || 0;
       card.dataset.budget = budget.toFixed(2);
+      card.dataset.contractBudget = contract.toFixed(2);
       const val = card.querySelector('.ctr-budget-val');
       if (val) val.textContent = fmtAmt(budget);
+      const cval = card.querySelector('.ctr-contract-val');
+      if (cval) cval.textContent = fmtAmt(contract);
+      const cnote = card.querySelector('.ctr-contract-note');
+      if (cnote) cnote.style.display = Math.abs(budget - contract) < 0.01 ? 'none' : '';
       // Importi, percentuali e totali li normalizza recalcCard, che è l'unico
       // punto a conoscere la modalità di ogni riga. Riscrivere qui l'importo
       // partendo dalla percentuale calpestava le milestone a cifra fissa.
@@ -1684,16 +1733,23 @@ const projectJson = JSON.stringify(data);
   });
 
   // ── SAL milestone helpers ─────────────────────────────────────────────────
-  function buildSalRowHtml(m, budget) {
+  function buildSalRowHtml(m, budget, contract) {
     const inp = 'padding:.22rem .35rem;border:1px solid var(--g2);border-radius:4px;font-family:var(--sans)';
     const triggerOpts = ['signing','start','percent','date','final'].map(v =>
       `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='start'?'At start of works':v==='percent'?'At %':v==='date'?'On date':'Final'}</option>`
     ).join('');
-    const fixed  = m.amountMode === 'eur';
-    const amtVal = (fixed || !(budget > 0))
+    const mode   = m.amountMode ?? 'pct';
+    const fixed  = mode === 'eur';
+    const base   = mode === 'pctContract' ? contract : budget;
+    const amtVal = (fixed || !(base > 0))
       ? (m.fixedAmt != null ? parseFloat(m.fixedAmt) : 0).toFixed(2)
-      : (budget * m.pct / 100).toFixed(2);
-    const pctVal = budget > 0 ? parseFloat(((parseFloat(amtVal) / budget) * 100).toFixed(6)) : (m.pct || 0);
+      : (base * m.pct / 100).toFixed(2);
+    // In € fisso la % è derivata dal rideterminato; altrimenti è quella digitata.
+    const pctVal = fixed
+      ? (budget > 0 ? parseFloat(((parseFloat(amtVal) / budget) * 100).toFixed(6)) : (m.pct || 0))
+      : (m.pct || 0);
+    const modeOpts = [['pctContract','% del contratto'],['pct','% del rideterminato'],['eur','&#8364; fisso']]
+      .map(([v,l]) => `<option value="${v}"${mode===v?' selected':''}>${l}</option>`).join('');
     return [
       `<td><input class="sal-ref-input" type="text" value="${m.id}" style="width:52px;${inp};font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>`,
       `<td><input class="sal-label-input" type="text" value="${m.label}" style="width:100%;${inp};font-size:.75rem" /></td>`,
@@ -1706,9 +1762,7 @@ const projectJson = JSON.stringify(data);
         `<span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>`,
         `<input class="sal-amt-input" type="number" min="0" step="0.01" value="${amtVal}" style="width:88px;${inp};font-size:.75rem;font-family:monospace;text-align:right" />`,
         `<div class="sal-mode-wrap">`,
-          `<label class="sal-mode-lbl" title="Importo forfettario: non si riproporziona se cambia il budget">`,
-            `<input class="sal-fixed-check" type="checkbox"${fixed?' checked':''} /><span>&#8364; fisso</span>`,
-          `</label>`,
+          `<select class="sal-mode-select" title="Su cosa è calcolato questo importo">${modeOpts}</select>`,
         `</div>`,
         `<div class="sal-ded-wrap"${m.triggerType==='signing'?' style="display:none"':''}>`,
           `<label class="sal-ded-lbl"><input class="sal-ded-check" type="checkbox"${m.deductDeposit && m.triggerType!=='signing'?' checked':''} /><span>− acconto</span></label>`,
@@ -1776,36 +1830,49 @@ const projectJson = JSON.stringify(data);
     return winner;
   }
 
+  function salBasesOf(card) {
+    const budget   = parseFloat(card.dataset.budget ?? '0') || 0;
+    const contract = parseFloat(card.dataset.contractBudget ?? '') || budget;
+    return { budget, contract };
+  }
+  function rowMode(row) { return row.querySelector('.sal-mode-select')?.value ?? 'pct'; }
+
   function recalcCard(card) {
-    const budget  = parseFloat(card.dataset.budget ?? '0');
+    const { budget, contract } = salBasesOf(card);
     const rows    = salRowsOf(card);
     const dedRow  = enforceSingleDeduction(card, null);
 
     // PASSO 1 — normalizza ogni riga secondo la sua modalità.
-    // Le righe "€ fisso" tengono l'importo digitato e si vedono ricalcolare la
-    // percentuale; le altre seguono il budget. È qui che un acconto forfettario
-    // smette di riproporzionarsi quando cambia il budget del fornitore.
+    //  · '€ fisso'          tiene l'importo digitato, la % la si ricalcola
+    //  · '% del contratto'  applica la % all'importo contrattuale: varianti ed
+    //                       extra non lo toccano, ed è ciò che tiene fermo l'acconto
+    //  · '% del rideterminato' applica la % al budget corrente
     let grossTotal = 0;
     const amounts = new Map();
     rows.forEach(row => {
       const amtIn = row.querySelector('.sal-amt-input');
       const pctIn = row.querySelector('.sal-pct-input');
-      const fixed = row.querySelector('.sal-fixed-check')?.checked === true;
+      const mode  = rowMode(row);
+      const fixed = mode === 'eur';
+      const base  = mode === 'pctContract' ? contract : budget;
       let gross;
-      if (fixed || !(budget > 0)) {
+      if (fixed || !(base > 0)) {
         gross = parseFloat(amtIn?.value ?? '0') || 0;
-        if (pctIn && budget > 0) pctIn.value = parseFloat(((gross / budget) * 100).toFixed(6));
+        if (pctIn && fixed && budget > 0) pctIn.value = parseFloat(((gross / budget) * 100).toFixed(6));
       } else {
         const pct = parseFloat(pctIn?.value ?? '0') || 0;
-        gross = budget * pct / 100;
+        gross = base * pct / 100;
         if (amtIn) amtIn.value = gross.toFixed(2);
       }
       if (pctIn) {
         pctIn.readOnly = fixed;
         pctIn.style.background = fixed ? 'var(--g1)' : '';
         pctIn.style.fontStyle  = fixed ? 'italic' : '';
-        pctIn.title = fixed ? 'Derivata dall’importo fisso' : 'Percentuale del budget';
+        pctIn.title = fixed
+          ? 'Derivata dall’importo fisso'
+          : mode === 'pctContract' ? 'Percentuale dell’importo contrattuale' : 'Percentuale dell’importo rideterminato';
       }
+      row.dataset.prevMode = mode;
       amounts.set(row, gross);
       grossTotal += gross;
     });
@@ -1836,6 +1903,15 @@ const projectJson = JSON.stringify(data);
       : Math.abs(totalPct - 100) < 0.01;
     const color     = ok ? 'var(--green)' : 'var(--red)';
     const grossColor = deduction > 0 ? 'var(--slate)' : color;
+
+    // Scarto in euro: "99,98% ⚠" da solo non dice quanto manca, e con basi
+    // diverse un extra lascia sempre una piccola quota da assegnare.
+    const gapCell = card.querySelector('.sal-gap');
+    if (gapCell) {
+      const gap = budget - netTotal;
+      gapCell.style.display = ok ? 'none' : '';
+      gapCell.textContent = gap > 0 ? `scoperto ${fmtAmt(gap)}` : `eccedenza ${fmtAmt(-gap)}`;
+    }
 
     const eurCell = card.querySelector('.sal-total-amt-eur');
     const pctCell = card.querySelector('.sal-total-amt');
@@ -1869,18 +1945,17 @@ const projectJson = JSON.stringify(data);
       ? state.technicians.find(t => t.id === ctrId)
       : state.contractors.find(c => c.id === ctrId);
     if (!entity) return;
-    const budget = parseFloat(card.dataset.budget ?? '0') || 0;
+    const { budget, contract } = salBasesOf(card);
     entity.sal = Array.from(card.querySelectorAll('tbody tr:not(.sal-total)')).map(row => {
       const pct      = parseFloat(row.querySelector('.sal-pct-input')?.value) || 0;
       const amtRaw   = parseFloat(row.querySelector('.sal-amt-input')?.value) || 0;
-      const isFixed  = row.querySelector('.sal-fixed-check')?.checked === true;
-      // In modalità 'eur' la cifra è il dato da conservare; la percentuale la si
-      // salva comunque, ma solo come valore derivato per chi legge i totali.
-      // Senza budget si conserva la cifra anche in modalità percentuale,
-      // altrimenti l'importo digitato andrebbe perso.
-      const fixedAmt = (isFixed || budget <= 0) && amtRaw > 0 ? amtRaw : null;
+      const mode     = rowMode(row);
+      // In 'eur' la cifra è il dato da conservare. Senza base utile si conserva
+      // comunque, altrimenti l'importo digitato andrebbe perso.
+      const base     = mode === 'pctContract' ? contract : budget;
+      const fixedAmt = (mode === 'eur' || base <= 0) && amtRaw > 0 ? amtRaw : null;
       return {
-        amountMode: isFixed ? 'eur' : 'pct',
+        amountMode: mode,
         id:          row.querySelector('.sal-ref-input')?.value.trim() ?? '',
         label:       row.querySelector('.sal-label-input')?.value.trim() ?? '',
         triggerType: row.querySelector('.sal-trigger-type-input')?.value ?? 'signing',
@@ -1912,11 +1987,23 @@ const projectJson = JSON.stringify(data);
 
   // Inline SAL editing
   document.addEventListener('change', e => {
-    // Toggle "€ fisso": commuta fra importo forfettario e percentuale del budget
-    if (e.target.classList.contains('sal-fixed-check')) {
+    // Cambio modalità dal menu. Uscendo da "€ fisso" non c'è una percentuale da
+    // riusare, quindi la si ricava dall'importo corrente: così la cifra non salta.
+    // Fra le due modalità percentuali si conserva invece la percentuale digitata,
+    // perché "il 10%" resta il 10%, cambia solo la base su cui si applica.
+    if (e.target.classList.contains('sal-mode-select')) {
       const row  = e.target.closest('.sal-table tbody tr:not(.sal-total)');
       const card = row?.closest('.ctr-card') ?? row?.closest('.tec-card');
-      if (!card) return;
+      if (!card || !row) return;
+      const { budget, contract } = salBasesOf(card);
+      const mode = e.target.value;
+      if (mode !== 'eur' && row.dataset.prevMode === 'eur') {
+        const base  = mode === 'pctContract' ? contract : budget;
+        const amt   = parseFloat(row.querySelector('.sal-amt-input')?.value) || 0;
+        const pctIn = row.querySelector('.sal-pct-input');
+        if (pctIn && base > 0) pctIn.value = parseFloat(((amt / base) * 100).toFixed(6));
+      }
+      row.dataset.prevMode = mode;
       recalcCard(card);
       syncSalFromCard(card);
       return;
@@ -1958,20 +2045,22 @@ const projectJson = JSON.stringify(data);
       recalcCard(card);
     }
     if (e.target.classList.contains('sal-amt-input')) {
-      const budget = parseFloat(card.dataset.budget ?? '0') || 0;
+      const { budget, contract } = salBasesOf(card);
+      const base   = rowMode(row) === 'pctContract' ? contract : budget;
       const amt    = parseFloat(e.target.value) || 0;
       const pctIn  = row.querySelector('.sal-pct-input');
       // Precisione piena: arrotondando la percentuale a 2 decimali, recalcCard
       // ricalcolava l'importo e riscriveva la cifra appena digitata
       // (€ 15.000 diventava € 15.001,30 su un budget di € 150.313).
-      if (pctIn && budget > 0) pctIn.value = parseFloat(((amt / budget) * 100).toFixed(6));
+      if (pctIn && base > 0) pctIn.value = parseFloat(((amt / base) * 100).toFixed(6));
       recalcCard(card);
     }
     if (e.target.classList.contains('sal-pct-input')) {
-      const budget = parseFloat(card.dataset.budget ?? '0') || 0;
+      const { budget, contract } = salBasesOf(card);
+      const base   = rowMode(row) === 'pctContract' ? contract : budget;
       const pct    = parseFloat(e.target.value) || 0;
       const amtIn  = row.querySelector('.sal-amt-input');
-      if (amtIn) amtIn.value = (budget * pct / 100).toFixed(2);
+      if (amtIn) amtIn.value = (base * pct / 100).toFixed(2);
       recalcCard(card);
     }
     syncSalFromCard(card);
@@ -1997,6 +2086,9 @@ const projectJson = JSON.stringify(data);
   const msDateRow        = document.getElementById('ms-date-row');
   const msTriggerDate    = document.getElementById('ms-trigger-date');
   const msModeBtn        = document.getElementById('ms-mode-pct');
+  const msModeBtnContract = document.getElementById('ms-mode-contract');
+  const msPctHint        = document.getElementById('ms-pct-hint');
+  const msPctBaseLbl     = document.getElementById('ms-pct-base-lbl');
   const msModeBtnEur     = document.getElementById('ms-mode-eur');
   const msPctAmountRow   = document.getElementById('ms-pct-amount-row');
   const msEurAmountRow   = document.getElementById('ms-eur-amount-row');
@@ -2006,21 +2098,34 @@ const projectJson = JSON.stringify(data);
   const msDedRow         = document.getElementById('ms-ded-row');
   const msDedHint        = document.getElementById('ms-ded-hint');
   let msTargetCard       = null;
-  let msAmountMode       = 'pct'; // 'pct' | 'eur'
+  let msAmountMode       = 'pctContract'; // 'pctContract' | 'pct' | 'eur'
 
   function setMsAmountMode(mode) {
     msAmountMode = mode;
-    if (mode === 'pct') {
-      msModeBtn.style.background    = 'var(--navy)'; msModeBtn.style.color    = '#fff';
-      msModeBtnEur.style.background = '#fff';        msModeBtnEur.style.color = 'var(--g3)';
-      msPctAmountRow.style.display  = 'flex';
-      msEurAmountRow.style.display  = 'none';
+    const btns = { pctContract: msModeBtnContract, pct: msModeBtn, eur: msModeBtnEur };
+    Object.entries(btns).forEach(([k, btn]) => {
+      if (!btn) return;
+      const on = k === mode;
+      btn.style.background = on ? 'var(--navy)' : '#fff';
+      btn.style.color      = on ? '#fff' : 'var(--g3)';
+    });
+    const isEur = mode === 'eur';
+    msPctAmountRow.style.display = isEur ? 'none' : 'flex';
+    msPctHint.style.display      = isEur ? 'none' : '';
+    msEurAmountRow.style.display = isEur ? 'flex' : 'none';
+    if (isEur) updateEurHint(); else updatePctHint();
+  }
+
+  function updatePctHint() {
+    if (!msTargetCard) return;
+    const budget   = parseFloat(msTargetCard.dataset.budget ?? '0') || 0;
+    const contract = parseFloat(msTargetCard.dataset.contractBudget ?? '') || budget;
+    if (msAmountMode === 'pctContract') {
+      msPctBaseLbl.textContent = '% dell’importo contrattuale';
+      msPctHint.textContent = `Contrattuale: ${fmtAmt(contract)} — non si muove con varianti ed extra, quindi l’importo resta fermo.`;
     } else {
-      msModeBtnEur.style.background = 'var(--navy)'; msModeBtnEur.style.color    = '#fff';
-      msModeBtn.style.background    = '#fff';        msModeBtn.style.color    = 'var(--g3)';
-      msPctAmountRow.style.display  = 'none';
-      msEurAmountRow.style.display  = 'flex';
-      updateEurHint();
+      msPctBaseLbl.textContent = '% dell’importo rideterminato';
+      msPctHint.textContent = `Rideterminato: ${fmtAmt(budget)} — l’importo si riproporziona a ogni variante o extra.`;
     }
   }
 
@@ -2035,8 +2140,10 @@ const projectJson = JSON.stringify(data);
     msEurHint.textContent = `Budget: ${fmtAmt(budget)} — già allocato: ${fmtAmt(alreadyEur)} — residuo: ${fmtAmt(remaining)}`;
   }
 
-  msModeBtn.addEventListener('click',    () => setMsAmountMode('pct'));
-  msModeBtnEur.addEventListener('click', () => setMsAmountMode('eur'));
+  msModeBtnContract.addEventListener('click', () => setMsAmountMode('pctContract'));
+  msModeBtn.addEventListener('click',         () => setMsAmountMode('pct'));
+  msModeBtnEur.addEventListener('click',      () => setMsAmountMode('eur'));
+  msPct.addEventListener('input', updatePctHint);
   msEurInput.addEventListener('input', updateEurHint);
 
   msTriggerType.addEventListener('change', () => {
@@ -2075,7 +2182,7 @@ const projectJson = JSON.stringify(data);
     msRef.value = ''; msLabel.value = ''; msPct.value = ''; msTriggerPct.value = ''; msEurInput.value = ''; msTriggerDate.value = '';
     msTriggerType.value = 'signing'; msPctRow.style.display = 'none'; msDateRow.style.display = 'none';
     msDed.checked = false;
-    setMsAmountMode('pct');
+    setMsAmountMode('pctContract');
     refreshMsDedState();
     msModal.classList.add('is-open'); msRef.focus();
   }
@@ -2092,10 +2199,10 @@ const projectJson = JSON.stringify(data);
     const ttype  = msTriggerType.value;
     const tpct   = parseFloat(msTriggerPct.value) || null;
     const tdate  = ttype === 'date' ? (msTriggerDate.value || null) : null;
-    const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
-    // In modalità "€ fisso" la cifra resta quella: la percentuale è solo derivata
-    // e verrà ricalcolata da sola se il budget del fornitore cambia.
-    const amountMode = msAmountMode === 'eur' ? 'eur' : 'pct';
+    const budget   = parseFloat(msTargetCard.dataset.budget ?? '0');
+    const contract = parseFloat(msTargetCard.dataset.contractBudget ?? '') || budget;
+    const amountMode = msAmountMode;
+    const base = amountMode === 'pctContract' ? contract : budget;
     let pct;
     let fixedAmt = null;
     if (amountMode === 'eur') {
@@ -2104,14 +2211,14 @@ const projectJson = JSON.stringify(data);
       pct = budget > 0 ? (eur / budget) * 100 : 0;
     } else {
       pct = parseFloat(msPct.value) || 0;
-      if (budget > 0) fixedAmt = budget * pct / 100;
+      if (base > 0) fixedAmt = base * pct / 100;
     }
     // Deduct the acconto only if it is still available on this card
     const deductDeposit = msDed.checked && !msDed.disabled && ttype !== 'signing';
     const tbody   = msTargetCard.querySelector('tbody');
     const totalRow = tbody.querySelector('.sal-total');
     const tr = document.createElement('tr');
-    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct, fixedAmt, amountMode, deductDeposit }, budget);
+    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct, fixedAmt, amountMode, deductDeposit }, budget, contract);
     tbody.insertBefore(tr, totalRow);
     if (deductDeposit) enforceSingleDeduction(msTargetCard, tr);
     recalcCard(msTargetCard);
@@ -2220,6 +2327,7 @@ const projectJson = JSON.stringify(data);
       const div = document.createElement('div');
       div.className = 'card ctr-card';
       div.dataset.budget = '0';
+      div.dataset.contractBudget = '0';
       div.dataset.ctrId  = id;
       div.innerHTML = `
         <div class="ctr-header">
@@ -2345,6 +2453,7 @@ const projectJson = JSON.stringify(data);
       const div = document.createElement('div');
       div.className = 'card tec-card';
       div.dataset.budget = fee.toFixed(2);
+      div.dataset.contractBudget = fee.toFixed(2);
       div.dataset.tecId  = id;
       div.innerHTML = `
         <div class="ctr-header">
