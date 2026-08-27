@@ -102,6 +102,9 @@ const contractorSchedules = contractors.flatMap(c => {
   const cDeposit = depositOf(c.sal, cBudget, cContract, cDone);
   let nextFoundC = false;
   let cumPct = 0;
+  // Quanto è già stato certificato mentre scorriamo le rate in ordine: quando
+  // arriviamo alla prossima rata non pagata, qui c'è tutto il pagato a monte.
+  let paidRunning = 0;
 
   // Separate milestones into quantified (have an amount) and unquantified date ones
   // Le milestone in modalità "lavori eseguiti" non hanno né pct né fixedAmt:
@@ -133,26 +136,48 @@ const contractorSchedules = contractors.flatMap(c => {
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
                       : m.triggerType === 'start'   ? 'At start of works'
                       : m.triggerType === 'final'   ? 'On practical completion'
+                      : m.amountMode === 'done'     ? 'On works executed to date'
                       : m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}`
                       : `At ${workTriggerAt}% completion`;
     const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
     const dateExpired = dateDue ? dateDue <= new Date() : false;
+    const isDoneMs    = m.amountMode === 'done';
+    // Lavori eseguiti e non ancora coperti da pagamenti certificati. Una rata
+    // è esigibile solo se c'è lavoro da certificare: dopo un acconto generoso
+    // il cantiere può superare la soglia della rata senza che ci sia ancora
+    // nulla da pagare — i soldi sono già stati anticipati.
+    const uncertified = cDone - paidRunning;
     let status: 'paid' | 'next' | 'pending';
     let isDue = false;
+    let blockReason: 'trigger' | 'ahead' | null = null;
     if (m.paid === true) {
       status = 'paid';
-    } else if (m.triggerType === 'date') {
+    } else if (m.triggerType === 'date' && !isDoneMs) {
       if (dateExpired)        { status = 'paid'; }
-      else if (!nextFoundC)   { status = 'next'; nextFoundC = true; isDue = false; }
+      else if (!nextFoundC)   { status = 'next'; nextFoundC = true; isDue = false; blockReason = 'trigger'; }
       else                    { status = 'pending'; }
-    } else {
-      // pct / signing / final: never auto-paid — only m.paid===true certifies payment
-      if (!nextFoundC) {
-        status = 'next'; nextFoundC = true;
-        isDue = m.triggerType === 'signing' || (m.triggerType === 'start' && cPerc > 0) || (workTriggerAt > 0 && cPerc >= workTriggerAt);
-      } else { status = 'pending'; }
-    }
-    return { ...m, pct: effPct, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    } else if (!nextFoundC) {
+      // pct / signing / final / lavori eseguiti: mai pagate d'ufficio,
+      // solo m.paid===true certifica un pagamento.
+      status = 'next'; nextFoundC = true;
+      if (isDoneMs) {
+        // La rata insegue il Value Done: è dovuta se resta qualcosa da certificare.
+        isDue = amount > 0.01;
+        if (!isDue) blockReason = 'ahead';
+      } else if (m.triggerType === 'signing') {
+        isDue = true;
+      } else if (m.triggerType === 'start') {
+        isDue = cPerc > 0;
+        if (!isDue) blockReason = 'trigger';
+      } else {
+        const triggered = m.triggerType === 'final' ? cPerc >= 100 : (workTriggerAt > 0 && cPerc >= workTriggerAt);
+        if (!triggered)               { blockReason = 'trigger'; }
+        else if (uncertified <= 0.01) { blockReason = 'ahead'; }
+        else                          { isDue = true; }
+      }
+    } else { status = 'pending'; }
+    if (status === 'paid') paidRunning += amount;
+    return { ...m, pct: effPct, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, blockReason, uncertified, tickPos };
   });
 
   // Collapsed "Remaining" block for unquantified date milestones
@@ -187,6 +212,10 @@ const technicianSchedules = technicians.flatMap((t: any) => {
   if (!t.fee || !t.sal || t.sal.length === 0) return [];
   let nextFoundT = false;
   let cumPctT = 0;
+  let paidRunningT = 0;
+  // Parcella maturata sui lavori complessivi: è il metro con cui si giudica
+  // se una rata di onorario è già stata coperta dai pagamenti fatti.
+  const feeEarned = (t.fee * Math.min(totalPerc, 100)) / 100;
 
   const quantified = t.sal.filter((m: any) => m.pct > 0 || (m.fixedAmt ?? 0) > 0 || m.amountMode === 'done');
   const tDeposit   = depositOf(t.sal, t.fee, t.fee, 0);
@@ -210,30 +239,42 @@ const technicianSchedules = technicians.flatMap((t: any) => {
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
                       : m.triggerType === 'start'   ? 'At start of works'
                       : m.triggerType === 'final'   ? 'On practical completion'
+                      : m.amountMode === 'done'     ? 'On works executed to date'
                       : m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}`
                       : `At ${workTriggerAt}% overall works`;
 
     const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
     const dateExpired = dateDue ? dateDue <= new Date() : false;
+    const isDoneMs    = m.amountMode === 'done';
+    const uncertified = feeEarned - paidRunningT;
     let status: 'paid' | 'next' | 'pending';
     let isDue = false;
+    let blockReason: 'trigger' | 'ahead' | null = null;
 
     if (m.paid === true) {
       status = 'paid';
-    } else if (m.triggerType === 'date') {
+    } else if (m.triggerType === 'date' && !isDoneMs) {
       if (dateExpired)      { status = 'paid'; }
-      else if (!nextFoundT) { status = 'next'; nextFoundT = true; isDue = false; }
+      else if (!nextFoundT) { status = 'next'; nextFoundT = true; isDue = false; blockReason = 'trigger'; }
       else                  { status = 'pending'; }
-    } else {
-      if (!nextFoundT) {
-        status = 'next'; nextFoundT = true;
-        isDue = m.triggerType === 'signing'
-             || m.triggerType === 'start'
-             || (m.triggerType === 'final' && totalPerc >= 100)
-             || (m.triggerType === 'percent' && totalPerc >= (m.triggerPct ?? 0));
-      } else { status = 'pending'; }
-    }
-    return { ...m, pct: effPct, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    } else if (!nextFoundT) {
+      status = 'next'; nextFoundT = true;
+      if (isDoneMs) {
+        isDue = amount > 0.01;
+        if (!isDue) blockReason = 'ahead';
+      } else if (m.triggerType === 'signing' || m.triggerType === 'start') {
+        isDue = true;
+      } else {
+        const triggered = m.triggerType === 'final'
+          ? totalPerc >= 100
+          : totalPerc >= (m.triggerPct ?? 0);
+        if (!triggered)               { blockReason = 'trigger'; }
+        else if (uncertified <= 0.01) { blockReason = 'ahead'; }
+        else                          { isDue = true; }
+      }
+    } else { status = 'pending'; }
+    if (status === 'paid') paidRunningT += amount;
+    return { ...m, pct: effPct, amount, triggerAt, workTriggerAt, triggerNote, status, isDue, blockReason, uncertified, tickPos };
   });
 
   const paidT    = milestones.filter((m: any) => m.status === 'paid').reduce((s: number, m: any) => s + m.amount, 0);
@@ -921,13 +962,15 @@ const fmtDate = (d: string) => {
             <div class="pay-sum-label">{nextC ? (nextC.isDue ? '▶ Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
             <div class="pay-sum-amount">{nextC ? fmt(nextNetC) : '–'}</div>
             {nextC && <div class="pay-sum-sub">imponibile{vat > 0 && nextNetC > 0 ? ` — con IVA: ${fmt(withVat(nextNetC))}` : vat === 0 ? ' — No IVA' : ''}</div>}
-            {nextC && nextC.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
-            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'signing' && <div class="pay-sum-trigger">On contract signing</div>}
-            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'start'   && <div class="pay-sum-trigger">At start of works</div>}
-            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'final'   && <div class="pay-sum-trigger">On practical completion</div>}
-            {nextC && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'percent'  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {cPerc.toFixed(1)}% work done</div>}
-            {nextC && nextC.triggerType !== 'date' && !nextC.isDue && nextC.triggerType === 'final'    && <div class="pay-sum-trigger">Triggers on practical completion</div>}
-            {nextC && nextC.triggerType !== 'date' && !nextC.isDue && nextC.triggerType === 'percent'  && <div class="pay-sum-trigger">Triggers at {nextC.workTriggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
+            {nextC && nextC.amountMode === 'done' && nextC.isDue && <div class="pay-sum-trigger">Works executed &nbsp;&mdash;&nbsp; {cPerc.toFixed(1)}% done, {fmt(nextC.uncertified)} to certify</div>}
+            {nextC && nextC.amountMode !== 'done' && nextC.triggerType === 'date' && <div class="pay-sum-trigger">On {nextC.triggerDate ?? '—'}</div>}
+            {nextC && nextC.amountMode !== 'done' && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'signing' && <div class="pay-sum-trigger">On contract signing</div>}
+            {nextC && nextC.amountMode !== 'done' && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'start'   && <div class="pay-sum-trigger">At start of works</div>}
+            {nextC && nextC.amountMode !== 'done' && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'final'   && <div class="pay-sum-trigger">On practical completion</div>}
+            {nextC && nextC.amountMode !== 'done' && nextC.triggerType !== 'date' && nextC.isDue  && nextC.triggerType === 'percent'  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {cPerc.toFixed(1)}% work done</div>}
+            {nextC && nextC.blockReason === 'ahead' && <div class="pay-sum-trigger">Already covered by payments made &nbsp;&mdash;&nbsp; works at {cPerc.toFixed(1)}% vs {paidPct.toFixed(1)}% certified</div>}
+            {nextC && nextC.blockReason === 'trigger' && nextC.triggerType === 'final'    && <div class="pay-sum-trigger">Triggers on practical completion</div>}
+            {nextC && nextC.blockReason === 'trigger' && nextC.triggerType === 'percent'  && <div class="pay-sum-trigger">Triggers at {nextC.workTriggerAt}% &nbsp;&mdash;&nbsp; {progNdC.toFixed(1)}% to go</div>}
           </div>
           <div class="pay-sum-arrow">&#8594;</div>
           <div class="pay-sum-item pending">
@@ -954,7 +997,7 @@ const fmtDate = (d: string) => {
               <div class={`pay-tick ${m.status} ${m.tickPos >= 88 ? 'edge-r' : m.tickPos <= 6 ? 'edge-l' : ''}`} style={`left:${m.tickPos}%`}>
                 <div class="pay-tick-id">{m.id}</div>
                 <div class="pay-tick-dot"></div>
-                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : `at ${Math.round(m.workTriggerAt)}% works`}</div>
+                <div class="pay-tick-lbl">{m.amountMode === 'done' ? 'works to date' : m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : `at ${Math.round(m.workTriggerAt)}% works`}</div>
               </div>
             ))}
             {lastPaidDate && (
@@ -1042,13 +1085,15 @@ const fmtDate = (d: string) => {
                 <div class="pay-sum-label">{nextT ? (nextT.isDue ? '▶ Payment Due' : 'Upcoming Payment') : 'All payments due'}</div>
                 <div class="pay-sum-amount">{nextT ? fmt(nextNetT) : '–'}</div>
                 {nextT && <div class="pay-sum-sub">imponibile{vat > 0 && nextNetT > 0 ? ` — con IVA: ${fmt(withVatT(nextNetT))}` : vat === 0 ? ' — No IVA' : ''}</div>}
-                {nextT && nextT.triggerType === 'date'    && <div class="pay-sum-trigger">On {nextT.triggerDate ?? '—'}</div>}
-                {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'signing'  && <div class="pay-sum-trigger">On contract signing</div>}
-                {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'start'    && <div class="pay-sum-trigger">At start of works</div>}
-                {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'final'    && <div class="pay-sum-trigger">On practical completion</div>}
-                {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {totalPerc.toFixed(1)}% overall</div>}
-                {nextT && nextT.triggerType !== 'date' && !nextT.isDue && nextT.triggerType === 'final'    && <div class="pay-sum-trigger">Triggers on practical completion</div>}
-                {nextT && nextT.triggerType !== 'date' && !nextT.isDue && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Triggers at {nextT.workTriggerAt}% overall works</div>}
+                {nextT && nextT.amountMode === 'done' && nextT.isDue && <div class="pay-sum-trigger">Works executed &nbsp;&mdash;&nbsp; {totalPerc.toFixed(1)}% overall</div>}
+                {nextT && nextT.amountMode !== 'done' && nextT.triggerType === 'date' && <div class="pay-sum-trigger">On {nextT.triggerDate ?? '—'}</div>}
+                {nextT && nextT.amountMode !== 'done' && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'signing'  && <div class="pay-sum-trigger">On contract signing</div>}
+                {nextT && nextT.amountMode !== 'done' && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'start'    && <div class="pay-sum-trigger">At start of works</div>}
+                {nextT && nextT.amountMode !== 'done' && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'final'    && <div class="pay-sum-trigger">On practical completion</div>}
+                {nextT && nextT.amountMode !== 'done' && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {totalPerc.toFixed(1)}% overall</div>}
+                {nextT && nextT.blockReason === 'ahead' && <div class="pay-sum-trigger">Already covered by fees paid &nbsp;&mdash;&nbsp; works at {totalPerc.toFixed(1)}% vs {paidPctT.toFixed(1)}% certified</div>}
+                {nextT && nextT.blockReason === 'trigger' && nextT.triggerType === 'final'    && <div class="pay-sum-trigger">Triggers on practical completion</div>}
+                {nextT && nextT.blockReason === 'trigger' && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Triggers at {nextT.workTriggerAt}% overall works</div>}
               </div>
               <div class="pay-sum-arrow">&#8594;</div>
               <div class="pay-sum-item pending">
@@ -1075,7 +1120,7 @@ const fmtDate = (d: string) => {
                   <div class={`pay-tick ${m.status} ${m.tickPos >= 88 ? 'edge-r' : m.tickPos <= 6 ? 'edge-l' : ''}`} style={`left:${m.tickPos}%`}>
                     <div class="pay-tick-id">{m.id}</div>
                     <div class="pay-tick-dot"></div>
-                    <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : `at ${Math.round(m.workTriggerAt)}% overall`}</div>
+                    <div class="pay-tick-lbl">{m.amountMode === 'done' ? 'works to date' : m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : `at ${Math.round(m.workTriggerAt)}% overall`}</div>
                   </div>
                 ))}
                 {lastPaidDateT && (
