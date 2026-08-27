@@ -67,7 +67,6 @@ const contractorSchedules = contractors.flatMap(c => {
   const cPerc    = (cDone / cBudget) * 100;
   let nextFoundC = false;
   let cumPct = 0;
-  let cumTriggerPct = 0; // separate accumulator for work-progress trigger axis
 
   // Separate milestones into quantified (have an amount) and unquantified date ones
   const quantified   = c.sal.filter(m => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
@@ -86,15 +85,19 @@ const contractorSchedules = contractors.flatMap(c => {
     const gross    = cBudget > 0 ? (m.pct / 100) * cBudget : ((m as any).fixedAmt ?? 0);
     const deposDed = (dedId !== null && m.id === dedId) ? Math.min(depAmt, gross) : 0;
     const amount   = gross - deposDed;
-    // triggerAt (bar position) = tickPos for pct milestones
-    // workTriggerAt (isDue check) uses cumTriggerPct so pct ≠ triggerPct doesn't cause false dues
+    // Two different axes, deliberately kept apart:
+    //  · triggerAt     = position on the PAYMENTS bar   → cumulative payment share (tickPos)
+    //  · workTriggerAt = threshold on the WORK PROGRESS  → the milestone's own triggerPct,
+    //                    which is an ABSOLUTE completion % (seed data: 30 / 60 / 90), never
+    //                    a delta — accumulating it pushed later milestones past 100% and they
+    //                    could then never come due.
     let triggerAt: number;
     let workTriggerAt: number;
-    if      (m.triggerType === 'signing') { triggerAt = 0;       workTriggerAt = 0; }
-    else if (m.triggerType === 'start')   { triggerAt = 0;       workTriggerAt = 0; }
-    else if (m.triggerType === 'final')   { triggerAt = 100;     workTriggerAt = 100; }
-    else if (m.triggerType === 'date')    { triggerAt = -1;      workTriggerAt = -1; }
-    else { triggerAt = tickPos; cumTriggerPct += (m.triggerPct ?? 0); workTriggerAt = cumTriggerPct; }
+    if      (m.triggerType === 'signing') { triggerAt = 0;   workTriggerAt = 0; }
+    else if (m.triggerType === 'start')   { triggerAt = 0;   workTriggerAt = 0; }
+    else if (m.triggerType === 'final')   { triggerAt = 100; workTriggerAt = 100; }
+    else if (m.triggerType === 'date')    { triggerAt = -1;  workTriggerAt = -1; }
+    else { triggerAt = tickPos; workTriggerAt = m.triggerPct ?? 0; }
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
                       : m.triggerType === 'start'   ? 'At start of works'
                       : m.triggerType === 'final'   ? 'On practical completion'
@@ -167,18 +170,21 @@ const technicianSchedules = technicians.flatMap((t: any) => {
     const deposDed = (dedIdT !== null && m.id === dedIdT) ? Math.min(depAmtT, gross) : 0;
     const amount   = gross - deposDed;
 
+    // Same split as the contractors above: triggerAt positions the tick on the
+    // payments bar, workTriggerAt is the overall-works % that actually releases it.
     let triggerAt: number;
-    if      (m.triggerType === 'signing') { triggerAt = 0; }
-    else if (m.triggerType === 'start')   { triggerAt = 0; }
-    else if (m.triggerType === 'final')   { triggerAt = 100; }
-    else if (m.triggerType === 'date')    { triggerAt = -1; }
-    else { triggerAt = tickPos; }
+    let workTriggerAt: number;
+    if      (m.triggerType === 'signing') { triggerAt = 0;   workTriggerAt = 0; }
+    else if (m.triggerType === 'start')   { triggerAt = 0;   workTriggerAt = 0; }
+    else if (m.triggerType === 'final')   { triggerAt = 100; workTriggerAt = 100; }
+    else if (m.triggerType === 'date')    { triggerAt = -1;  workTriggerAt = -1; }
+    else { triggerAt = tickPos; workTriggerAt = m.triggerPct ?? 0; }
 
     const triggerNote = m.triggerType === 'signing' ? 'On contract signing'
                       : m.triggerType === 'start'   ? 'At start of works'
                       : m.triggerType === 'final'   ? 'On practical completion'
                       : m.triggerType === 'date'    ? `On ${m.triggerDate ?? '—'}`
-                      : `At ${triggerAt}% overall works`;
+                      : `At ${workTriggerAt}% overall works`;
 
     const dateDue     = m.triggerType === 'date' && m.triggerDate ? new Date(m.triggerDate) : null;
     const dateExpired = dateDue ? dateDue <= new Date() : false;
@@ -200,7 +206,7 @@ const technicianSchedules = technicians.flatMap((t: any) => {
              || (m.triggerType === 'percent' && totalPerc >= (m.triggerPct ?? 0));
       } else { status = 'pending'; }
     }
-    return { ...m, amount, gross, deposDed, triggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, amount, gross, deposDed, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   const paidT    = milestones.filter((m: any) => m.status === 'paid').reduce((s: number, m: any) => s + m.amount, 0);
@@ -1007,7 +1013,7 @@ const fmtDate = (d: string) => {
                 {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'final'    && <div class="pay-sum-trigger">On practical completion</div>}
                 {nextT && nextT.triggerType !== 'date' && nextT.isDue  && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Trigger reached &nbsp;&mdash;&nbsp; {totalPerc.toFixed(1)}% overall</div>}
                 {nextT && nextT.triggerType !== 'date' && !nextT.isDue && nextT.triggerType === 'final'    && <div class="pay-sum-trigger">Triggers on practical completion</div>}
-                {nextT && nextT.triggerType !== 'date' && !nextT.isDue && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Triggers at {nextT.triggerAt}% overall works</div>}
+                {nextT && nextT.triggerType !== 'date' && !nextT.isDue && nextT.triggerType === 'percent'  && <div class="pay-sum-trigger">Triggers at {nextT.workTriggerAt}% overall works</div>}
               </div>
               <div class="pay-sum-arrow">&#8594;</div>
               <div class="pay-sum-item pending">
