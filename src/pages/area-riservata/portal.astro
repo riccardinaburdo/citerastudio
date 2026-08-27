@@ -177,6 +177,7 @@ const contractorSchedules = contractors.flatMap(c => {
   // Last paid milestone → replaces "now" on the bar
   const lastPaid     = [...milestones].filter(m => m.status === 'paid').slice(-1)[0] ?? null;
   const lastPaidDate = lastPaid ? ((lastPaid as any).paidDate ?? (lastPaid as any).triggerDate ?? null) : null;
+  // Sull'asse della barra pagamenti (quota cumulata di cassa), come i tick.
   const lastPaidPos  = lastPaid?.tickPos ?? 0;
   return [{ c, cBudget, cPerc, milestones, paidC, paidPct, nextC, pendingC, lastPaidDate, lastPaidPos, vat: vatOf(c) }];
 });
@@ -241,7 +242,8 @@ const technicianSchedules = technicians.flatMap((t: any) => {
   const pendingT = milestones.filter((m: any) => m.status !== 'paid').slice(1).reduce((s: number, m: any) => s + m.amount, 0);
   const lastPaidT     = [...milestones].filter((m: any) => m.status === 'paid').slice(-1)[0] ?? null;
   const lastPaidDateT = lastPaidT ? (lastPaidT.paidDate ?? lastPaidT.triggerDate ?? null) : null;
-  return [{ t, tFee: t.fee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT, vat: vatOf(t) }];
+  const lastPaidPosT  = lastPaidT?.tickPos ?? 0;
+  return [{ t, tFee: t.fee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT, lastPaidPosT, vat: vatOf(t) }];
 });
 
 const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -370,6 +372,8 @@ const fmtDate = (d: string) => {
     .pay-bars-legend-swatch.pay  { background: linear-gradient(to right, #16a34a, #22c55e); }
     .pay-work-track { position: relative; height: 8px; background: var(--grey-2); border-radius: 4px; margin: 0 1rem .55rem; overflow: hidden; }
     .pay-work-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(to right, #4f46e5, #818cf8); border-radius: 4px; }
+    .pay-work-goal { position: absolute; top: 0; height: 100%; width: 2px; background: rgba(15,23,42,.35); }
+    .pay-work-goal.next { width: 3px; background: var(--orange); }
     .pay-track-spacer { height: 44px; }
     .pay-track { position: relative; height: 8px; background: var(--grey-2); border-radius: 4px; margin: 0 1rem; overflow: visible; }
     .pay-track-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(to right, #16a34a, #22c55e); border-radius: 4px; }
@@ -382,14 +386,20 @@ const fmtDate = (d: string) => {
     .pay-tick-lbl { position: absolute; top: 13px; left: 50%; transform: translateX(-50%); font-size: 0.58rem; text-align: center; white-space: nowrap; line-height: 1.4; color: var(--slate); }
     .pay-tick.paid .pay-tick-lbl  { color: #16a34a; font-weight: 600; }
     .pay-tick.next .pay-tick-lbl  { color: var(--orange); font-weight: 700; }
+    .pay-tick.edge-r .pay-tick-lbl, .pay-tick.edge-r .pay-tick-id { left: auto; right: 0; transform: none; text-align: right; }
+    .pay-tick.edge-l .pay-tick-lbl, .pay-tick.edge-l .pay-tick-id { left: 0; right: auto; transform: none; text-align: left; }
+    .pay-now.edge-l .pay-now-lbl { left: 0; transform: none; }
+    .pay-now.edge-l .pay-now-lbl::after { left: 8px; }
+    .pay-now.edge-r .pay-now-lbl { left: auto; right: 0; transform: none; }
+    .pay-now.edge-r .pay-now-lbl::after { left: auto; right: 8px; }
     .pay-tick-id { position: absolute; bottom: 13px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; font-weight: 700; white-space: nowrap; color: var(--slate); font-family: monospace; }
     .pay-tick.paid .pay-tick-id   { color: #16a34a; }
     .pay-tick.next .pay-tick-id   { color: var(--orange); }
     .pay-now { position: absolute; top: 50%; transform: translate(-50%,-50%); z-index: 3; }
     .pay-now-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--navy); border: 2px solid #fff; box-shadow: 0 0 0 2px var(--navy); }
-    .pay-now-lbl { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; font-weight: 700; white-space: nowrap; background: var(--navy); color: #fff; padding: .15rem .4rem; border-radius: 3px; }
+    .pay-now-lbl { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; font-weight: 700; white-space: nowrap; background: var(--navy); color: #fff; padding: .15rem .4rem; border-radius: 3px; }
     .pay-now-lbl::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 3px solid transparent; border-top-color: var(--navy); }
-    .pay-now-line { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 1.5px; height: 12px; background: var(--navy); opacity: .4; }
+    .pay-now-line { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 1.5px; height: 30px; background: var(--navy); opacity: .4; }
     .pay-track-labels { margin: 0 1rem; padding-top: 2.5rem; display: flex; justify-content: space-between; }
     .pay-track-edge { font-size: 0.6rem; color: var(--grey-3); }
     .pay-table-wrap { border-top: 1px solid var(--grey-2); padding-top: 1rem; overflow-x: auto; }
@@ -928,24 +938,27 @@ const fmtDate = (d: string) => {
         </div>
         <div class="pay-timeline-wrap">
           <div class="pay-bars-legend">
-            <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch work"></div>Work progress ({cPerc.toFixed(1)}%)</div>
-            <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch pay"></div>Payments certified ({paidPct.toFixed(1)}%)</div>
+            <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch work"></div>Work progress ({cPerc.toFixed(1)}% of works)</div>
+            <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch pay"></div>Payments certified ({paidPct.toFixed(1)}% of budget)</div>
           </div>
           <div class="pay-work-track">
             <div class="pay-work-fill" style={`width:${Math.min(cPerc, 100).toFixed(1)}%`}></div>
+            {milestones.filter(m => m.triggerType === 'percent' && (m.workTriggerAt ?? 0) > 0).map(m => (
+              <div class={`pay-work-goal ${m.status}`} style={`left:${Math.min(m.workTriggerAt, 100)}%`} title={`${m.id} — ${Math.round(m.workTriggerAt)}%`}></div>
+            ))}
           </div>
           <div class="pay-track-spacer"></div>
           <div class="pay-track">
             <div class="pay-track-fill" style={`width:${Math.min(paidPct, 100).toFixed(1)}%`}></div>
             {milestones.map(m => (
-              <div class={`pay-tick ${m.status}`} style={`left:${m.tickPos}%`}>
+              <div class={`pay-tick ${m.status} ${m.tickPos >= 88 ? 'edge-r' : m.tickPos <= 6 ? 'edge-l' : ''}`} style={`left:${m.tickPos}%`}>
                 <div class="pay-tick-id">{m.id}</div>
                 <div class="pay-tick-dot"></div>
-                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : Math.round(m.triggerAt) + '%'}</div>
+                <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : `at ${Math.round(m.workTriggerAt)}% works`}</div>
               </div>
             ))}
             {lastPaidDate && (
-              <div class="pay-now" style={`left:${lastPaidPos}%`}>
+              <div class={`pay-now ${lastPaidPos >= 88 ? 'edge-r' : lastPaidPos <= 6 ? 'edge-l' : ''}`} style={`left:${lastPaidPos}%`}>
                 <div class="pay-now-lbl">{lastPaidDate}</div>
                 <div class="pay-now-line"></div>
                 <div class="pay-now-dot"></div>
@@ -1001,7 +1014,7 @@ const fmtDate = (d: string) => {
   {technicianSchedules.length > 0 && (
     <>
       <div class="section-title">Technical Fees — by Technician</div>
-      {technicianSchedules.map(({ t, tFee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT, vat }: any) => {
+      {technicianSchedules.map(({ t, tFee, milestones, paidT, paidPctT, nextT, pendingT, lastPaidDateT, lastPaidPosT, vat }: any) => {
         const withVatT = (n: number) => n * (1 + vat / 100);
         const nextNetT = nextT?.amount ?? 0;
         return (
@@ -1046,24 +1059,27 @@ const fmtDate = (d: string) => {
             </div>
             <div class="pay-timeline-wrap">
               <div class="pay-bars-legend">
-                <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch work"></div>Overall works progress ({totalPerc.toFixed(1)}%)</div>
-                <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch pay"></div>Fees certified ({paidPctT.toFixed(1)}%)</div>
+                <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch work"></div>Overall works progress ({totalPerc.toFixed(1)}% of works)</div>
+                <div class="pay-bars-legend-item"><div class="pay-bars-legend-swatch pay"></div>Fees certified ({paidPctT.toFixed(1)}% of fee)</div>
               </div>
               <div class="pay-work-track">
                 <div class="pay-work-fill" style={`width:${Math.min(totalPerc, 100).toFixed(1)}%`}></div>
+                {milestones.filter((m: any) => m.triggerType === 'percent' && (m.workTriggerAt ?? 0) > 0).map((m: any) => (
+                  <div class={`pay-work-goal ${m.status}`} style={`left:${Math.min(m.workTriggerAt, 100)}%`} title={`${m.id} — ${Math.round(m.workTriggerAt)}%`}></div>
+                ))}
               </div>
               <div class="pay-track-spacer"></div>
               <div class="pay-track">
                 <div class="pay-track-fill" style={`width:${Math.min(paidPctT, 100).toFixed(1)}%`}></div>
                 {milestones.map((m: any) => (
-                  <div class={`pay-tick ${m.status}`} style={`left:${m.tickPos}%`}>
+                  <div class={`pay-tick ${m.status} ${m.tickPos >= 88 ? 'edge-r' : m.tickPos <= 6 ? 'edge-l' : ''}`} style={`left:${m.tickPos}%`}>
                     <div class="pay-tick-id">{m.id}</div>
                     <div class="pay-tick-dot"></div>
-                    <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : Math.round(m.triggerAt) + '%'}</div>
+                    <div class="pay-tick-lbl">{m.triggerType === 'signing' ? 'Signing' : m.triggerType === 'start' ? 'Start' : m.triggerType === 'final' ? 'Final' : m.triggerType === 'date' ? (m.triggerDate ?? '—') : `at ${Math.round(m.workTriggerAt)}% overall`}</div>
                   </div>
                 ))}
                 {lastPaidDateT && (
-                  <div class="pay-now" style="left:0%">
+                  <div class={`pay-now ${lastPaidPosT >= 88 ? 'edge-r' : lastPaidPosT <= 6 ? 'edge-l' : ''}`} style={`left:${lastPaidPosT}%`}>
                     <div class="pay-now-lbl">{lastPaidDateT}</div>
                     <div class="pay-now-line"></div>
                     <div class="pay-now-dot"></div>
