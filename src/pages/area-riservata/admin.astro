@@ -14,27 +14,35 @@ const projectId = rawId ?? 'default';
 const data = await getProject(projectId);
 const { info: project, contractors, technicians, categories } = data;
 
+// Le voci extra si comportano in tutto come le altre: hanno una quantità
+// contrattata, un revised budget, avanzamento e stato. L'unica differenza è che
+// non erano nel contratto originale, quindi `budget` (la colonna Budget e i
+// totali "originale") resta a zero e l'extra continua a risultare come
+// Additional cost nella differenza revised − originale.
 const enrich = (item: any) => {
-  const qty           = item.extra ? 0 : (item.qty ?? 0);
+  const qty           = item.qty ?? 0;
   const price         = item.price ?? 0;
   const variationQty  = item.variation ?? 0;
-  const budget        = item.extra ? 0 : qty * price;
+  const contracted    = qty * price;          // quanto è stato pattuito su questa voce
+  const budget        = item.extra ? 0 : contracted;
   const variationAmt  = variationQty * price;
-  const revisedBudget = item.extra ? variationAmt : (qty + variationQty) * price;
+  const revisedBudget = (qty + variationQty) * price;
   const rawDone       = (item.done ?? 0) * price;
-  const agreedQty     = item.extra ? variationQty : (qty + variationQty);
+  const agreedQty     = qty + variationQty;
   const overrun       = revisedBudget > 0 && (item.done ?? 0) > agreedQty;
   const forceComplete = !!item.complete && !overrun;
   const valueDone     = forceComplete ? revisedBudget : rawDone;
   const perc          = revisedBudget > 0 ? (rawDone / revisedBudget) * 100 : null;
-  return { ...item, budget, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun, forceComplete };
+  return { ...item, budget, contracted, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun, forceComplete };
 };
 const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
 
+// Budget per fornitore = somma dei revised budget delle sue voci, EXTRA COMPRESI:
+// è l'importo su cui vengono calcolate le percentuali delle milestone SAL.
 const ctrBudgets = new Map<string, { budget: number; itemCount: number }>();
 for (const cat of categories) {
   for (const item of cat.items) {
-    if (!item.extra && item.contractor) {
+    if (item.contractor) {
       const qty      = parseFloat(item.qty)                     || 0;
       const varQty   = parseFloat((item as any).variation)      || 0;
       const price    = parseFloat(item.price)                   || 0;
@@ -281,6 +289,7 @@ const projectJson = JSON.stringify(data);
     .status-overrun      { background:transparent; color:var(--red); }
     .status-not-executed { background:#f1f5f9; color:#475569; }
     .status-extra    { background:#fef3c7; color:#92400e; }
+    .status-none     { background:transparent; color:var(--g3); font-weight:400; letter-spacing:0; }
     .status-badge.is-toggleable { cursor:pointer; user-select:none; }
     .status-badge.is-toggleable:hover { opacity:.75; }
     tr.subtotal td { background:#e2e8f0; padding:.35rem .65rem; font-size:.7rem; font-weight:600; white-space:nowrap; border-top:2px solid #c7d9f0;
@@ -810,8 +819,10 @@ const projectJson = JSON.stringify(data);
                   const overrun        = item.overrun ?? false;
                   const forceComplete  = item.forceComplete ?? (!!item.complete && !overrun);
                   const revisedIsZero  = !(item.revisedBudget > 0);
-                  const isNotExecuted  = revisedIsZero && (item.budget > 0);
-                  const hasNoRevised   = revisedIsZero && !(item.budget > 0);
+                  // "Not executed" = era pattuito qualcosa ma è stato azzerato.
+                  // Si guarda l'importo pattuito, non `budget`, così vale anche per gli extra.
+                  const isNotExecuted  = revisedIsZero && (item.contracted > 0);
+                  const hasNoRevised   = revisedIsZero && !(item.contracted > 0);
                   const extraShowDash  = item.extra && revisedIsZero;
                   const percNull       = item.perc === null;
                   const percVal        = item.perc ?? 0;
@@ -832,10 +843,8 @@ const projectJson = JSON.stringify(data);
                           {['m²','m³','lm','unit','lump','kg'].map((u:string) => <option selected={item.unit===u}>{u}</option>)}
                         </select>
                       </td>
-                      <td class={item.extra ? 'auto-cell' : 'editable-cell'}>
-                        {item.extra
-                          ? <span style="color:var(--g3)">–</span>
-                          : <input type="number" value={item.qty ?? ''} placeholder="0" data-cat-id={cat.id} data-item-id={item.id} data-field="qty" />}
+                      <td class="editable-cell">
+                        <input type="number" value={item.qty ?? ''} placeholder="0" data-cat-id={cat.id} data-item-id={item.id} data-field="qty" />
                       </td>
                       <td class="editable-cell">
                         <input type="number" value={item.price} step="0.01" data-cat-id={cat.id} data-item-id={item.id} data-field="price" />
@@ -865,7 +874,7 @@ const projectJson = JSON.stringify(data);
                           : isNotExecuted
                             ? <span class="status-badge status-not-executed">Not Executed</span>
                             : hasNoRevised
-                              ? <span class="status-badge status-pending is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to mark as complete">Not Started</span>
+                              ? <span class="status-badge status-none">–</span>
                               : isComplete
                                 ? <span class="status-badge status-complete is-toggleable" data-cat-id={cat.id} data-item-id={item.id} title="Click to unmark completion">Complete</span>
                                 : isInProgress
@@ -1368,14 +1377,14 @@ const projectJson = JSON.stringify(data);
     if (field === 'contractor') { recalcCtrBudgets(); return; }
     if (!row || !(field === 'qty' || field === 'price' || field === 'done' || field === 'variation')) return;
 
-    const qty          = item.extra ? 0 : (field === 'qty' ? (parseFloat(newVal) || 0) : (parseFloat(item.qty) || 0));
+    const qty          = field === 'qty' ? (parseFloat(newVal) || 0) : (parseFloat(item.qty) || 0);
     const price        = parseFloat(item.price) || 0;
     const variationQty = field === 'variation' ? (parseFloat(newVal) || 0) : (parseFloat(item.variation) || 0);
     const budget       = item.extra ? 0 : qty * price;
     const variationAmt = variationQty * price;
-    const revised      = item.extra ? variationAmt : (qty + variationQty) * price;
+    const revised      = (qty + variationQty) * price;
     const rawDone      = (parseFloat(field === 'done' ? newVal : item.done) || 0) * price;
-    const agreedQty    = item.extra ? variationQty : (qty + variationQty);
+    const agreedQty    = qty + variationQty;
     const doneQty      = parseFloat(field === 'done' ? newVal : item.done) || 0;
     const overrun      = revised > 0 && doneQty > agreedQty;
     const forceComplete = !!item.complete && !overrun;
@@ -1441,11 +1450,16 @@ const projectJson = JSON.stringify(data);
     // Status badge
     const statusSpan = row.querySelector('.status-badge');
     if (statusSpan) {
-      const notExecuted = revised <= 0 && budget > 0;
-      const noRevised   = revised <= 0 && budget <= 0;
+      // Si guarda l'importo pattuito (qty × price), non `budget`, che per gli
+      // extra è sempre zero: così anche un extra passa da Not Started a Complete.
+      const contracted  = qty * price;
+      const notExecuted = revised <= 0 && contracted > 0;
+      const noRevised   = revised <= 0 && contracted <= 0;
       if (overrun)                          { statusSpan.className = 'status-badge status-overrun';      statusSpan.textContent = 'Overrun'; }
       else if (notExecuted)                 { statusSpan.className = 'status-badge status-not-executed'; statusSpan.textContent = 'Not Executed'; }
-      else if (noRevised)                           { statusSpan.className = ''; statusSpan.textContent = '–'; }
+      // La classe status-badge va conservata: se la si azzera, questa riga non
+      // viene più ritrovata dai ricalcoli successivi e lo stato resta congelato.
+      else if (noRevised)                           { statusSpan.className = 'status-badge status-none'; statusSpan.textContent = '–'; }
       else if (forceCompleteActual || percActual >= 100) { statusSpan.className = 'status-badge status-complete is-toggleable'; statusSpan.textContent = 'Complete'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
       else if (percActual > 0)                      { statusSpan.className = 'status-badge status-progress is-toggleable'; statusSpan.textContent = 'In Progress'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
       else                                          { statusSpan.className = 'status-badge status-pending is-toggleable';  statusSpan.textContent = 'Not Started'; statusSpan.dataset.catId = catId; statusSpan.dataset.itemId = itemId; }
@@ -1466,18 +1480,18 @@ const projectJson = JSON.stringify(data);
     // Compute totals directly from state (same logic as server-side enrich)
     let sumBudget = 0, sumRevised = 0, sumDone = 0;
     for (const item of cat.items) {
-      const qty         = item.extra ? 0 : (parseFloat(item.qty) || 0);
+      const qty         = parseFloat(item.qty) || 0;
       const price       = parseFloat(item.price) || 0;
       const variationQty= parseFloat(item.variation) || 0;
       const budget      = item.extra ? 0 : qty * price;
       const variationAmt= variationQty * price;
-      const revised     = item.extra ? variationAmt : (qty + variationQty) * price;
+      const revised     = (qty + variationQty) * price;
       const rawDone     = (parseFloat(item.done) || 0) * price;
-      const agreedQty   = item.extra ? variationQty : (qty + variationQty);
+      const agreedQty   = qty + variationQty;
       const overrun     = revised > 0 && (parseFloat(item.done)||0) > agreedQty;
       const forceComplete = !!item.complete && !overrun;
       const valueDone   = forceComplete ? revised : rawDone;
-      if (!item.extra) sumBudget += budget;
+      sumBudget += budget;   // per gli extra budget è già 0: non erano a contratto
       sumRevised += revised;
       sumDone    += valueDone;
     }
@@ -1529,17 +1543,19 @@ const projectJson = JSON.stringify(data);
     let gtBudget = 0, gtRevised = 0, gtDone = 0;
     for (const cat of state.categories) {
       for (const item of cat.items) {
-        const qty         = item.extra ? 0 : (parseFloat(item.qty) || 0);
+        const qty         = parseFloat(item.qty) || 0;
         const price       = parseFloat(item.price) || 0;
         const variationQty= parseFloat(item.variation) || 0;
         const budget      = item.extra ? 0 : qty * price;
-        const variationAmt= variationQty * price;
-        const revised     = item.extra ? variationAmt : (qty + variationQty) * price;
+        const revised     = (qty + variationQty) * price;
         const rawDone     = (parseFloat(item.done) || 0) * price;
-        const overrun     = !item.extra && (parseFloat(item.done)||0) > qty;
-        const forceComplete = !!item.complete && !overrun && !item.extra;
+        // agreedQty tiene conto della variation, come lato server: senza, una voce
+        // ridotta o aumentata veniva contata come overrun e il totale Done sballava.
+        const agreedQty   = qty + variationQty;
+        const overrun     = revised > 0 && (parseFloat(item.done)||0) > agreedQty;
+        const forceComplete = !!item.complete && !overrun;
         const valueDone   = forceComplete ? revised : rawDone;
-        if (!item.extra) gtBudget += budget;
+        gtBudget += budget;
         gtRevised += revised;
         gtDone    += valueDone;
       }
@@ -1559,7 +1575,7 @@ const projectJson = JSON.stringify(data);
     const budgets = {};
     for (const cat of state.categories) {
       for (const item of cat.items) {
-        if (item.extra || !item.contractor) continue;
+        if (!item.contractor) continue;   // gli extra entrano nel budget del fornitore
         const qty      = parseFloat(item.qty) || 0;
         const varQty   = parseFloat(item.variation) || 0;
         const price    = parseFloat(item.price) || 0;
@@ -1593,26 +1609,37 @@ const projectJson = JSON.stringify(data);
     const { catId, itemId } = badge.dataset;
     if (!catId || !itemId) return;
     const item = findItem(catId, itemId);
-    if (!item || item.extra) return;
+    if (!item) return;   // gli extra sono spuntabili come tutte le altre voci
     item.complete = !item.complete;
     const row = badge.closest('tr');
-    const overrun = !item.extra && (item.done || 0) > (item.qty || 0);
-    const budget  = (item.qty || 0) * (item.price || 0);
-    const valDone = (item.done || 0) * (item.price || 0);
-    const perc    = budget > 0 ? valDone / budget * 100 : 0;
-    const force   = item.complete && !overrun;
-    const pColor  = overrun ? '#dc2626' : force ? '#22c55e' : perc >= 100 ? '#22c55e' : perc > 0 ? '#f59e0b' : '#cbd5e1';
+    // Stessa formula del server: la variation fa parte della quantità pattuita,
+    // altrimenti una voce ridotta o aumentata risultava sempre in overrun.
+    const qty       = parseFloat(item.qty) || 0;
+    const varQty    = parseFloat(item.variation) || 0;
+    const price     = parseFloat(item.price) || 0;
+    const doneQty   = parseFloat(item.done) || 0;
+    const agreedQty = qty + varQty;
+    const revised   = agreedQty * price;
+    const rawDone   = doneQty * price;
+    const overrun   = revised > 0 && doneQty > agreedQty;
+    const perc      = revised > 0 ? rawDone / revised * 100 : 0;
+    const force     = item.complete && !overrun;
+    const dispPerc  = force ? 100 : perc;
+    const pColor    = overrun ? '#dc2626' : force ? '#22c55e' : perc >= 100 ? '#22c55e' : perc > 0 ? '#f59e0b' : '#cbd5e1';
     // Update badge
     if (force || perc >= 100) { badge.className = 'status-badge status-complete is-toggleable'; badge.textContent = 'Complete'; badge.title = 'Click to unmark completion'; }
     else if (perc > 0)        { badge.className = 'status-badge status-progress is-toggleable'; badge.textContent = 'In Progress'; badge.title = 'Click to mark as complete'; }
     else                      { badge.className = 'status-badge status-pending is-toggleable';  badge.textContent = 'Not Started'; badge.title = 'Click to mark as complete'; }
-    // Update progress bar color
+    // Progress bar + Value Done: quest'ultimo cambia quando si forza il completamento
     if (row) {
       const fill = row.querySelector('.perc-fill');
       const num  = row.querySelector('.perc-num');
-      if (fill) fill.style.background = pColor;
-      if (num)  num.style.color = pColor;
+      if (fill) { fill.style.width = `${Math.min(dispPerc, 100)}%`; fill.style.background = pColor; }
+      if (num)  { num.textContent = `${Math.round(dispPerc)}%`; num.style.color = pColor; }
+      const dCell = row.querySelector('.auto-cell-done');
+      if (dCell) dCell.textContent = fmtAmt(force ? revised : rawDone);
     }
+    recalcSubtotal(catId);
   });
 
   document.addEventListener('click', e => {
@@ -2322,9 +2349,9 @@ const projectJson = JSON.stringify(data);
     const isX = item.extra;
     const price       = parseFloat(item.price) || 0;
     const variationQty= parseFloat(item.variation) || 0;
-    const revised     = isX ? variationQty * price : ((parseFloat(item.qty)||0) + variationQty) * price;
+    const revised     = ((parseFloat(item.qty)||0) + variationQty) * price;
     const rawDone     = (parseFloat(item.done)||0) * price;
-    const agreedQty   = isX ? variationQty : ((parseFloat(item.qty)||0) + variationQty);
+    const agreedQty   = (parseFloat(item.qty)||0) + variationQty;
     const doneQty     = parseFloat(item.done)||0;
     const overrunX    = revised > 0 && doneQty > agreedQty;
     const fcX         = !!item.complete && !overrunX;
@@ -2336,7 +2363,7 @@ const projectJson = JSON.stringify(data);
     const statusHtml  = overrunX
       ? `<span class="status-badge status-overrun">Overrun</span>`
       : revised <= 0
-        ? `<span class="status-badge status-pending is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to mark as complete">Not Started</span>`
+        ? `<span class="status-badge status-none">–</span>`
         : fcX || dispPercX >= 100
             ? `<span class="status-badge status-complete is-toggleable" data-cat-id="${catId}" data-item-id="${item.id}" title="Click to unmark completion">Complete</span>`
             : dispPercX > 0
@@ -2348,7 +2375,7 @@ const projectJson = JSON.stringify(data);
       `<td class="item-id">${item.id}</td>`,
       `<td>${isX?'<span class="extra-badge">Extra</span>':''}<span class="brief-link" data-id="${item.id}" data-cat-id="${catId}" data-brief="" data-fulldesc="" title="Click to view / edit full description"><em class="brief-empty">+ add description</em></span></td>`,
       `<td class="edit-col"><select data-cat-id="${catId}" data-item-id="${item.id}" data-field="unit" style="border:1px solid var(--g2);border-radius:4px;padding:.2rem .3rem;font-size:.72rem;width:60px">${unitOpts}</select></td>`,
-      `<td class="${isX?'auto-cell':'editable-cell'}">${isX?'<span style="color:var(--g3)">–</span>':`<input type="number" value="0" placeholder="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" />`}</td>`,
+      `<td class="editable-cell"><input type="number" value="0" placeholder="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="qty" /></td>`,
       `<td class="editable-cell"><input type="number" value="0" step="0.01" data-cat-id="${catId}" data-item-id="${item.id}" data-field="price" /></td>`,
       `<td class="auto-cell auto-cell-budget">${isX?'<span style="color:var(--g3)">–</span>':'€ 0.00'}</td>`,
       `<td class="editable-cell"><input type="number" step="any" value="" placeholder="0" data-cat-id="${catId}" data-item-id="${item.id}" data-field="variation" style="text-align:right;width:80px;color:var(--g3)" /></td>`,

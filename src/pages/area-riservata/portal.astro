@@ -26,20 +26,24 @@ const { info: project, contractors, technicians: rawTechnicians, categories: raw
 const technicians = rawTechnicians ?? [];
 const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 
+// Stessa logica del pannello admin: le voci extra hanno quantità contrattata,
+// revised budget e avanzamento come tutte le altre. Solo `budget` (l'importo
+// contrattuale originale) resta a zero, perché l'extra non era nel contratto.
 const enrich = (item: any) => {
-  const qty           = item.extra ? 0 : (item.qty ?? 0);
+  const qty           = item.qty ?? 0;
   const price         = item.price ?? 0;
   const variationQty  = item.variation ?? 0;
-  const budget        = item.extra ? 0 : qty * price;
+  const contracted    = qty * price;
+  const budget        = item.extra ? 0 : contracted;
   const variationAmt  = variationQty * price;
-  const revisedBudget = item.extra ? variationAmt : (qty + variationQty) * price;
+  const revisedBudget = (qty + variationQty) * price;
   const rawDone       = (item.done ?? 0) * price;
-  const agreedQty     = item.extra ? variationQty : (qty + variationQty);
+  const agreedQty     = qty + variationQty;
   const overrun       = revisedBudget > 0 && (item.done ?? 0) > agreedQty;
   const forceComplete = !!item.complete && !overrun;
   const valueDone     = forceComplete ? revisedBudget : rawDone;
   const perc          = revisedBudget > 0 ? (rawDone / revisedBudget) * 100 : null;
-  return { ...item, qty, budget, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun, forceComplete };
+  return { ...item, qty, budget, contracted, variationQty, variationAmt, revisedBudget, valueDone, perc, overrun, forceComplete };
 };
 const enrichedCats = rawCategories.map((cat: any) => {
   const items        = cat.items.map(enrich);
@@ -60,7 +64,7 @@ const totalLeft      = totalRevised - totalDone;
 
 // Per-contractor payment schedules (uses each contractor's sal milestones and their own budget)
 const contractorSchedules = contractors.flatMap(c => {
-  const allItems = enrichedCats.flatMap(cat => cat.items).filter(i => i.contractor === c.id && !i.extra);
+  const allItems = enrichedCats.flatMap(cat => cat.items).filter(i => i.contractor === c.id);   // extra compresi
   const cBudget  = allItems.reduce((s, i) => s + i.revisedBudget, 0);
   if (cBudget === 0 || !c.sal || c.sal.length === 0) return [];
   const cDone    = allItems.reduce((s, i) => s + i.valueDone, 0);
@@ -222,7 +226,7 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionD
 const fmtQ    = (n: number, unit: string) => unit === 'lump' ? (n === 0 ? '–' : '✓') : n.toLocaleString('en-GB');
 const fmtQty  = (n: number, unit: string) => unit === 'lump' ? '1' : n.toLocaleString('en-GB');
 // True when variation has zeroed out the contracted budget
-const isNotExecuted = (item: any) => !item.extra && item.budget > 0 && !(item.revisedBudget > 0);
+const isNotExecuted = (item: any) => item.contracted > 0 && !(item.revisedBudget > 0);
 
 const statusLabel = (itemOrPerc: any) => {
   if (typeof itemOrPerc === 'number' || itemOrPerc === null) {
@@ -736,7 +740,7 @@ const fmtDate = (d: string) => {
                 const variationPos  = item.variationQty > 0;
                 const variationNeg  = item.variationQty < 0;
                 const revisedPos    = item.revisedBudget > 0;
-                const notExecuted   = !item.extra && item.budget > 0 && !(item.revisedBudget > 0);
+                const notExecuted   = item.contracted > 0 && !(item.revisedBudget > 0);
                 const revisedColor  = variationNeg ? '#16a34a' : variationPos ? '#dc2626' : '';
                 return (
                 <tr class={`item${item.extra ? ' extra-item' : ''}`} data-cat-member={cat.id}>
@@ -752,8 +756,8 @@ const fmtDate = (d: string) => {
                     >{item.brief}</span>
                   </td>
                   <td style="color:var(--slate); font-size:0.72rem">{item.unit}</td>
-                  <td class="item-num" style={item.extra ? 'color:var(--grey-3)' : ''}>
-                    {item.extra ? '–' : fmtQty(item.qty, item.unit)}
+                  <td class="item-num">
+                    {item.qty ? fmtQty(item.qty, item.unit) : <span style="color:var(--grey-3)">–</span>}
                   </td>
                   <td class="item-money">{fmt(item.price)}</td>
                   <td class="item-money" style={item.extra ? 'color:var(--grey-3)' : ''}>
