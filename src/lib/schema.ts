@@ -6,9 +6,9 @@ export interface SalMilestone {
   triggerDate?: string;
   /**
    * Su cosa è calcolato l'importo della milestone:
-   *  - 'pct' (default): percentuale dell'importo RIDETERMINATO del fornitore
-   *    (varianti ed extra compresi). Si riproporziona quando il budget cambia.
-   *    È la base giusta per i SAL, che certificano i lavori effettivamente svolti.
+   *  - 'pct' (default): percentuale dell'importo RIDETERMINATO. Se `baseAmt` è
+   *    presente la percentuale si applica a quella fotografia e l'importo non si
+   *    muove più; altrimenti segue il rideterminato corrente (milestone vecchie).
    *  - 'pctContract': percentuale dell'importo CONTRATTUALE, cioè quantità
    *    contrattata × prezzo delle sole voci a contratto, senza varianti né extra.
    *    È la base giusta per l'acconto, che si paga alla firma su quell'importo:
@@ -19,14 +19,21 @@ export interface SalMilestone {
   amountMode?: 'pct' | 'pctContract' | 'eur';
   pct: number;        // % della propria base — autoritativa nelle due modalità percentuali
   fixedAmt?: number;  // importo in euro — autoritativo in modalità 'eur'
+  /**
+   * Modalità 'pct': fotografia del rideterminato presa quando la milestone è
+   * stata creata, con la data. È su questo che si applica la percentuale, così
+   * un SAL già definito non si sposta più. Assente su quelle vecchie: in quel
+   * caso si ricade sul rideterminato corrente, come prima.
+   */
+  baseAmt?: number;
+  baseDate?: string;
   paid?: boolean;     // manually certified as paid
   paidDate?: string;  // ISO date of actual payment
   /**
-   * Detrae l'acconto (la milestone con triggerType 'signing') dall'importo di
-   * QUESTA milestone. Vincolo: al massimo UNA milestone per fornitore/tecnico
-   * può averlo attivo, e mai la milestone di acconto stessa.
-   * L'importo lordo (pct / fixedAmt) resta quello certificato dal SAL sui
-   * lavori eseguiti; il netto da incassare è lordo − acconto.
+   * Recupera l'acconto su QUESTA milestone. Gli importi dei SAL sono cumulativi
+   * e ogni SAL detrae già da sé il cumulato precedente; l'acconto invece resta
+   * fuori dal conteggio finché non lo si recupera qui, esplicitamente.
+   * Vincolo: al massimo UNA milestone per fornitore/tecnico, mai l'acconto stesso.
    */
   deductDeposit?: boolean;
 }

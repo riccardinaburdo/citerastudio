@@ -32,7 +32,9 @@ const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num
 const msAmount = (m: any, budget: number, contractBudget: number) => {
   const mode = m.amountMode ?? 'pct';
   if (mode === 'eur') return m.fixedAmt ?? 0;
-  const base = mode === 'pctContract' ? contractBudget : budget;
+  // 'pct' usa la fotografia del rideterminato presa alla creazione della milestone;
+  // senza fotografia (dati vecchi) si ricade sul rideterminato corrente.
+  const base = mode === 'pctContract' ? contractBudget : (m.baseAmt ?? budget);
   return base > 0 ? base * (m.pct || 0) / 100 : (m.fixedAmt ?? 0);
 };
 
@@ -95,6 +97,9 @@ const contractorSchedules = contractors.flatMap(c => {
   const depAmt   = depM ? msAmount(depM, cBudget, cContract) : 0;
   const dedIdx   = c.sal.findIndex(m => (m as any).deductDeposit === true && m.triggerType !== 'signing');
   const dedId    = dedIdx >= 0 ? c.sal[dedIdx].id : null;
+  // Gli importi dei SAL sono cumulativi: si incassa l'incremento sul SAL
+  // precedente, meno l'acconto sul SAL dove è stato messo il recupero.
+  let prevCumC = 0;
 
   const milestones = quantified.map(m => {
     const gross    = msAmount(m, cBudget, cContract);
@@ -103,8 +108,11 @@ const contractorSchedules = contractors.flatMap(c => {
     const effPct   = cBudget > 0 ? (gross / cBudget) * 100 : (m.pct || 0);
     cumPct += effPct;
     const tickPos  = Math.min(cumPct, 100);
-    const deposDed = (dedId !== null && m.id === dedId) ? Math.min(depAmt, gross) : 0;
-    const amount   = gross - deposDed;
+    const isDep    = m === depM;
+    const deposDed = (!isDep && dedId !== null && m.id === dedId) ? depAmt : 0;
+    const prevCum  = isDep ? 0 : prevCumC;
+    const amount   = isDep ? gross : gross - prevCum - deposDed;
+    if (!isDep) prevCumC = gross;
     // Two different axes, deliberately kept apart:
     //  · triggerAt     = position on the PAYMENTS bar   → cumulative payment share (tickPos)
     //  · workTriggerAt = threshold on the WORK PROGRESS  → the milestone's own triggerPct,
@@ -140,7 +148,7 @@ const contractorSchedules = contractors.flatMap(c => {
         isDue = m.triggerType === 'signing' || (m.triggerType === 'start' && cPerc > 0) || (workTriggerAt > 0 && cPerc >= workTriggerAt);
       } else { status = 'pending'; }
     }
-    return { ...m, pct: effPct, amount, gross, deposDed, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, pct: effPct, amount, gross, prevCum, deposDed, isDep, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   // Collapsed "Remaining" block for unquantified date milestones
@@ -182,14 +190,18 @@ const technicianSchedules = technicians.flatMap((t: any) => {
   const depAmtT = depMT ? msAmount(depMT, t.fee, t.fee) : 0;
   const dedMT   = t.sal.find((m: any) => m.deductDeposit === true && m.triggerType !== 'signing') ?? null;
   const dedIdT  = dedMT ? dedMT.id : null;
+  let prevCumT = 0;
 
   const milestones = quantified.map((m: any) => {
     const gross    = msAmount(m, t.fee, t.fee);
     const effPct   = t.fee > 0 ? (gross / t.fee) * 100 : (m.pct || 0);
     cumPctT += effPct;
     const tickPos = cumPctT;
-    const deposDed = (dedIdT !== null && m.id === dedIdT) ? Math.min(depAmtT, gross) : 0;
-    const amount   = gross - deposDed;
+    const isDep    = m === depMT;
+    const deposDed = (!isDep && dedIdT !== null && m.id === dedIdT) ? depAmtT : 0;
+    const prevCum  = isDep ? 0 : prevCumT;
+    const amount   = isDep ? gross : gross - prevCum - deposDed;
+    if (!isDep) prevCumT = gross;
 
     // Same split as the contractors above: triggerAt positions the tick on the
     // payments bar, workTriggerAt is the overall-works % that actually releases it.
@@ -227,7 +239,7 @@ const technicianSchedules = technicians.flatMap((t: any) => {
              || (m.triggerType === 'percent' && totalPerc >= (m.triggerPct ?? 0));
       } else { status = 'pending'; }
     }
-    return { ...m, pct: effPct, amount, gross, deposDed, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, pct: effPct, amount, gross, prevCum, deposDed, isDep, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   const paidT    = milestones.filter((m: any) => m.status === 'paid').reduce((s: number, m: any) => s + m.amount, 0);
@@ -972,9 +984,11 @@ const fmtDate = (d: string) => {
                   <td class="pay-col-id">{m.id}</td>
                   <td class="pay-col-label">
                     {m.label}
-                    {(m as any).deposDed > 0 && (
+                    {!(m as any).isDep && ((m as any).prevCum > 0 || (m as any).deposDed > 0) && (
                       <span style="display:block;font-size:.66rem;color:var(--slate);margin-top:.1rem">
-                        {fmt((m as any).gross)} − acconto {fmt((m as any).deposDed)}
+                        cumulato {fmt((m as any).gross)}
+                        {(m as any).prevCum > 0 ? ` − ${fmt((m as any).prevCum)} SAL prec.` : ''}
+                        {(m as any).deposDed > 0 ? ` − ${fmt((m as any).deposDed)} acconto` : ''}
                       </span>
                     )}
                   </td>
@@ -1091,9 +1105,11 @@ const fmtDate = (d: string) => {
                       <td class="pay-col-id">{m.id}</td>
                       <td class="pay-col-label">
                         {m.label}
-                        {m.deposDed > 0 && (
+                        {!m.isDep && (m.prevCum > 0 || m.deposDed > 0) && (
                           <span style="display:block;font-size:.66rem;color:var(--slate);margin-top:.1rem">
-                            {fmt(m.gross)} − acconto {fmt(m.deposDed)}
+                            cumulato {fmt(m.gross)}
+                            {m.prevCum > 0 ? ` − ${fmt(m.prevCum)} SAL prec.` : ''}
+                            {m.deposDed > 0 ? ` − ${fmt(m.deposDed)} acconto` : ''}
                           </span>
                         )}
                       </td>
