@@ -13,10 +13,12 @@ export interface SalMilestone {
    *    contrattata × prezzo delle sole voci a contratto, senza varianti né extra.
    *    È la base giusta per l'acconto, che si paga alla firma su quell'importo:
    *    varianti ed extra decisi dopo non lo spostano.
+   *  - 'done': LAVORI ESEGUITI dalla ditta a oggi. La rata insegue il Value Done,
+   *    come fa un SAL vero; l'importo lo scrive il sistema, non si digita.
    *  - 'eur': cifra forfettaria. Non si muove mai; la percentuale è derivata.
    * Assente = 'pct', così le milestone già salvate non cambiano comportamento.
    */
-  amountMode?: 'pct' | 'pctContract' | 'eur';
+  amountMode?: 'pct' | 'pctContract' | 'done' | 'eur';
   pct: number;        // % della propria base — autoritativa nelle due modalità percentuali
   fixedAmt?: number;  // importo in euro — autoritativo in modalità 'eur'
   /**
@@ -27,6 +29,13 @@ export interface SalMilestone {
    */
   baseAmt?: number;
   baseDate?: string;
+  /**
+   * Sottrae da QUESTA rata l'acconto (la milestone con trigger 'signing').
+   * Serve soprattutto in modalità 'done': il SAL certifica tutti i lavori
+   * eseguiti, e da lì va tolto l'anticipo già versato. Al massimo una milestone
+   * per fornitore può averlo attivo, e mai l'acconto stesso.
+   */
+  deductDeposit?: boolean;
   paid?: boolean;     // manually certified as paid
   paidDate?: string;  // ISO date of actual payment
 }

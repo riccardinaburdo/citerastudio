@@ -37,6 +37,15 @@ const enrich = (item: any) => {
 };
 const enrichedCats = categories.map(c => ({ ...c, items: c.items.map(enrich) }));
 
+// Lavori eseguiti per fornitore: base della modalità 'done' delle milestone.
+const ctrDone = new Map<string, number>();
+for (const cat of enrichedCats) {
+  for (const item of cat.items) {
+    if (!item.contractor) continue;
+    ctrDone.set(item.contractor, (ctrDone.get(item.contractor) ?? 0) + item.valueDone);
+  }
+}
+
 // Due importi per fornitore, che servono a cose diverse:
 //  · budget         = rideterminato, varianti ed extra compresi. Base dei SAL.
 //  · contractBudget = contrattuale, quantità a contratto × prezzo delle sole voci
@@ -74,58 +83,71 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionD
 const vatOf    = (e: any) => (e?.vatRate ?? 10) as number;
 const vatLabel = (r: any) => (r ?? 10) === 0 ? 'No IVA' : `IVA ${r ?? 10}%`;
 
-// ── Acconto (deposit) handling ────────────────────────────────────────────
-// The "acconto" is the milestone with triggerType === 'signing'.
-// Importo di una milestone. In modalità 'eur' la cifra pattuita è il dato
-// autoritativo e NON si riproporziona quando il budget del fornitore cambia:
-// è il caso dell'acconto forfettario. In modalità 'pct' l'importo segue il
-// budget. Senza budget non esiste percentuale, quindi si ricade sulla cifra.
+// ── Importo di una milestone ──────────────────────────────────────────────
+// Quattro modalità, scelte riga per riga:
+//  · 'pctContract' — % dell'importo CONTRATTUALE: immune a varianti ed extra,
+//                    è la base dell'acconto
+//  · 'pct'         — % del rideterminato fotografato alla creazione (baseAmt);
+//                    senza fotografia (dati vecchi) segue il rideterminato corrente
+//  · 'eur'         — cifra forfettaria
+//  · 'done'        — LAVORI ESEGUITI dalla ditta a oggi: la rata insegue il
+//                    Value Done, come fa un SAL vero. Da qui si può detrarre
+//                    l'acconto spuntando `deductDeposit`.
 const msMode    = (m: any) => m.amountMode ?? 'pct';
 const isFixedMs = (m: any) => msMode(m) === 'eur';
-// Base su cui si applica la percentuale:
-//  · 'pctContract' -> importo contrattuale (immune a varianti ed extra)
-//  · 'pct'         -> fotografia del rideterminato scattata alla creazione della
-//                     milestone; se manca (dati vecchi) il rideterminato corrente
+const isDoneMs  = (m: any) => msMode(m) === 'done';
 const msBase = (m: any, budget: number, contractBudget: number) =>
   msMode(m) === 'pctContract' ? contractBudget : (m.baseAmt ?? budget);
-const msAmount = (m: any, budget: number, contractBudget: number) => {
+
+const msAmountRaw = (m: any, budget: number, contractBudget: number, done: number) => {
   if (isFixedMs(m)) return m.fixedAmt ?? 0;
+  if (isDoneMs(m))  return done;
   const base = msBase(m, budget, contractBudget);
   return base > 0 ? base * (m.pct || 0) / 100 : (m.fixedAmt ?? 0);
 };
-// Percentuale mostrata nella colonna %: nelle due modalità percentuali è quella
-// digitata (riferita alla propria base); in 'eur' è derivata dal rideterminato.
-const msPct = (m: any, budget: number, contractBudget: number) =>
-  isFixedMs(m)
-    ? (budget > 0 ? (msAmount(m, budget, contractBudget) / budget) * 100 : (m.pct || 0))
+
+// L'acconto è la milestone con trigger "On signing". Può essere detratto da UNA
+// sola altra milestone, quella su cui è stata spuntata la casella.
+const depositAmountOf = (sal: any[], budget: number, contractBudget: number, done: number) => {
+  const dep = (sal ?? []).find((m: any) => m.triggerType === 'signing');
+  return dep ? msAmountRaw(dep, budget, contractBudget, done) : 0;
+};
+
+const msAmount = (m: any, budget: number, contractBudget: number, done: number, deposit = 0) => {
+  const raw = msAmountRaw(m, budget, contractBudget, done);
+  return (m.deductDeposit === true && m.triggerType !== 'signing') ? raw - deposit : raw;
+};
+
+// Percentuale in colonna: digitata nelle due modalità percentuali, derivata
+// dall'importo in 'eur' e in 'done'.
+const msPct = (m: any, budget: number, contractBudget: number, done: number, deposit = 0) =>
+  (isFixedMs(m) || isDoneMs(m))
+    ? (budget > 0 ? (msAmount(m, budget, contractBudget, done, deposit) / budget) * 100 : (m.pct || 0))
     : (m.pct || 0);
 
-/**
- * Scadenzario di un fornitore. Gli importi dei SAL sono CUMULATIVI: la riga
- * porta il valore complessivo certificato a quella data, non la singola rata.
- * Quindi:
- *     da pagare = cumulato − cumulato del SAL precedente − eventuale acconto
- * L'acconto (trigger "On signing") sta fuori dalla catena cumulativa: è un
- * pagamento a sé, e viene recuperato sul SAL su cui è stato spuntato.
- */
 /**
  * Scadenzario di un fornitore. Ogni milestone è una RATA: l'acconto è
  * semplicemente la prima (e può valere zero). Le rate si sommano e devono
  * arrivare al 100% del budget rideterminato — non si decurtano fra loro.
- * Il carattere cumulativo del SAL sta nella BASE su cui si calcola la rata
- * ("% del revised alla data"), non nell'importo della rata stessa.
+ * Fa eccezione la modalità 'done', che insegue i lavori eseguiti: finché il
+ * cantiere è in corso il totale resta sotto il budget, e la differenza non è
+ * un errore ma il residuo ancora da certificare.
  */
-const salSchedule = (sal: any[], budget: number, contractBudget: number) => {
-  const list  = sal ?? [];
-  const rows  = list.map((m: any) => ({ m, amount: msAmount(m, budget, contractBudget) }));
-  const total = rows.reduce((s: number, r: any) => s + r.amount, 0);
+const salSchedule = (sal: any[], budget: number, contractBudget: number, done: number) => {
+  const list    = sal ?? [];
+  const deposit = depositAmountOf(list, budget, contractBudget, done);
+  const rows    = list.map((m: any) => ({ m, amount: msAmount(m, budget, contractBudget, done, deposit) }));
+  const total   = rows.reduce((s: number, r: any) => s + r.amount, 0);
   const totalPct = budget > 0
     ? (total / budget) * 100
     : list.reduce((s: number, m: any) => s + (m.pct || 0), 0);
   const ok = budget > 0
     ? Math.abs(total - budget) < 0.01
     : Math.abs(totalPct - 100) < 0.01;
-  return { rows, total, totalPct, ok };
+  // Con una rata che insegue i lavori eseguiti, stare sotto il budget è la
+  // normalità di un cantiere aperto: si segnala come residuo, non come errore.
+  const tracking = list.some(isDoneMs);
+  return { rows, total, totalPct, ok, deposit, tracking };
 };
 
 const projectJson = JSON.stringify(data);
@@ -246,6 +268,11 @@ const projectJson = JSON.stringify(data);
                        border:1px solid var(--g2); border-radius:4px; padding:.1rem .15rem; cursor:pointer; max-width:132px; }
     .sal-mode-select:focus { outline:none; border-color:var(--navy); }
     .sal-base-note   { font-size:.58rem; color:var(--g3); font-family:monospace; margin-top:.1rem; }
+    .sal-ded-wrap { display:flex; align-items:center; justify-content:flex-end; margin-top:.18rem; }
+    .sal-ded-lbl  { display:inline-flex; align-items:center; gap:.2rem; font-size:.62rem; color:var(--slate);
+                    cursor:pointer; user-select:none; white-space:nowrap; }
+    .sal-ded-lbl input { width:12px; height:12px; cursor:pointer; accent-color:var(--orange); }
+    .sal-ded-lbl:has(input:checked) { color:var(--orange); font-weight:600; }
     .auto-tag { display:inline-block; font-size:.55rem; font-weight:700; text-transform:uppercase;
       letter-spacing:.05em; background:#f0f6ff; color:var(--navy); border:1px solid #c7d9f0;
       padding:.05rem .35rem; border-radius:3px; margin-left:.4rem; vertical-align:middle; }
@@ -551,7 +578,8 @@ const projectJson = JSON.stringify(data);
         const info   = ctrBudgets.get(c.id) ?? { budget: 0, itemCount: 0 };
         const budget   = info.budget;
         const contract = info.contractBudget;
-        const st       = salSchedule(c.sal, budget, contract);
+        const done     = ctrDone.get(c.id) ?? 0;
+        const st       = salSchedule(c.sal, budget, contract, done);
         // Dettaglio per categoria: stessa formula del budget in intestazione,
         // extra compresi, altrimenti le due cifre non tornano.
         const catBreakdown = categories.map(cat => {
@@ -566,7 +594,7 @@ const projectJson = JSON.stringify(data);
           return { id: cat.id, label: cat.label, total: catTotal, count: items.length };
         }).filter(Boolean);
         return (
-          <div class="card ctr-card" data-budget={budget.toFixed(2)} data-contract-budget={contract.toFixed(2)} data-ctr-id={c.id}>
+          <div class="card ctr-card" data-budget={budget.toFixed(2)} data-contract-budget={contract.toFixed(2)} data-done-amt={done.toFixed(2)} data-ctr-id={c.id}>
             <div class="ctr-header">
               <div>
                 <div class="ctr-name">{c.name}</div>
@@ -627,20 +655,27 @@ const projectJson = JSON.stringify(data);
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">&#8364;</span>
-                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, budget, contract).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, budget, contract, done, st.deposit).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
                       <div class="sal-mode-wrap">
                         <select class="sal-mode-select" title="Su cosa &egrave; calcolata questa rata">
                           <option value="pctContract" selected={msMode(m) === 'pctContract'}>% del contratto</option>
                           <option value="pct"         selected={msMode(m) === 'pct'}>% del revised alla data</option>
+                          <option value="done"        selected={msMode(m) === 'done'}>Lavori eseguiti a oggi</option>
                           <option value="eur"         selected={msMode(m) === 'eur'}>Fisso</option>
                         </select>
+                      </div>
+                      <div class="sal-ded-wrap" style={m.triggerType === 'signing' ? 'display:none' : ''}>
+                        <label class="sal-ded-lbl" title="Sottrae da questa rata l&rsquo;acconto gi&agrave; versato">
+                          <input class="sal-ded-check" type="checkbox" checked={m.deductDeposit === true && m.triggerType !== 'signing'} />
+                          <span>&minus; acconto</span>
+                        </label>
                       </div>
                       <div class="sal-base-note" style={msMode(m) === 'pct' && m.baseAmt ? '' : 'display:none'}>
                         su {fmt(m.baseAmt ?? 0)}{m.baseDate ? ` del ${m.baseDate}` : ''}
                       </div>
                     </td>
                     <td style="text-align:right;white-space:nowrap">
-                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, budget, contract).toFixed(6))} readonly={isFixedMs(m)} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
+                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, budget, contract, done, st.deposit).toFixed(6))} readonly={isFixedMs(m) || isDoneMs(m)} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) || isDoneMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
                       <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
                     </td>
                     <td style="text-align:center;white-space:nowrap">
@@ -655,13 +690,15 @@ const projectJson = JSON.stringify(data);
                 <tr class="sal-total">
                   <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">
                     TOTALE RATE
-                    <span class="sal-gap" style={`font-size:.66rem;font-weight:600;letter-spacing:0;margin-left:.5rem;color:var(--red)${st.ok ? ';display:none' : ''}`}>
-                      {st.total < budget ? `mancano ${fmt(budget - st.total)}` : `${fmt(st.total - budget)} oltre il budget`}
+                    <span class="sal-gap" style={`font-size:.66rem;font-weight:600;letter-spacing:0;margin-left:.5rem;color:${st.tracking && st.total < budget ? 'var(--g3)' : 'var(--red)'}${st.ok ? ';display:none' : ''}`}>
+                      {st.total < budget
+                        ? (st.tracking ? `residuo da certificare ${fmt(budget - st.total)}` : `mancano ${fmt(budget - st.total)}`)
+                        : `${fmt(st.total - budget)} oltre il budget`}
                     </span>
                   </td>
-                  <td class="sal-total-amt-eur" style={`text-align:right;font-family:monospace;font-weight:700;color:${st.ok ? 'var(--green)' : 'var(--red)'}`}>{fmt(st.total)}</td>
-                  <td class="sal-total-amt" style={`text-align:right;font-weight:700;font-size:.72rem;color:${st.ok ? 'var(--green)' : 'var(--red)'}`}>
-                    {parseFloat(st.totalPct.toFixed(2))}% {st.ok ? '\u2713' : '\u26a0'}
+                  <td class="sal-total-amt-eur" style={`text-align:right;font-family:monospace;font-weight:700;color:${st.ok ? 'var(--green)' : (st.tracking && st.total < budget ? 'var(--slate)' : 'var(--red)')}`}>{fmt(st.total)}</td>
+                  <td class="sal-total-amt" style={`text-align:right;font-weight:700;font-size:.72rem;color:${st.ok ? 'var(--green)' : (st.tracking && st.total < budget ? 'var(--slate)' : 'var(--red)')}`}>
+                    {parseFloat(st.totalPct.toFixed(2))}% {st.ok ? '\u2713' : (st.tracking && st.total < budget ? '' : '\u26a0')}
                   </td>
                   <td></td>
                   <td></td>
@@ -685,9 +722,9 @@ const projectJson = JSON.stringify(data);
     </div>
     <div class="contractor-grid" id="technician-grid">
       {(technicians ?? []).map(t => {
-        const stT = salSchedule(t.sal, t.fee, t.fee);   // parcella unica: nessuna distinzione contratto/rideterminato
+        const stT = salSchedule(t.sal, t.fee, t.fee, 0);   // parcella unica, nessun avanzamento lavori
         return (
-          <div class="card tec-card" data-budget={t.fee.toFixed(2)} data-contract-budget={t.fee.toFixed(2)} data-tec-id={t.id}>
+          <div class="card tec-card" data-budget={t.fee.toFixed(2)} data-contract-budget={t.fee.toFixed(2)} data-done-amt="0" data-tec-id={t.id}>
             <div class="ctr-header">
               <div>
                 <div class="ctr-name">{t.name}</div>
@@ -734,20 +771,27 @@ const projectJson = JSON.stringify(data);
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">&#8364;</span>
-                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, t.fee, t.fee).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, t.fee, t.fee, 0, stT.deposit).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
                       <div class="sal-mode-wrap">
                         <select class="sal-mode-select" title="Su cosa &egrave; calcolata questa rata">
                           <option value="pctContract" selected={msMode(m) === 'pctContract'}>% del contratto</option>
                           <option value="pct"         selected={msMode(m) === 'pct'}>% del revised alla data</option>
+                          <option value="done"        selected={msMode(m) === 'done'}>Lavori eseguiti a oggi</option>
                           <option value="eur"         selected={msMode(m) === 'eur'}>Fisso</option>
                         </select>
+                      </div>
+                      <div class="sal-ded-wrap" style={m.triggerType === 'signing' ? 'display:none' : ''}>
+                        <label class="sal-ded-lbl" title="Sottrae da questa rata l&rsquo;acconto gi&agrave; versato">
+                          <input class="sal-ded-check" type="checkbox" checked={m.deductDeposit === true && m.triggerType !== 'signing'} />
+                          <span>&minus; acconto</span>
+                        </label>
                       </div>
                       <div class="sal-base-note" style={msMode(m) === 'pct' && m.baseAmt ? '' : 'display:none'}>
                         su {fmt(m.baseAmt ?? 0)}{m.baseDate ? ` del ${m.baseDate}` : ''}
                       </div>
                     </td>
                     <td style="text-align:right;white-space:nowrap">
-                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, t.fee, t.fee).toFixed(6))} readonly={isFixedMs(m)} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
+                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, t.fee, t.fee, 0, stT.deposit).toFixed(6))} readonly={isFixedMs(m) || isDoneMs(m)} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) || isDoneMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
                       <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
                     </td>
                     <td style="text-align:center;white-space:nowrap">
@@ -762,13 +806,15 @@ const projectJson = JSON.stringify(data);
                 <tr class="sal-total">
                   <td colspan="3" style="text-align:right;color:var(--slate);font-size:.68rem;letter-spacing:.04em">
                     TOTALE RATE
-                    <span class="sal-gap" style={`font-size:.66rem;font-weight:600;letter-spacing:0;margin-left:.5rem;color:var(--red)${stT.ok ? ';display:none' : ''}`}>
-                      {stT.total < t.fee ? `mancano ${fmt(t.fee - stT.total)}` : `${fmt(stT.total - t.fee)} oltre il budget`}
+                    <span class="sal-gap" style={`font-size:.66rem;font-weight:600;letter-spacing:0;margin-left:.5rem;color:${stT.tracking && stT.total < t.fee ? 'var(--g3)' : 'var(--red)'}${stT.ok ? ';display:none' : ''}`}>
+                      {stT.total < t.fee
+                        ? (stT.tracking ? `residuo da certificare ${fmt(t.fee - stT.total)}` : `mancano ${fmt(t.fee - stT.total)}`)
+                        : `${fmt(stT.total - t.fee)} oltre il budget`}
                     </span>
                   </td>
-                  <td class="sal-total-amt-eur" style={`text-align:right;font-family:monospace;font-weight:700;color:${stT.ok ? 'var(--green)' : 'var(--red)'}`}>{fmt(stT.total)}</td>
-                  <td class="sal-total-amt" style={`text-align:right;font-weight:700;font-size:.72rem;color:${stT.ok ? 'var(--green)' : 'var(--red)'}`}>
-                    {parseFloat(stT.totalPct.toFixed(2))}% {stT.ok ? '\u2713' : '\u26a0'}
+                  <td class="sal-total-amt-eur" style={`text-align:right;font-family:monospace;font-weight:700;color:${stT.ok ? 'var(--green)' : (stT.tracking && stT.total < t.fee ? 'var(--slate)' : 'var(--red)')}`}>{fmt(stT.total)}</td>
+                  <td class="sal-total-amt" style={`text-align:right;font-weight:700;font-size:.72rem;color:${stT.ok ? 'var(--green)' : (stT.tracking && stT.total < t.fee ? 'var(--slate)' : 'var(--red)')}`}>
+                    {parseFloat(stT.totalPct.toFixed(2))}% {stT.ok ? '\u2713' : (stT.tracking && stT.total < t.fee ? '' : '\u26a0')}
                   </td>
                   <td></td>
                   <td></td>
@@ -1099,6 +1145,7 @@ const projectJson = JSON.stringify(data);
         <div style="display:flex;gap:0;border:1px solid var(--g2);border-radius:6px;overflow:hidden;width:fit-content;margin-bottom:.55rem">
           <button type="button" id="ms-mode-contract" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">% del contratto</button>
           <button type="button" id="ms-mode-pct" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:#fff;color:var(--g3)">% del revised alla data</button>
+          <button type="button" id="ms-mode-done" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:#fff;color:var(--g3)">Lavori eseguiti</button>
           <button type="button" id="ms-mode-eur" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:none;cursor:pointer;background:#fff;color:var(--g3)">Fisso</button>
         </div>
         <div id="ms-pct-amount-row" style="display:flex;align-items:center;gap:.4rem">
@@ -1610,6 +1657,7 @@ const projectJson = JSON.stringify(data);
   function recalcCtrBudgets() {
     const budgets = {};
     const contracts = {};
+    const dones = {};
     for (const cat of state.categories) {
       for (const item of cat.items) {
         if (!item.contractor) continue;   // gli extra entrano nel budget del fornitore
@@ -1619,6 +1667,11 @@ const projectJson = JSON.stringify(data);
         const revised  = (qty + varQty) * price;
         // Importo contrattuale: niente varianti, niente extra
         contracts[item.contractor] = (contracts[item.contractor] || 0) + (item.extra ? 0 : qty * price);
+        // Lavori eseguiti: stessa formula del server, spunta "complete" compresa
+        const doneQty  = parseFloat(item.done) || 0;
+        const overrun  = revised > 0 && doneQty > (qty + varQty);
+        const forceC   = !!item.complete && !overrun;
+        dones[item.contractor] = (dones[item.contractor] || 0) + (forceC ? revised : doneQty * price);
         budgets[item.contractor] = (budgets[item.contractor] || 0) + revised;
       }
     }
@@ -1628,6 +1681,7 @@ const projectJson = JSON.stringify(data);
       const contract = contracts[ctrId] || 0;
       card.dataset.budget = budget.toFixed(2);
       card.dataset.contractBudget = contract.toFixed(2);
+      card.dataset.doneAmt = (dones[ctrId] || 0).toFixed(2);
       const val = card.querySelector('.ctr-budget-val');
       if (val) val.textContent = fmtAmt(budget);
       const cval = card.querySelector('.ctr-contract-val');
@@ -1710,15 +1764,18 @@ const projectJson = JSON.stringify(data);
     ).join('');
     const mode   = m.amountMode ?? 'pct';
     const fixed  = mode === 'eur';
+    const derived = fixed || mode === 'done';
     const base   = mode === 'pctContract' ? contract : (m.baseAmt ?? budget);
-    const amtVal = (fixed || !(base > 0))
-      ? (m.fixedAmt != null ? parseFloat(m.fixedAmt) : 0).toFixed(2)
-      : (base * m.pct / 100).toFixed(2);
-    // In € fisso la % è derivata dal rideterminato; altrimenti è quella digitata.
-    const pctVal = fixed
+    const amtVal = mode === 'done'
+      ? (0).toFixed(2)                       // lo scrive recalcCard, che conosce i lavori eseguiti
+      : (fixed || !(base > 0))
+        ? (m.fixedAmt != null ? parseFloat(m.fixedAmt) : 0).toFixed(2)
+        : (base * m.pct / 100).toFixed(2);
+    // In "Fisso" e in "Lavori eseguiti" la % è derivata; altrimenti è quella digitata.
+    const pctVal = derived
       ? (budget > 0 ? parseFloat(((parseFloat(amtVal) / budget) * 100).toFixed(6)) : (m.pct || 0))
       : (m.pct || 0);
-    const modeOpts = [['pctContract','% del contratto'],['pct','% del revised alla data'],['eur','Fisso']]
+    const modeOpts = [['pctContract','% del contratto'],['pct','% del revised alla data'],['done','Lavori eseguiti a oggi'],['eur','Fisso']]
       .map(([v,l]) => `<option value="${v}"${mode===v?' selected':''}>${l}</option>`).join('');
     return [
       `<td><input class="sal-ref-input" type="text" value="${m.id}" style="width:52px;${inp};font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>`,
@@ -1735,9 +1792,12 @@ const projectJson = JSON.stringify(data);
           `<select class="sal-mode-select" title="Su cosa è calcolato questo importo">${modeOpts}</select>`,
         `</div>`,
         `<div class="sal-base-note"${mode==='pct'&&m.baseAmt?'':' style="display:none"'}>su ${fmtAmt(m.baseAmt??0)}${m.baseDate?` del ${m.baseDate}`:''}</div>`,
+        `<div class="sal-ded-wrap"${m.triggerType==='signing'?' style="display:none"':''}>`,
+          `<label class="sal-ded-lbl" title="Sottrae da questa rata l’acconto già versato"><input class="sal-ded-check" type="checkbox"${m.deductDeposit && m.triggerType!=='signing'?' checked':''} /><span>− acconto</span></label>`,
+        `</div>`,
       `</td>`,
       `<td style="text-align:right;white-space:nowrap">`,
-        `<input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value="${pctVal}"${fixed?' readonly':''} style="width:48px;${inp};font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${fixed?';background:var(--g1);font-style:italic':''}" />`,
+        `<input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value="${pctVal}"${derived?' readonly':''} style="width:48px;${inp};font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${derived?';background:var(--g1);font-style:italic':''}" />`,
         `<span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>`,
       `</td>`,
       `<td style="text-align:center;white-space:nowrap">`,
@@ -1757,7 +1817,33 @@ const projectJson = JSON.stringify(data);
   function salBasesOf(card) {
     const budget   = parseFloat(card.dataset.budget ?? '0') || 0;
     const contract = parseFloat(card.dataset.contractBudget ?? '') || budget;
-    return { budget, contract };
+    const done     = parseFloat(card.dataset.doneAmt ?? '0') || 0;
+    return { budget, contract, done };
+  }
+  function isSigningRow(row) {
+    return row.querySelector('.sal-trigger-type-input')?.value === 'signing';
+  }
+  /**
+   * L'acconto può essere detratto da UNA sola rata. Le caselle restano tutte
+   * cliccabili: spuntandone un'altra la detrazione si sposta, senza dover prima
+   * togliere la precedente. `preferRow` vince i pareggi.
+   */
+  function enforceSingleDeduction(card, preferRow) {
+    const rows = salRowsOf(card);
+    rows.forEach(r => {
+      const wrap = r.querySelector('.sal-ded-wrap');
+      const chk  = r.querySelector('.sal-ded-check');
+      if (isSigningRow(r)) {                 // l'acconto non detrae sé stesso
+        if (chk) chk.checked = false;
+        if (wrap) wrap.style.display = 'none';
+      } else if (wrap) {
+        wrap.style.display = '';
+      }
+    });
+    const checked = rows.filter(r => !isSigningRow(r) && r.querySelector('.sal-ded-check')?.checked);
+    const winner  = (preferRow && checked.includes(preferRow)) ? preferRow : (checked[0] ?? null);
+    checked.forEach(r => { if (r !== winner) r.querySelector('.sal-ded-check').checked = false; });
+    return winner;
   }
   function rowMode(row) { return row.querySelector('.sal-mode-select')?.value ?? 'pct'; }
 
@@ -1767,67 +1853,91 @@ const projectJson = JSON.stringify(data);
   }
 
   function recalcCard(card) {
-    const { budget, contract } = salBasesOf(card);
-    const rows = salRowsOf(card);
+    const { budget, contract, done } = salBasesOf(card);
+    const rows   = salRowsOf(card);
+    const dedRow = enforceSingleDeduction(card, null);
 
-    // Ogni riga è una rata: si normalizza secondo la sua modalità e la sua base,
-    // e poi si sommano. Non si decurtano fra loro — il carattere cumulativo del
-    // SAL sta nella base ("% del revised alla data"), non nell'importo.
+    // Importo lordo di una riga, secondo la sua modalità.
+    const rawOf = (row) => {
+      const amtIn = row.querySelector('.sal-amt-input');
+      const pctIn = row.querySelector('.sal-pct-input');
+      const mode  = rowMode(row);
+      if (mode === 'done') return done;
+      if (mode === 'eur')  return parseFloat(amtIn?.value ?? '0') || 0;
+      const base = mode === 'pctContract' ? contract : rowBaseAmt(row, budget);
+      if (!(base > 0)) return parseFloat(amtIn?.value ?? '0') || 0;
+      return base * (parseFloat(pctIn?.value ?? '0') || 0) / 100;
+    };
+
+    // L'acconto va letto prima, perché è quello che una rata può detrarre.
+    const depRow  = rows.find(isSigningRow) ?? null;
+    const deposit = depRow ? rawOf(depRow) : 0;
+
     let total = 0;
     rows.forEach(row => {
       const amtIn = row.querySelector('.sal-amt-input');
       const pctIn = row.querySelector('.sal-pct-input');
       const mode  = rowMode(row);
-      const fixed = mode === 'eur';
-      const base  = mode === 'pctContract' ? contract : rowBaseAmt(row, budget);
-      let amount;
-      if (fixed || !(base > 0)) {
-        amount = parseFloat(amtIn?.value ?? '0') || 0;
-        if (pctIn && fixed && budget > 0) pctIn.value = parseFloat(((amount / budget) * 100).toFixed(6));
-      } else {
-        const pct = parseFloat(pctIn?.value ?? '0') || 0;
-        amount = base * pct / 100;
-        if (amtIn) amtIn.value = amount.toFixed(2);
-      }
+      const derived = mode === 'eur' || mode === 'done';
+      const amount  = rawOf(row) - (row === dedRow ? deposit : 0);
+
+      // In 'eur' comanda la cifra digitata; in 'done' la cifra la scrive il
+      // sistema; nelle due modalità percentuali comanda la percentuale.
+      if (mode === 'done' && amtIn) amtIn.value = amount.toFixed(2);
+      if (mode !== 'eur' && mode !== 'done' && amtIn) amtIn.value = amount.toFixed(2);
       if (pctIn) {
-        pctIn.readOnly = fixed;
-        pctIn.style.background = fixed ? 'var(--g1)' : '';
-        pctIn.style.fontStyle  = fixed ? 'italic' : '';
-        pctIn.title = fixed
-          ? 'Derivata dall’importo fisso'
-          : mode === 'pctContract' ? 'Percentuale dell’importo contrattuale' : 'Percentuale del revised congelato';
+        if (derived && budget > 0) pctIn.value = parseFloat(((amount / budget) * 100).toFixed(6));
+        pctIn.readOnly = derived;
+        pctIn.style.background = derived ? 'var(--g1)' : '';
+        pctIn.style.fontStyle  = derived ? 'italic' : '';
+        pctIn.title = mode === 'done' ? 'Derivata dai lavori eseguiti'
+                    : mode === 'eur'  ? 'Derivata dall’importo fisso'
+                    : mode === 'pctContract' ? 'Percentuale dell’importo contrattuale'
+                    : 'Percentuale del revised congelato';
       }
+      if (amtIn) amtIn.readOnly = mode === 'done';
+
       const note = row.querySelector('.sal-base-note');
       if (note) {
-        const show = mode === 'pct' && parseFloat(row.dataset.baseAmt ?? '') > 0;
-        note.style.display = show ? '' : 'none';
-        if (show) note.textContent = `su ${fmtAmt(parseFloat(row.dataset.baseAmt))}` +
-          (row.dataset.baseDate ? ` del ${row.dataset.baseDate}` : '');
+        if (mode === 'done') {
+          note.style.display = '';
+          note.textContent = `lavori eseguiti ${fmtAmt(done)}` + (row === dedRow ? ` − acconto ${fmtAmt(deposit)}` : '');
+        } else {
+          const show = mode === 'pct' && parseFloat(row.dataset.baseAmt ?? '') > 0;
+          note.style.display = show ? '' : 'none';
+          if (show) note.textContent = `su ${fmtAmt(parseFloat(row.dataset.baseAmt))}` +
+            (row.dataset.baseDate ? ` del ${row.dataset.baseDate}` : '');
+        }
       }
       row.dataset.prevMode = mode;
       total += amount;
     });
 
+    const tracking = rows.some(r => rowMode(r) === 'done');
     const totalPct = budget > 0
       ? (total / budget) * 100
       : rows.reduce((t, r) => t + (parseFloat(r.querySelector('.sal-pct-input')?.value) || 0), 0);
     const ok = budget > 0
       ? Math.abs(total - budget) < 0.01
       : Math.abs(totalPct - 100) < 0.01;
-    const color = ok ? 'var(--green)' : 'var(--red)';
+    // Con una rata che insegue i lavori, stare sotto il budget è la normalità di
+    // un cantiere aperto: si mostra come residuo in grigio, non come errore.
+    const residual = tracking && total < budget;
+    const color = ok ? 'var(--green)' : (residual ? 'var(--slate)' : 'var(--red)');
 
     const eurCell = card.querySelector('.sal-total-amt-eur');
     const pctCell = card.querySelector('.sal-total-amt');
     const gapCell = card.querySelector('.sal-gap');
     if (eurCell) { eurCell.textContent = fmtAmt(total); eurCell.style.color = color; }
     if (pctCell) {
-      pctCell.textContent = totalPct.toFixed(2).replace(/\.00$/,'') + '% ' + (ok ? '✓' : '⚠');
+      pctCell.textContent = totalPct.toFixed(2).replace(/\.00$/,'') + '%' + (ok ? ' ✓' : (residual ? '' : ' ⚠'));
       pctCell.style.color = color;
     }
     if (gapCell) {
       gapCell.style.display = ok ? 'none' : '';
+      gapCell.style.color = residual ? 'var(--g3)' : 'var(--red)';
       gapCell.textContent = total < budget
-        ? `mancano ${fmtAmt(budget - total)}`
+        ? (tracking ? `residuo da certificare ${fmtAmt(budget - total)}` : `mancano ${fmtAmt(budget - total)}`)
         : `${fmtAmt(total - budget)} oltre il budget`;
     }
   }
@@ -1852,6 +1962,8 @@ const projectJson = JSON.stringify(data);
       const fixedAmt = (mode === 'eur' || base <= 0) && amtRaw > 0 ? amtRaw : null;
       return {
         amountMode: mode,
+        deductDeposit: (row.querySelector('.sal-ded-check')?.checked ?? false)
+                       && row.querySelector('.sal-trigger-type-input')?.value !== 'signing',
         ...(mode === 'pct' && hasBase
               ? { baseAmt: baseAmtR, ...(row.dataset.baseDate ? { baseDate: row.dataset.baseDate } : {}) }
               : {}),
@@ -1876,6 +1988,16 @@ const projectJson = JSON.stringify(data);
 
   // Inline SAL editing
   document.addEventListener('change', e => {
+    // Detrazione acconto: una sola rata per volta, e spuntandone un'altra si sposta
+    if (e.target.classList.contains('sal-ded-check')) {
+      const row  = e.target.closest('.sal-table tbody tr:not(.sal-total)');
+      const card = row?.closest('.ctr-card') ?? row?.closest('.tec-card');
+      if (!card) return;
+      enforceSingleDeduction(card, e.target.checked ? row : null);
+      recalcCard(card);
+      syncSalFromCard(card);
+      return;
+    }
     // Cambio modalità dal menu. Uscendo da "€ fisso" non c'è una percentuale da
     // riusare, quindi la si ricava dall'importo corrente: così la cifra non salta.
     // Fra le due modalità percentuali si conserva invece la percentuale digitata,
@@ -1973,6 +2095,7 @@ const projectJson = JSON.stringify(data);
   const msTriggerDate    = document.getElementById('ms-trigger-date');
   const msModeBtn        = document.getElementById('ms-mode-pct');
   const msModeBtnContract = document.getElementById('ms-mode-contract');
+  const msModeBtnDone     = document.getElementById('ms-mode-done');
   const msPctHint        = document.getElementById('ms-pct-hint');
   const msPctBaseLbl     = document.getElementById('ms-pct-base-lbl');
   const msModeBtnEur     = document.getElementById('ms-mode-eur');
@@ -1985,18 +2108,25 @@ const projectJson = JSON.stringify(data);
 
   function setMsAmountMode(mode) {
     msAmountMode = mode;
-    const btns = { pctContract: msModeBtnContract, pct: msModeBtn, eur: msModeBtnEur };
+    const btns = { pctContract: msModeBtnContract, pct: msModeBtn, done: msModeBtnDone, eur: msModeBtnEur };
     Object.entries(btns).forEach(([k, btn]) => {
       if (!btn) return;
       const on = k === mode;
       btn.style.background = on ? 'var(--navy)' : '#fff';
       btn.style.color      = on ? '#fff' : 'var(--g3)';
     });
-    const isEur = mode === 'eur';
-    msPctAmountRow.style.display = isEur ? 'none' : 'flex';
+    const isEur  = mode === 'eur';
+    const isDone = mode === 'done';
+    // In "Lavori eseguiti" non c'è niente da digitare: l'importo lo scrive il sistema.
+    msPctAmountRow.style.display = (isEur || isDone) ? 'none' : 'flex';
     msPctHint.style.display      = isEur ? 'none' : '';
     msEurAmountRow.style.display = isEur ? 'flex' : 'none';
-    if (isEur) updateEurHint(); else updatePctHint();
+    if (isEur) updateEurHint();
+    else if (isDone) {
+      const doneAmt = parseFloat(msTargetCard?.dataset.doneAmt ?? '0') || 0;
+      msPctHint.textContent = `La rata segue i lavori eseguiti dalla ditta, oggi ${fmtAmt(doneAmt)}. Per detrarre l’acconto usa la casella “− acconto” sulla riga.`;
+    }
+    else updatePctHint();
   }
 
   function updatePctHint() {
@@ -2024,6 +2154,7 @@ const projectJson = JSON.stringify(data);
   }
 
   msModeBtnContract.addEventListener('click', () => setMsAmountMode('pctContract'));
+  msModeBtnDone.addEventListener('click',     () => setMsAmountMode('done'));
   msModeBtn.addEventListener('click',         () => setMsAmountMode('pct'));
   msModeBtnEur.addEventListener('click',      () => setMsAmountMode('eur'));
   msPct.addEventListener('input', updatePctHint);
@@ -2072,7 +2203,7 @@ const projectJson = JSON.stringify(data);
     }
     // Deduct the acconto only if it is still available on this card
     // "% del revised alla data": la fotografia si scatta adesso, alla creazione.
-    const baseAmt  = amountMode === 'pct' ? budget : null;
+    const baseAmt  = amountMode === 'pct' ? budget : null;   // 'done' non ha base: la legge dai lavori
     const baseDate = amountMode === 'pct' ? new Date().toISOString().slice(0, 10) : null;
     const tbody   = msTargetCard.querySelector('tbody');
     const totalRow = tbody.querySelector('.sal-total');

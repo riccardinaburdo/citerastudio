@@ -33,13 +33,24 @@ const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num
 const vatOf    = (e: any) => (e?.vatRate ?? 10) as number;
 const vatLabel = (r: number) => r === 0 ? 'No IVA' : `IVA ${r}%`;
 
-const msAmount = (m: any, budget: number, contractBudget: number) => {
+// Importo lordo di una milestone, secondo la sua modalità. 'done' insegue i
+// lavori eseguiti dalla ditta; 'pct' usa la fotografia del rideterminato presa
+// alla creazione della milestone, o quello corrente se manca (dati vecchi).
+const msAmountRaw = (m: any, budget: number, contractBudget: number, done: number) => {
   const mode = m.amountMode ?? 'pct';
-  if (mode === 'eur') return m.fixedAmt ?? 0;
-  // 'pct' usa la fotografia del rideterminato presa alla creazione della milestone;
-  // senza fotografia (dati vecchi) si ricade sul rideterminato corrente.
+  if (mode === 'eur')  return m.fixedAmt ?? 0;
+  if (mode === 'done') return done;
   const base = mode === 'pctContract' ? contractBudget : (m.baseAmt ?? budget);
   return base > 0 ? base * (m.pct || 0) / 100 : (m.fixedAmt ?? 0);
+};
+// L'acconto ("On signing") può essere detratto da UNA sola altra milestone.
+const depositOf = (sal: any[], budget: number, contractBudget: number, done: number) => {
+  const dep = (sal ?? []).find((m: any) => m.triggerType === 'signing');
+  return dep ? msAmountRaw(dep, budget, contractBudget, done) : 0;
+};
+const msAmount = (m: any, budget: number, contractBudget: number, done: number, deposit = 0) => {
+  const raw = msAmountRaw(m, budget, contractBudget, done);
+  return (m.deductDeposit === true && m.triggerType !== 'signing') ? raw - deposit : raw;
 };
 
 // Stessa logica del pannello admin: le voci extra hanno quantità contrattata,
@@ -88,17 +99,21 @@ const contractorSchedules = contractors.flatMap(c => {
   if (cBudget === 0 || !c.sal || c.sal.length === 0) return [];
   const cDone    = allItems.reduce((s, i) => s + i.valueDone, 0);
   const cPerc    = (cDone / cBudget) * 100;
+  const cDeposit = depositOf(c.sal, cBudget, cContract, cDone);
   let nextFoundC = false;
   let cumPct = 0;
 
   // Separate milestones into quantified (have an amount) and unquantified date ones
-  const quantified   = c.sal.filter(m => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
-  const unquantified = c.sal.filter(m => m.pct === 0 && !((m as any).fixedAmt) && m.triggerType === 'date');
+  // Le milestone in modalità "lavori eseguiti" non hanno né pct né fixedAmt:
+  // il loro importo lo determinano i lavori, quindi contano come quantificate.
+  const isQuantified = (m: any) => m.pct > 0 || (m.fixedAmt ?? 0) > 0 || m.amountMode === 'done';
+  const quantified   = c.sal.filter(isQuantified);
+  const unquantified = c.sal.filter(m => !isQuantified(m) && m.triggerType === 'date');
 
 
   const milestones = quantified.map(m => {
     // Ogni milestone è una rata: le rate si sommano fino al 100% del budget.
-    const amount   = msAmount(m, cBudget, cContract);
+    const amount   = msAmount(m, cBudget, cContract, cDone, cDeposit);
     const effPct   = cBudget > 0 ? (amount / cBudget) * 100 : (m.pct || 0);
     cumPct += effPct;
     const tickPos  = Math.min(cumPct, 100);
@@ -172,12 +187,11 @@ const technicianSchedules = technicians.flatMap((t: any) => {
   let nextFoundT = false;
   let cumPctT = 0;
 
-  const quantified = t.sal.filter((m: any) => m.pct > 0 || ((m as any).fixedAmt ?? 0) > 0);
-
-  // Acconto handling — identical rule to the contractors above
+  const quantified = t.sal.filter((m: any) => m.pct > 0 || (m.fixedAmt ?? 0) > 0 || m.amountMode === 'done');
+  const tDeposit   = depositOf(t.sal, t.fee, t.fee, 0);
 
   const milestones = quantified.map((m: any) => {
-    const amount   = msAmount(m, t.fee, t.fee);
+    const amount   = msAmount(m, t.fee, t.fee, 0, tDeposit);
     const effPct   = t.fee > 0 ? (amount / t.fee) * 100 : (m.pct || 0);
     cumPctT += effPct;
     const tickPos = Math.min(cumPctT, 100);
