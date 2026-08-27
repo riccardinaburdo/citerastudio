@@ -26,6 +26,12 @@ const { info: project, contractors, technicians: rawTechnicians, categories: raw
 const technicians = rawTechnicians ?? [];
 const updates = (projectData.updates ?? []).slice().sort((a, b) => b.num - a.num);
 
+// Importo di una milestone, come nel pannello admin: in modalità 'eur' è una
+// cifra forfettaria che non si riproporziona al variare del budget, in 'pct' è
+// una percentuale che lo segue. Senza budget si ricade sulla cifra.
+const msAmount = (m: any, budget: number) =>
+  m.amountMode === 'eur' || !(budget > 0) ? (m.fixedAmt ?? 0) : budget * (m.pct || 0) / 100;
+
 // Stessa logica del pannello admin: le voci extra hanno quantità contrattata,
 // revised budget e avanzamento come tutte le altre. Solo `budget` (l'importo
 // contrattuale originale) resta a zero, perché l'extra non era nel contratto.
@@ -79,14 +85,17 @@ const contractorSchedules = contractors.flatMap(c => {
   // Acconto: the milestone triggered "on signing". At most one other milestone
   // may deduct it (deductDeposit) — the deduction is applied exactly once.
   const depM     = c.sal.find(m => m.triggerType === 'signing') ?? null;
-  const depAmt   = depM ? (cBudget > 0 ? (depM.pct / 100) * cBudget : ((depM as any).fixedAmt ?? 0)) : 0;
+  const depAmt   = depM ? msAmount(depM, cBudget) : 0;
   const dedIdx   = c.sal.findIndex(m => (m as any).deductDeposit === true && m.triggerType !== 'signing');
   const dedId    = dedIdx >= 0 ? c.sal[dedIdx].id : null;
 
   const milestones = quantified.map(m => {
-    cumPct += m.pct;
+    const gross    = msAmount(m, cBudget);
+    // Percentuale derivata dall'importo: quella memorizzata è stantia per le
+    // milestone a cifra fissa se il budget è cambiato dopo il salvataggio.
+    const effPct   = cBudget > 0 ? (gross / cBudget) * 100 : (m.pct || 0);
+    cumPct += effPct;
     const tickPos  = Math.min(cumPct, 100);
-    const gross    = cBudget > 0 ? (m.pct / 100) * cBudget : ((m as any).fixedAmt ?? 0);
     const deposDed = (dedId !== null && m.id === dedId) ? Math.min(depAmt, gross) : 0;
     const amount   = gross - deposDed;
     // Two different axes, deliberately kept apart:
@@ -124,7 +133,7 @@ const contractorSchedules = contractors.flatMap(c => {
         isDue = m.triggerType === 'signing' || (m.triggerType === 'start' && cPerc > 0) || (workTriggerAt > 0 && cPerc >= workTriggerAt);
       } else { status = 'pending'; }
     }
-    return { ...m, amount, gross, deposDed, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, pct: effPct, amount, gross, deposDed, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   // Collapsed "Remaining" block for unquantified date milestones
@@ -163,14 +172,15 @@ const technicianSchedules = technicians.flatMap((t: any) => {
 
   // Acconto handling — identical rule to the contractors above
   const depMT   = t.sal.find((m: any) => m.triggerType === 'signing') ?? null;
-  const depAmtT = depMT ? (t.fee > 0 ? t.fee * depMT.pct / 100 : (depMT.fixedAmt ?? 0)) : 0;
+  const depAmtT = depMT ? msAmount(depMT, t.fee) : 0;
   const dedMT   = t.sal.find((m: any) => m.deductDeposit === true && m.triggerType !== 'signing') ?? null;
   const dedIdT  = dedMT ? dedMT.id : null;
 
   const milestones = quantified.map((m: any) => {
-    cumPctT += m.pct;
+    const gross    = msAmount(m, t.fee);
+    const effPct   = t.fee > 0 ? (gross / t.fee) * 100 : (m.pct || 0);
+    cumPctT += effPct;
     const tickPos = cumPctT;
-    const gross    = t.fee > 0 ? t.fee * m.pct / 100 : ((m.fixedAmt ?? 0) as number);
     const deposDed = (dedIdT !== null && m.id === dedIdT) ? Math.min(depAmtT, gross) : 0;
     const amount   = gross - deposDed;
 
@@ -210,7 +220,7 @@ const technicianSchedules = technicians.flatMap((t: any) => {
              || (m.triggerType === 'percent' && totalPerc >= (m.triggerPct ?? 0));
       } else { status = 'pending'; }
     }
-    return { ...m, amount, gross, deposDed, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
+    return { ...m, pct: effPct, amount, gross, deposDed, triggerAt, workTriggerAt, triggerNote, status, isDue, tickPos };
   });
 
   const paidT    = milestones.filter((m: any) => m.status === 'paid').reduce((s: number, m: any) => s + m.amount, 0);

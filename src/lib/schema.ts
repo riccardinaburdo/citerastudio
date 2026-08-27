@@ -4,8 +4,17 @@ export interface SalMilestone {
   triggerType: 'signing' | 'start' | 'percent' | 'date' | 'final';
   triggerPct: number | null;
   triggerDate?: string;
-  pct: number; // % of budget/fee
-  fixedAmt?: number;
+  /**
+   * Come è definito l'importo della milestone:
+   *  - 'pct' (default): è una percentuale del budget. Se il budget cambia,
+   *    l'importo in euro si riproporziona.
+   *  - 'eur': è una cifra forfettaria pattuita. Resta quella qualunque cosa
+   *    succeda al budget; la percentuale diventa un valore derivato.
+   * Assente = 'pct', così le milestone già salvate non cambiano comportamento.
+   */
+  amountMode?: 'pct' | 'eur';
+  pct: number;        // % of budget/fee — autoritativa solo in modalità 'pct'
+  fixedAmt?: number;  // importo in euro — autoritativo in modalità 'eur'
   paid?: boolean;     // manually certified as paid
   paidDate?: string;  // ISO date of actual payment
   /**

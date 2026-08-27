@@ -67,24 +67,32 @@ const fmt = (n: number) => '€ ' + n.toLocaleString('en-GB', { minimumFractionD
 // Exactly ONE other milestone may carry `deductDeposit: true`: its gross amount
 // is what the SAL certifies on the work actually done, and the deposit already
 // cashed is subtracted from it — once, and only once.
+// Importo di una milestone. In modalità 'eur' la cifra pattuita è il dato
+// autoritativo e NON si riproporziona quando il budget del fornitore cambia:
+// è il caso dell'acconto forfettario. In modalità 'pct' l'importo segue il
+// budget. Senza budget non esiste percentuale, quindi si ricade sulla cifra.
+const isFixedMs = (m: any) => m.amountMode === 'eur';
 const msAmount = (m: any, budget: number) =>
-  budget > 0 ? budget * (m.pct || 0) / 100 : (m.fixedAmt ?? 0);
+  isFixedMs(m) || !(budget > 0) ? (m.fixedAmt ?? 0) : budget * (m.pct || 0) / 100;
+// Percentuale effettiva sul budget: autoritativa in 'pct', derivata in 'eur'.
+const msPct = (m: any, budget: number) =>
+  budget > 0 ? (msAmount(m, budget) / budget) * 100 : (m.pct || 0);
 
 const salTotals = (sal: any[], budget: number) => {
   const list       = sal ?? [];
-  const totalPct   = list.reduce((s: number, m: any) => s + (m.pct || 0), 0);
+  // Con modalità miste il conto si fa in euro: le percentuali da sole non
+  // descrivono più il totale, perché una parte è pattuita a cifra fissa.
+  const grossTotal = list.reduce((s: number, m: any) => s + msAmount(m, budget), 0);
+  const totalPct   = budget > 0 ? (grossTotal / budget) * 100 : list.reduce((s: number, m: any) => s + (m.pct || 0), 0);
   const depM       = list.find((m: any) => m.triggerType === 'signing') ?? null;
   const depAmt     = depM ? msAmount(depM, budget) : 0;
   const dedM       = list.find((m: any) => m.deductDeposit === true && m.triggerType !== 'signing') ?? null;
   const deduction  = dedM ? Math.min(depAmt, msAmount(dedM, budget)) : 0;
-  const grossTotal = budget > 0
-    ? budget * totalPct / 100
-    : list.reduce((s: number, m: any) => s + (m.fixedAmt ?? 0), 0);
   const netTotal   = grossTotal - deduction;
-  // With a deduction in play the gross percentages legitimately exceed 100 (by
-  // exactly the deposit %), so the sanity check moves onto the net total.
-  const ok = deduction > 0
-    ? (budget > 0 ? Math.abs(netTotal - budget) < 0.01 : Math.abs(totalPct - 100) < 0.01)
+  // Il piano è coerente quando il netto da incassare copre esattamente il budget.
+  // Senza budget (fornitore ancora senza voci) ci si accontenta del 100%.
+  const ok = budget > 0
+    ? Math.abs(netTotal - budget) < 0.01
     : Math.abs(totalPct - 100) < 0.01;
   return { totalPct, depAmt, deduction, grossTotal, netTotal, ok, dedId: dedM ? dedM.id : null };
 };
@@ -201,7 +209,12 @@ const projectJson = JSON.stringify(data);
     .sal-total td { font-weight:700; font-size:.72rem; padding:.4rem .6rem; }
     .sal-trigger { font-size:.7rem; color:var(--slate); }
     .sal-add-row { margin-top:.5rem; }
-    /* Acconto deduction control (lives inside the Amount cell) */
+    /* Modalità importo (€ fisso) e detrazione acconto: entrambe nella cella Amount */
+    .sal-mode-wrap { display:flex; align-items:center; justify-content:flex-end; margin-top:.18rem; }
+    .sal-mode-lbl  { display:inline-flex; align-items:center; gap:.2rem; font-size:.62rem; color:var(--slate);
+                     cursor:pointer; user-select:none; white-space:nowrap; }
+    .sal-mode-lbl input { width:12px; height:12px; cursor:pointer; accent-color:var(--navy); }
+    .sal-mode-lbl:has(input:checked) { color:var(--navy); font-weight:600; }
     .sal-ded-wrap { display:flex; align-items:center; justify-content:flex-end; gap:.3rem; margin-top:.18rem; }
     .sal-ded-lbl  { display:inline-flex; align-items:center; gap:.2rem; font-size:.62rem; color:var(--slate);
                     cursor:pointer; user-select:none; white-space:nowrap; }
@@ -586,7 +599,13 @@ const projectJson = JSON.stringify(data);
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>
-                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={(budget > 0 ? budget * m.pct / 100 : (m.fixedAmt ?? 0)).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, budget).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <div class="sal-mode-wrap">
+                        <label class="sal-mode-lbl" title="Importo forfettario: non si riproporziona se cambia il budget">
+                          <input class="sal-fixed-check" type="checkbox" checked={isFixedMs(m)} />
+                          <span>&#8364; fisso</span>
+                        </label>
+                      </div>
                       <div class="sal-ded-wrap" style={m.triggerType === 'signing' ? 'display:none' : ''}>
                         <label class="sal-ded-lbl">
                           <input class="sal-ded-check" type="checkbox" checked={m.deductDeposit === true && m.triggerType !== 'signing'} />
@@ -596,7 +615,7 @@ const projectJson = JSON.stringify(data);
                       </div>
                     </td>
                     <td style="text-align:right;white-space:nowrap">
-                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={m.pct} style="width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />
+                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, budget).toFixed(6))} readonly={isFixedMs(m)} title={isFixedMs(m) ? 'Derivata dall\u2019importo fisso' : 'Percentuale del budget'} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
                       <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
                     </td>
                     <td style="text-align:center;white-space:nowrap">
@@ -700,7 +719,13 @@ const projectJson = JSON.stringify(data);
                     </td>
                     <td style="text-align:right;white-space:nowrap">
                       <span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>
-                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={(t.fee > 0 ? t.fee * m.pct / 100 : (m.fixedAmt ?? 0)).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <input class="sal-amt-input" type="number" min="0" step="0.01" value={msAmount(m, t.fee).toFixed(2)} style="width:88px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.75rem;font-family:monospace;text-align:right" />
+                      <div class="sal-mode-wrap">
+                        <label class="sal-mode-lbl" title="Importo forfettario: non si riproporziona se cambia il budget">
+                          <input class="sal-fixed-check" type="checkbox" checked={isFixedMs(m)} />
+                          <span>&#8364; fisso</span>
+                        </label>
+                      </div>
                       <div class="sal-ded-wrap" style={m.triggerType === 'signing' ? 'display:none' : ''}>
                         <label class="sal-ded-lbl">
                           <input class="sal-ded-check" type="checkbox" checked={m.deductDeposit === true && m.triggerType !== 'signing'} />
@@ -710,7 +735,7 @@ const projectJson = JSON.stringify(data);
                       </div>
                     </td>
                     <td style="text-align:right;white-space:nowrap">
-                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={m.pct} style="width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />
+                      <input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value={parseFloat(msPct(m, t.fee).toFixed(6))} readonly={isFixedMs(m)} title={isFixedMs(m) ? 'Derivata dall\u2019importo fisso' : 'Percentuale del budget'} style={`width:48px;padding:.22rem .3rem;border:1px solid var(--g2);border-radius:4px;font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${isFixedMs(m) ? ';background:var(--g1);font-style:italic' : ''}`} />
                       <span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>
                     </td>
                     <td style="text-align:center;white-space:nowrap">
@@ -1067,6 +1092,7 @@ const projectJson = JSON.stringify(data);
             <input id="ms-eur" type="number" min="0" step="0.01" placeholder="e.g. 15000.00" style="width:140px;padding:.45rem .65rem;border:1px solid var(--g2);border-radius:6px;font-size:.82rem;font-family:monospace" />
           </div>
           <div id="ms-eur-hint" style="font-size:.7rem;color:var(--g3)"></div>
+          <div style="font-size:.68rem;color:var(--navy);margin-top:.15rem">Cifra forfettaria: non cambia se cambia il budget del fornitore.</div>
         </div>
       </div>
       <div id="ms-ded-row" style="border-top:1px solid var(--g2);padding-top:.75rem">
@@ -1589,16 +1615,11 @@ const projectJson = JSON.stringify(data);
       card.dataset.budget = budget.toFixed(2);
       const val = card.querySelector('.ctr-budget-val');
       if (val) val.textContent = fmtAmt(budget);
-      // Update SAL milestone amount inputs
-      card.querySelectorAll('tr:not(.sal-total) .sal-pct-input, tr:not(.sal-total) .sal-amt-input').forEach(inp => {
-        if (inp.classList.contains('sal-amt-input')) {
-          const pctInput = inp.closest('tr')?.querySelector('.sal-pct-input');
-          const pct = parseFloat(pctInput?.value) || 0;
-          if (budget > 0) inp.value = (budget * pct / 100).toFixed(2);
-        }
-      });
-      // Update SAL total + net-of-acconto rows (single source of truth)
+      // Importi, percentuali e totali li normalizza recalcCard, che è l'unico
+      // punto a conoscere la modalità di ogni riga. Riscrivere qui l'importo
+      // partendo dalla percentuale calpestava le milestone a cifra fissa.
       recalcCard(card);
+      syncSalFromCard(card);
     });
   }
 
@@ -1668,7 +1689,11 @@ const projectJson = JSON.stringify(data);
     const triggerOpts = ['signing','start','percent','date','final'].map(v =>
       `<option value="${v}"${m.triggerType===v?' selected':''}>${v==='signing'?'On signing':v==='start'?'At start of works':v==='percent'?'At %':v==='date'?'On date':'Final'}</option>`
     ).join('');
-    const amtVal = budget > 0 ? (budget * m.pct / 100).toFixed(2) : (m.fixedAmt != null ? parseFloat(m.fixedAmt).toFixed(2) : (0).toFixed(2));
+    const fixed  = m.amountMode === 'eur';
+    const amtVal = (fixed || !(budget > 0))
+      ? (m.fixedAmt != null ? parseFloat(m.fixedAmt) : 0).toFixed(2)
+      : (budget * m.pct / 100).toFixed(2);
+    const pctVal = budget > 0 ? parseFloat(((parseFloat(amtVal) / budget) * 100).toFixed(6)) : (m.pct || 0);
     return [
       `<td><input class="sal-ref-input" type="text" value="${m.id}" style="width:52px;${inp};font-size:.72rem;font-family:monospace;font-weight:700;color:var(--navy)" /></td>`,
       `<td><input class="sal-label-input" type="text" value="${m.label}" style="width:100%;${inp};font-size:.75rem" /></td>`,
@@ -1680,13 +1705,18 @@ const projectJson = JSON.stringify(data);
       `<td style="text-align:right;white-space:nowrap">`,
         `<span style="font-size:.68rem;color:var(--g3);margin-right:.2rem">€</span>`,
         `<input class="sal-amt-input" type="number" min="0" step="0.01" value="${amtVal}" style="width:88px;${inp};font-size:.75rem;font-family:monospace;text-align:right" />`,
+        `<div class="sal-mode-wrap">`,
+          `<label class="sal-mode-lbl" title="Importo forfettario: non si riproporziona se cambia il budget">`,
+            `<input class="sal-fixed-check" type="checkbox"${fixed?' checked':''} /><span>&#8364; fisso</span>`,
+          `</label>`,
+        `</div>`,
         `<div class="sal-ded-wrap"${m.triggerType==='signing'?' style="display:none"':''}>`,
           `<label class="sal-ded-lbl"><input class="sal-ded-check" type="checkbox"${m.deductDeposit && m.triggerType!=='signing'?' checked':''} /><span>− acconto</span></label>`,
           `<span class="sal-net-amt"></span>`,
         `</div>`,
       `</td>`,
       `<td style="text-align:right;white-space:nowrap">`,
-        `<input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value="${m.pct}" style="width:48px;${inp};font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)" />`,
+        `<input class="sal-pct-input" type="number" min="0" max="100" step="0.01" value="${pctVal}"${fixed?' readonly':''} style="width:48px;${inp};font-size:.72rem;font-family:monospace;text-align:right;color:var(--g3)${fixed?';background:var(--g1);font-style:italic':''}" />`,
         `<span style="font-size:.65rem;color:var(--g3);margin-left:.15rem">%</span>`,
       `</td>`,
       `<td style="text-align:center;white-space:nowrap">`,
@@ -1750,16 +1780,45 @@ const projectJson = JSON.stringify(data);
     const budget  = parseFloat(card.dataset.budget ?? '0');
     const rows    = salRowsOf(card);
     const dedRow  = enforceSingleDeduction(card, null);
-    const deposit = depositAmountOf(card);
 
-    let totalPct = 0, sumFixed = 0, deduction = 0;
+    // PASSO 1 — normalizza ogni riga secondo la sua modalità.
+    // Le righe "€ fisso" tengono l'importo digitato e si vedono ricalcolare la
+    // percentuale; le altre seguono il budget. È qui che un acconto forfettario
+    // smette di riproporzionarsi quando cambia il budget del fornitore.
+    let grossTotal = 0;
+    const amounts = new Map();
     rows.forEach(row => {
-      const pct   = parseFloat(row.querySelector('.sal-pct-input')?.value ?? '0') || 0;
-      const gross = parseFloat(row.querySelector('.sal-amt-input')?.value ?? '0') || 0;
-      totalPct += pct;
-      sumFixed += gross;
+      const amtIn = row.querySelector('.sal-amt-input');
+      const pctIn = row.querySelector('.sal-pct-input');
+      const fixed = row.querySelector('.sal-fixed-check')?.checked === true;
+      let gross;
+      if (fixed || !(budget > 0)) {
+        gross = parseFloat(amtIn?.value ?? '0') || 0;
+        if (pctIn && budget > 0) pctIn.value = parseFloat(((gross / budget) * 100).toFixed(6));
+      } else {
+        const pct = parseFloat(pctIn?.value ?? '0') || 0;
+        gross = budget * pct / 100;
+        if (amtIn) amtIn.value = gross.toFixed(2);
+      }
+      if (pctIn) {
+        pctIn.readOnly = fixed;
+        pctIn.style.background = fixed ? 'var(--g1)' : '';
+        pctIn.style.fontStyle  = fixed ? 'italic' : '';
+        pctIn.title = fixed ? 'Derivata dall’importo fisso' : 'Percentuale del budget';
+      }
+      amounts.set(row, gross);
+      grossTotal += gross;
+    });
+
+    // PASSO 2 — l'acconto va letto DOPO la normalizzazione, altrimenti si
+    // detrarrebbe l'importo vecchio quando il budget è appena cambiato.
+    const depRow  = rows.find(isSigningRow) ?? null;
+    const deposit = depRow ? (amounts.get(depRow) ?? 0) : 0;
+    let deduction = 0;
+    rows.forEach(row => {
       const netEl = row.querySelector('.sal-net-amt');
       if (row === dedRow && deposit > 0) {
+        const gross = amounts.get(row) ?? 0;
         deduction = Math.min(deposit, gross);
         if (netEl) netEl.textContent = '→ netto ' + fmtAmt(gross - deduction);
       } else if (netEl) {
@@ -1767,12 +1826,13 @@ const projectJson = JSON.stringify(data);
       }
     });
 
-    const grossTotal = budget > 0 ? budget * totalPct / 100 : sumFixed;
-    const netTotal   = grossTotal - deduction;
-    // Once the acconto is deducted the gross percentages legitimately exceed
-    // 100 (by exactly the deposit %), so the check moves onto the net total.
-    const ok = deduction > 0
-      ? (budget > 0 ? Math.abs(netTotal - budget) < 0.01 : Math.abs(totalPct - 100) < 0.01)
+    const totalPct = budget > 0
+      ? (grossTotal / budget) * 100
+      : rows.reduce((t, r) => t + (parseFloat(r.querySelector('.sal-pct-input')?.value) || 0), 0);
+    const netTotal = grossTotal - deduction;
+    // Il piano è coerente quando il netto da incassare copre esattamente il budget.
+    const ok = budget > 0
+      ? Math.abs(netTotal - budget) < 0.01
       : Math.abs(totalPct - 100) < 0.01;
     const color     = ok ? 'var(--green)' : 'var(--red)';
     const grossColor = deduction > 0 ? 'var(--slate)' : color;
@@ -1813,8 +1873,14 @@ const projectJson = JSON.stringify(data);
     entity.sal = Array.from(card.querySelectorAll('tbody tr:not(.sal-total)')).map(row => {
       const pct      = parseFloat(row.querySelector('.sal-pct-input')?.value) || 0;
       const amtRaw   = parseFloat(row.querySelector('.sal-amt-input')?.value) || 0;
-      const fixedAmt = budget <= 0 && amtRaw > 0 ? amtRaw : null;
+      const isFixed  = row.querySelector('.sal-fixed-check')?.checked === true;
+      // In modalità 'eur' la cifra è il dato da conservare; la percentuale la si
+      // salva comunque, ma solo come valore derivato per chi legge i totali.
+      // Senza budget si conserva la cifra anche in modalità percentuale,
+      // altrimenti l'importo digitato andrebbe perso.
+      const fixedAmt = (isFixed || budget <= 0) && amtRaw > 0 ? amtRaw : null;
       return {
+        amountMode: isFixed ? 'eur' : 'pct',
         id:          row.querySelector('.sal-ref-input')?.value.trim() ?? '',
         label:       row.querySelector('.sal-label-input')?.value.trim() ?? '',
         triggerType: row.querySelector('.sal-trigger-type-input')?.value ?? 'signing',
@@ -1846,6 +1912,15 @@ const projectJson = JSON.stringify(data);
 
   // Inline SAL editing
   document.addEventListener('change', e => {
+    // Toggle "€ fisso": commuta fra importo forfettario e percentuale del budget
+    if (e.target.classList.contains('sal-fixed-check')) {
+      const row  = e.target.closest('.sal-table tbody tr:not(.sal-total)');
+      const card = row?.closest('.ctr-card') ?? row?.closest('.tec-card');
+      if (!card) return;
+      recalcCard(card);
+      syncSalFromCard(card);
+      return;
+    }
     // Acconto deduction toggle — only one milestone per card may carry it
     if (e.target.classList.contains('sal-ded-check')) {
       const row  = e.target.closest('.sal-table tbody tr:not(.sal-total)');
@@ -1886,7 +1961,10 @@ const projectJson = JSON.stringify(data);
       const budget = parseFloat(card.dataset.budget ?? '0') || 0;
       const amt    = parseFloat(e.target.value) || 0;
       const pctIn  = row.querySelector('.sal-pct-input');
-      if (pctIn) pctIn.value = budget > 0 ? ((amt / budget) * 100).toFixed(2) : '0';
+      // Precisione piena: arrotondando la percentuale a 2 decimali, recalcCard
+      // ricalcolava l'importo e riscriveva la cifra appena digitata
+      // (€ 15.000 diventava € 15.001,30 su un budget di € 150.313).
+      if (pctIn && budget > 0) pctIn.value = parseFloat(((amt / budget) * 100).toFixed(6));
       recalcCard(card);
     }
     if (e.target.classList.contains('sal-pct-input')) {
@@ -2015,21 +2093,25 @@ const projectJson = JSON.stringify(data);
     const tpct   = parseFloat(msTriggerPct.value) || null;
     const tdate  = ttype === 'date' ? (msTriggerDate.value || null) : null;
     const budget = parseFloat(msTargetCard.dataset.budget ?? '0');
+    // In modalità "€ fisso" la cifra resta quella: la percentuale è solo derivata
+    // e verrà ricalcolata da sola se il budget del fornitore cambia.
+    const amountMode = msAmountMode === 'eur' ? 'eur' : 'pct';
     let pct;
     let fixedAmt = null;
-    if (msAmountMode === 'eur') {
+    if (amountMode === 'eur') {
       const eur = parseFloat(msEurInput.value) || 0;
       fixedAmt = eur;
       pct = budget > 0 ? (eur / budget) * 100 : 0;
     } else {
       pct = parseFloat(msPct.value) || 0;
+      if (budget > 0) fixedAmt = budget * pct / 100;
     }
     // Deduct the acconto only if it is still available on this card
     const deductDeposit = msDed.checked && !msDed.disabled && ttype !== 'signing';
     const tbody   = msTargetCard.querySelector('tbody');
     const totalRow = tbody.querySelector('.sal-total');
     const tr = document.createElement('tr');
-    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct, fixedAmt, deductDeposit }, budget);
+    tr.innerHTML = buildSalRowHtml({ id: ref, label, triggerType: ttype, triggerPct: tpct, triggerDate: tdate, pct, fixedAmt, amountMode, deductDeposit }, budget);
     tbody.insertBefore(tr, totalRow);
     if (deductDeposit) enforceSingleDeduction(msTargetCard, tr);
     recalcCard(msTargetCard);
